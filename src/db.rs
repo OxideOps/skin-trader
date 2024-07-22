@@ -1,7 +1,6 @@
 use crate::api::Skin;
 use anyhow::{Context, Result};
-use sqlx::postgres::PgQueryResult;
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{postgres::{PgQueryResult, PgPoolOptions}, PgPool};
 use std::env;
 
 pub struct Database {
