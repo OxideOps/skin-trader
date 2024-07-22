@@ -8,11 +8,9 @@ use anyhow::Result;
 async fn main() -> Result<()> {
     let db = db::Database::new().await?;
     let api = Api::new();
-    let mut count = 0;
-    for _ in api.search_csgo().await? {
-        count += 1
+    for skin in api.search_csgo().await? {
+        db.store_skin(&skin).await?;
     }
-    println!("{}", count);
-    db.store_skin(&Skin { id: 1, price: 100 }).await?;
+    
     Ok(())
 }
