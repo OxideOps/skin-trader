@@ -2,6 +2,7 @@ use anyhow::{bail, Result};
 use futures::future::join_all;
 use reqwest::Client;
 use serde_json::{json, Value};
+use log::{debug, warn};
 
 const API_KEY: &str = "37998e2152c5dd9507c060eb03ede9f71d7dfcc71c29308fa6f19149074735d7";
 const BASE_URL: &str = "https://api.bitskins.com";
@@ -27,21 +28,43 @@ impl Api {
     }
     
     fn create_skin(skin_data: &Value) -> Option<Skin> {
-        let id = skin_data.get("id")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<i64>().ok())
-            .or_else(|| {
-                log::error!("Invalid or missing id in skin_data");
-                None
-            })?;
-
-        let price = skin_data.get("price")
-            .and_then(|v| v.as_i64())
-            .or_else(|| {
-                log::error!("Invalid or missing price in skin_data");
-                None
-            })?;
+        debug!("Attempting to create skin from data: {:?}", skin_data);
     
+        let id = match skin_data.get("id").and_then(|v| v.as_str()) {
+            Some(id_str) => match id_str.parse::<i64>() {
+                Ok(id) => {
+                    debug!("Successfully parsed id: {}", id);
+                    id
+                },
+                Err(e) => {
+                    warn!("Failed to parse id '{}' as i64: {}", id_str, e);
+                    return None;
+                }
+            },
+            None => {
+                warn!("Missing or non-string 'id' field in skin_data");
+                return None;
+            }
+        };
+    
+        let price = match skin_data.get("price") {
+            Some(price_value) => match price_value.as_i64() {
+                Some(price) => {
+                    debug!("Successfully parsed price: {}", price);
+                    price
+                },
+                None => {
+                    warn!("'price' field is not a valid i64: {:?}", price_value);
+                    return None;
+                }
+            },
+            None => {
+                warn!("Missing 'price' field in skin_data");
+                return None;
+            }
+        };
+    
+        debug!("Successfully created Skin {{ id: {}, price: {} }}", id, price);
         Some(Skin { id, price })
     }
 
