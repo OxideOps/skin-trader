@@ -26,19 +26,17 @@ impl Api {
         }
     }
 
-    fn create_skin(skin_data: &Value) -> Result<Skin> {
+    fn create_skin(skin_data: &Value) -> Option<Skin> {
         let id = skin_data
-            .get("id")
-            .and_then(Value::as_str)
-            .ok_or_else(|| anyhow::anyhow!("No 'id' present or not a string"))?
-            .parse::<i64>()?;
+            .get("id")?
+            .as_str()?
+            .parse::<i64>().ok()?;
 
         let price = skin_data
-            .get("price")
-            .and_then(Value::as_i64)
-            .ok_or_else(|| anyhow::anyhow!("No 'price' present or not a valid number"))?;
+            .get("price")?
+            .as_i64()?;
 
-        Ok(Skin { id, price })
+        Some(Skin { id, price })
     }
 
     async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
@@ -55,10 +53,7 @@ impl Api {
             .await?;
 
         match response.json::<Value>().await?.get("list") {
-            Some(Value::Array(list)) => Ok(list
-                .iter()
-                .filter_map(|v| Self::create_skin(v).ok())
-                .collect()),
+            Some(Value::Array(list)) => Ok(list.iter().filter_map(Self::create_skin).collect()),
             Some(_) => bail!("'list' field is not an array"),
             None => bail!("Response does not contain a 'list' field"),
         }
