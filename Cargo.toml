@@ -10,3 +10,4 @@ anyhow = "1.0.86"
 sqlx = { version = "0.7.4", features = ["postgres", "runtime-tokio-rustls"] }
 tokio = { version = "1.38.1", features = ["full"] }
 serde = { version = "1.0.204", features = ["derive"] }
+futures = "0.3.30"
