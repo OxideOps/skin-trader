@@ -41,7 +41,7 @@ impl Api {
         Ok(Skin { id, price })
     }
 
-    async fn _search_csgo(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
+    async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
         let response = self
             .client
             .post(format!("{BASE_URL}/market/search/730"))
@@ -54,7 +54,7 @@ impl Api {
             .send()
             .await?;
 
-        match response.json::<Value>().await?.get_mut("list") {
+        match response.json::<Value>().await?.get("list") {
             Some(Value::Array(list)) => Ok(list
                 .iter()
                 .filter_map(|v| Self::create_skin(v).ok())
@@ -64,10 +64,10 @@ impl Api {
         }
     }
 
-    pub(crate) async fn search_csgo(&self) -> Result<Vec<Skin>> {
+    pub(crate) async fn get_skins(&self) -> Result<Vec<Skin>> {
         let futures = (0..=MAX_OFFSET)
             .step_by(MAX_LIMIT)
-            .map(|offset| self._search_csgo(MAX_LIMIT, offset));
+            .map(|offset| self._get_skins(MAX_LIMIT, offset));
         let results = join_all(futures).await;
 
         let mut all_results = Vec::new();

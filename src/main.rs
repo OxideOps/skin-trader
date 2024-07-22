@@ -9,7 +9,7 @@ async fn main() -> Result<()> {
     let db = db::Database::new().await?;
     let api = Api::new();
 
-    for skin in api.search_csgo().await? {
+    for skin in api.get_skins().await? {
         db.store_skin(&skin).await?;
     }
 
