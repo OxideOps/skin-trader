@@ -1,0 +1,6 @@
+CREATE TABLE skin_prices (
+    id BIGINT PRIMARY KEY,
+    price BIGINT NOT NULL,
+    timestamp DATE NOT NULL DEFAULT CURRENT_DATE,
+    ema DOUBLE PRECISION NOT NULL
+);
