@@ -6,7 +6,7 @@ use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // let db = db::Database::new().await?; let mut hash_map: HashMap<String, Number> = HashMap::new();
+    let db = db::Database::new().await?; 
     let api = Api::new();
     let mut count = 0;
     for _ in api.search_csgo().await? {

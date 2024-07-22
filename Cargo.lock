@@ -226,6 +226,7 @@ name = "csgo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "dotenvy",
  "futures",
  "reqwest",
  "serde",

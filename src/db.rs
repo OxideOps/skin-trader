@@ -8,6 +8,7 @@ pub struct Database {
 
 impl Database {
     pub async fn new() -> anyhow::Result<Self> {
+        dotenvy::dotenv().ok();
         Ok(Self {
             pool: PgPoolOptions::new()
                 .max_connections(5)
