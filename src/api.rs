@@ -25,17 +25,23 @@ impl Api {
             client: Client::new(),
         }
     }
-
+    
     fn create_skin(skin_data: &Value) -> Option<Skin> {
-        let id = skin_data
-            .get("id")?
-            .as_str()?
-            .parse::<i64>().ok()?;
-
-        let price = skin_data
-            .get("price")?
-            .as_i64()?;
-
+        let id = skin_data.get("id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<i64>().ok())
+            .or_else(|| {
+                log::error!("Invalid or missing id in skin_data");
+                None
+            })?;
+    
+        let price = skin_data.get("price")
+            .and_then(|v| v.as_i64())
+            .or_else(|| {
+                log::error!("Invalid or missing price in skin_data");
+                None
+            })?;
+    
         Some(Skin { id, price })
     }
 
@@ -43,7 +49,6 @@ impl Api {
         let response = self
             .client
             .post(format!("{BASE_URL}/market/search/730"))
-            .header("content-type", "application/json")
             .header("x-apikey", API_KEY)
             .json(&json!({
                 "limit": limit,
