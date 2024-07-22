@@ -1,8 +1,7 @@
 use crate::api::Skin;
 use anyhow::{Context, Result};
 use sqlx::postgres::PgQueryResult;
-use sqlx::types::time::Date;
-use sqlx::{postgres::PgPoolOptions, Error, PgPool};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
 
 pub struct Database {
@@ -22,12 +21,10 @@ impl Database {
     }
 
     pub async fn store_skin(&self, skin: &Skin) -> Result<PgQueryResult> {
-        Ok(sqlx::query!(
-            r#"SELECT update_skin_price_ema($1, $2)"#,
-            skin.id,
-            skin.price
+        Ok(
+            sqlx::query!("SELECT update_skin_price_ema($1, $2)", skin.id, skin.price)
+                .execute(&self.pool)
+                .await?,
         )
-        .execute(&self.pool)
-        .await?)
     }
 }

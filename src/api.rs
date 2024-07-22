@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use futures::future::join_all;
 use reqwest::Client;
 use serde_json::{json, Value};
