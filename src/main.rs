@@ -8,9 +8,10 @@ use anyhow::Result;
 async fn main() -> Result<()> {
     // let db = db::Database::new().await?; let mut hash_map: HashMap<String, Number> = HashMap::new();
     let api = Api::new();
-    for i in api.search_csgo().await? {
-        println!("{:?}", i);
-        break;
+    let mut count = 0;
+    for _ in api.search_csgo().await? {
+        count += 1
     }
+    println!("{}", count);
     Ok(())
 }
