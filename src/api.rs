@@ -34,7 +34,7 @@ impl Api {
                 log::error!("Invalid or missing id in skin_data");
                 None
             })?;
-    
+
         let price = skin_data.get("price")
             .and_then(|v| v.as_i64())
             .or_else(|| {
