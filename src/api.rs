@@ -1,4 +1,4 @@
-use anyhow::{bail, anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use futures::future::join_all;
 use reqwest::Client;
 use serde_json::{json, Value};
@@ -11,8 +11,8 @@ const MAX_OFFSET: usize = 2000;
 
 #[derive(Debug)]
 pub(crate) struct Skin {
-    id: u64,
-    price: u64,
+    pub id: i64,
+    pub price: i64,
 }
 
 pub(crate) struct Api {
@@ -27,15 +27,17 @@ impl Api {
     }
 
     fn create_skin(skin_data: &Value) -> Result<Skin> {
-        let id = skin_data.get("id")
+        let id = skin_data
+            .get("id")
             .and_then(Value::as_str)
             .ok_or_else(|| anyhow::anyhow!("No 'id' present or not a string"))?
-            .parse::<u64>()?;
-    
-        let price = skin_data.get("price")
-            .and_then(Value::as_u64)
+            .parse::<i64>()?;
+
+        let price = skin_data
+            .get("price")
+            .and_then(Value::as_i64)
             .ok_or_else(|| anyhow::anyhow!("No 'price' present or not a valid number"))?;
-    
+
         Ok(Skin { id, price })
     }
 
@@ -51,9 +53,12 @@ impl Api {
             }))
             .send()
             .await?;
-        
+
         match response.json::<Value>().await?.get_mut("list") {
-            Some(Value::Array(list)) => Ok(list.iter().filter_map(|v| Self::create_skin(v).ok()).collect()),
+            Some(Value::Array(list)) => Ok(list
+                .iter()
+                .filter_map(|v| Self::create_skin(v).ok())
+                .collect()),
             Some(_) => bail!("'list' field is not an array"),
             None => bail!("Response does not contain a 'list' field"),
         }
