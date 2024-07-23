@@ -3,7 +3,7 @@ use futures::future::join_all;
 use reqwest::Client;
 use serde_json::{json, Value};
 use log::{info, warn};
-use indicatif::{ProgressBar, ProgressStyle};
+use crate::progress_bar::ProgressTracker;
 
 const API_KEY: &str = "37998e2152c5dd9507c060eb03ede9f71d7dfcc71c29308fa6f19149074735d7";
 const BASE_URL: &str = "https://api.bitskins.com";
@@ -66,21 +66,20 @@ impl Api {
         }
     }
 
-    pub(crate) async fn get_skins(&self) -> Result<Vec<Skin>> {
+    pub async fn get_skins(&self) -> Result<Vec<Skin>> {
         let total_batches = (MAX_OFFSET / MAX_LIMIT) + 1;
-        let progress_bar = ProgressBar::new(total_batches as u64);
-        progress_bar.set_style(ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos}/{len} batches {msg}")
-            .unwrap()
-            .progress_chars("##-"));
+        let progress_tracker = ProgressTracker::new(
+            total_batches as u64,
+            "[{elapsed_precise}] {bar:40.cyan/blue} {pos}/{len} batches {msg}"
+        );
     
         let futures = (0..=MAX_OFFSET)
             .step_by(MAX_LIMIT)
             .map(|offset| {
-                let pb = progress_bar.clone();
+                let tracker = progress_tracker.clone();
                 async move {
                     let result = self._get_skins(MAX_LIMIT, offset).await;
-                    pb.inc(1);
+                    tracker.increment().await;
                     result
                 }
             });
@@ -93,7 +92,7 @@ impl Api {
             all_results.extend(batch?);
         }
         
-        progress_bar.finish_with_message("Done!");
+        progress_tracker.finish("Done!".to_string()).await;
         info!("All skins data fetched successfully");
         Ok(all_results)
     }

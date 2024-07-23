@@ -1,5 +1,6 @@
 mod api;
 mod db;
+mod progress_bar;
 
 use crate::api::Api;
 use anyhow::Result;
