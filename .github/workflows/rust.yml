@@ -24,8 +24,5 @@ jobs:
           components: rustfmt
       - uses: actions-rs/cargo@v1
         with:
-          command: check
-      - uses: actions-rs/cargo@v1
-        with:
           command: fmt
           args: --all -- --check
