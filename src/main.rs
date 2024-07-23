@@ -5,11 +5,10 @@ mod progress_bar;
 use crate::api::Api;
 use crate::db::Database;
 use anyhow::Result;
-use std::sync::Arc;
 use tokio::signal;
 use tokio_cron_scheduler::{Job, JobScheduler};
 
-async fn update_skins(api: Arc<Api>, db: Arc<Database>) -> Result<()> {
+async fn update_skins(api: Api, db: Database) -> Result<()> {
     for skin in api.get_skins().await? {
         db.store_skin(&skin).await?;
     }
@@ -19,9 +18,9 @@ async fn update_skins(api: Arc<Api>, db: Arc<Database>) -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    let db = Arc::new(Database::new().await?);
-    let api = Arc::new(Api::new());
     let mut scheduler = JobScheduler::new().await?;
+    let api = Api::new();
+    let db = Database::new().await?;
     log::info!("Connected to database");
 
     // Create a job that runs daily at midnight

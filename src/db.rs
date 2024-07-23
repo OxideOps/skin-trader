@@ -6,6 +6,7 @@ use sqlx::{
 };
 use std::env;
 
+#[derive(Clone)]
 pub struct Database {
     pool: PgPool,
 }
