@@ -18,7 +18,7 @@ RUN sqlx migrate run
 RUN cargo build --release --bin skin-trader
 
 # We do not need the Rust toolchain to run the binary!
-FROM debian:bookworm-slim AS runtime
+FROM ubuntu AS runtime
 WORKDIR /app
 COPY --from=builder /app/target/release/skin-trader /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/skin-trader"]
