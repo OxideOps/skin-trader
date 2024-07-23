@@ -12,15 +12,17 @@ pub(crate) struct ProgressTracker {
 impl ProgressTracker {
     pub(crate) fn new(total: u64, template: &str) -> Self {
         let progress_bar = ProgressBar::new(total);
-        progress_bar.set_style(ProgressStyle::default_bar()
-            .template(template)
-            .unwrap()
-            .progress_chars("##-"));
-        
+        progress_bar.set_style(
+            ProgressStyle::default_bar()
+                .template(template)
+                .unwrap()
+                .progress_chars("##-"),
+        );
+
         let tracker = ProgressTracker {
             bar: Arc::new(Mutex::new(progress_bar)),
         };
-        
+
         // Start a background task to update the elapsed time
         let bar_clone = tracker.bar.clone();
         task::spawn(async move {
@@ -30,7 +32,7 @@ impl ProgressTracker {
                 bar_clone.lock().await.tick();
             }
         });
-        
+
         tracker
     }
 
