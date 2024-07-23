@@ -1,9 +1,9 @@
+use crate::progress_bar::ProgressTracker;
 use anyhow::{bail, Result};
 use futures::future::join_all;
+use log::{info, warn};
 use reqwest::Client;
 use serde_json::{json, Value};
-use log::{info, warn};
-use crate::progress_bar::ProgressTracker;
 
 const API_KEY: &str = "37998e2152c5dd9507c060eb03ede9f71d7dfcc71c29308fa6f19149074735d7";
 const BASE_URL: &str = "https://api.bitskins.com";
@@ -27,23 +27,25 @@ impl Api {
             client: Client::new(),
         }
     }
-    
+
     fn create_skin(skin_data: &Value) -> Option<Skin> {
-        let id = skin_data.get("id")
+        let id = skin_data
+            .get("id")
             .and_then(|v| v.as_str())
             .and_then(|s| s.parse::<i64>().ok())
             .or_else(|| {
                 warn!("Invalid or missing 'id' in skin_data. Skipping skin creation.");
                 None
             })?;
-    
-        let price = skin_data.get("price")
+
+        let price = skin_data
+            .get("price")
             .and_then(|v| v.as_i64())
             .or_else(|| {
                 warn!("Invalid or missing 'price' in skin_data. Skipping skin creation.");
                 None
             })?;
-    
+
         Some(Skin { id, price })
     }
 
@@ -70,28 +72,26 @@ impl Api {
         let total_batches = (MAX_OFFSET / MAX_LIMIT) + 1;
         let progress_tracker = ProgressTracker::new(
             total_batches as u64,
-            "[{elapsed_precise}] {bar:40.cyan/blue} {pos}/{len} batches {msg}"
+            "[{elapsed_precise}] {bar:40.cyan/blue} {pos}/{len} batches {msg}",
         );
-    
-        let futures = (0..=MAX_OFFSET)
-            .step_by(MAX_LIMIT)
-            .map(|offset| {
-                let tracker = progress_tracker.clone();
-                async move {
-                    let result = self._get_skins(MAX_LIMIT, offset).await;
-                    tracker.increment().await;
-                    result
-                }
-            });
-        
+
+        let futures = (0..=MAX_OFFSET).step_by(MAX_LIMIT).map(|offset| {
+            let tracker = progress_tracker.clone();
+            async move {
+                let result = self._get_skins(MAX_LIMIT, offset).await;
+                tracker.increment().await;
+                result
+            }
+        });
+
         info!("Fetching skins data...");
         let results = join_all(futures).await;
-        
+
         let mut all_results = Vec::new();
         for batch in results {
             all_results.extend(batch?);
         }
-        
+
         progress_tracker.finish("Done!".to_string()).await;
         info!("All skins data fetched successfully");
         Ok(all_results)
