@@ -17,6 +17,7 @@ pub(crate) struct Skin {
     pub price: i64,
 }
 
+#[derive(Clone)]
 pub(crate) struct Api {
     client: Client,
 }
