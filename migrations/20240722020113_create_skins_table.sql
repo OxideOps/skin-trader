@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION update_skin_price_ema(
     p_id BIGINT,
     p_price BIGINT,
     p_date DATE DEFAULT CURRENT_DATE,
-    p_smoothing_factor DOUBLE PRECISION DEFAULT 0.2
+    p_smoothing_factor DOUBLE PRECISION DEFAULT 0.1
 ) RETURNS VOID AS $$
 DECLARE
     v_current_date DATE;
