@@ -5,9 +5,9 @@ mod progress_bar;
 use crate::api::Api;
 use crate::db::Database;
 use anyhow::Result;
+use env_logger::{Builder, Env};
 use tokio::signal;
 use tokio_cron_scheduler::{Job, JobScheduler};
-use env_logger::{Builder, Env};
 
 async fn update_skins(api: Api, db: Database) -> Result<()> {
     for skin in api.get_skins().await? {
@@ -19,7 +19,7 @@ async fn update_skins(api: Api, db: Database) -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     Builder::from_env(Env::default().default_filter_or("info")).init();
-    
+
     let mut scheduler = JobScheduler::new().await?;
     let api = Api::new();
     let db = Database::new().await?;
