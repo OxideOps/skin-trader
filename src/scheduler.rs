@@ -30,13 +30,11 @@ impl Scheduler {
     }
 
     pub(crate) async fn start(&self) -> Result<()> {
-        self.scheduler.start().await?;
-        Ok(())
+        Ok(self.scheduler.start().await?)
     }
 
     pub(crate) async fn shutdown(mut self) -> Result<()> {
-        self.scheduler.shutdown().await?;
-        Ok(())
+        Ok(self.scheduler.shutdown().await?)
     }
 
     async fn update_skins(api: Api, db: Database) -> Result<()> {
