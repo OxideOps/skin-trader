@@ -1,11 +1,10 @@
 use crate::progress_bar::ProgressTracker;
 use anyhow::{bail, Result};
 use futures::future::join_all;
-use log::{info, warn};
+use log::info;
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::env;
-use std::fmt::Debug;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
