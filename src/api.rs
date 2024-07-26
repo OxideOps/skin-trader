@@ -58,52 +58,53 @@ impl Api {
     }
 
     pub(crate) async fn get_price_summary(
-            &self,
-            skin_id: u32,
-            date_from: Date,
-            date_to: Date,
-        ) -> Result<Vec<PriceSummary>> {
-            let url = format!("{BASE_URL}/market/pricing/summary");
-            let payload = json!({
-                "app_id": CS2_APP_ID,
-                "skin_id": skin_id,
-                "date_from": date_from.to_string(),
-                "date_to": date_to.to_string(),
-            });
-            let response = self
-                .client
-                .post(url)
-                .header("x-apikey", env::var("BITSKIN_API_KEY")?)
-                .json(&payload)
-                .send()
-                .await?
-                .json::<Value>()
-                .await?;
-            
-            match response {
-                Value::Array(vec) => {
-                    let summaries = vec.into_iter()
-                        .filter_map(|item| {
-                            let date = extract(&item, "date", |v| v.as_str().map(ToOwned::to_owned));
-                            let price_avg = extract(&item, "price_avg", |v| v.as_f64());
-                            let skin_id = extract(&item, "skin_id", |v| v.as_u64().map(|id| id as u32));
-    
-                            match (date, price_avg, skin_id) {
-                                (Some(date), Some(price_avg), Some(skin_id)) => Some(PriceSummary {
-                                    date,
-                                    price_avg,
-                                    skin_id,
-                                }),
-                                _ => None,
-                            }
-                        })
-                        .collect();
-    
-                    Ok(summaries)
-                },
-                _ => bail!("Expected array response"),
+        &self,
+        skin_id: u32,
+        date_from: Date,
+        date_to: Date,
+    ) -> Result<Vec<PriceSummary>> {
+        let url = format!("{BASE_URL}/market/pricing/summary");
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "skin_id": skin_id,
+            "date_from": date_from.to_string(),
+            "date_to": date_to.to_string(),
+        });
+        let response = self
+            .client
+            .post(url)
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
+            .json(&payload)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?;
+
+        match response {
+            Value::Array(vec) => {
+                let summaries = vec
+                    .into_iter()
+                    .filter_map(|item| {
+                        let date = extract(&item, "date", |v| v.as_str().map(ToOwned::to_owned));
+                        let price_avg = extract(&item, "price_avg", |v| v.as_f64());
+                        let skin_id = extract(&item, "skin_id", |v| v.as_u64().map(|id| id as u32));
+
+                        match (date, price_avg, skin_id) {
+                            (Some(date), Some(price_avg), Some(skin_id)) => Some(PriceSummary {
+                                date,
+                                price_avg,
+                                skin_id,
+                            }),
+                            _ => None,
+                        }
+                    })
+                    .collect();
+
+                Ok(summaries)
             }
+            _ => bail!("Expected array response"),
         }
+    }
 
     async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
         let response = self
