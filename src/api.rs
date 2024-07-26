@@ -24,8 +24,8 @@ pub(crate) struct Skin {
 #[derive(Debug)]
 pub struct PriceSummary {
     pub date: String,
-    pub price_avg: f64,
-    pub skin_id: u32,
+    pub price_avg: i64,
+    pub skin_id: i64,
 }
 
 #[derive(Clone)]
@@ -33,8 +33,29 @@ pub(crate) struct Api {
     client: Client,
 }
 
-fn extract<T>(value: &Value, field: &str, parse: impl Fn(&Value) -> Option<T>) -> Option<T> {
-    value.get(field).and_then(parse).or_else(|| {
+trait FromValue: Sized {
+    fn from_value(v: &Value) -> Option<Self>;
+}
+
+impl FromValue for i64 {
+    fn from_value(v: &Value) -> Option<Self> {
+        v.as_i64()
+    }
+}
+
+impl FromValue for String {
+    fn from_value(v: &Value) -> Option<Self> {
+        match v {
+            Value::String(s) => Some(s.clone()),
+            Value::Number(n) => Some(n.to_string()),
+            Value::Bool(b) => Some(b.to_string()),
+            _ => None,
+        }
+    }
+}
+
+fn extract<T: FromValue>(value: &Value, field: &str) -> Option<T> {
+    value.get(field).and_then(T::from_value).or_else(|| {
         log::error!("Invalid or missing '{}' in data", field);
         None
     })
@@ -48,11 +69,8 @@ impl Api {
     }
 
     fn create_skin(skin_data: &Value) -> Option<Skin> {
-        let id = extract(skin_data, "id", |v| v.as_str().and_then(|s| s.parse().ok()))?;
-        let price = extract(skin_data, "price", |v| {
-            v.as_i64()
-                .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
-        })?;
+        let id = extract(skin_data, "id")?;
+        let price = extract(skin_data, "price")?;
 
         Some(Skin { id, price })
     }
@@ -81,15 +99,15 @@ impl Api {
             .await?
             .json::<Value>()
             .await?;
-
+        
         match response {
             Value::Array(vec) => {
                 let summaries = vec
                     .into_iter()
                     .filter_map(|item| {
-                        let date = extract(&item, "date", |v| v.as_str().map(ToOwned::to_owned));
-                        let price_avg = extract(&item, "price_avg", |v| v.as_f64());
-                        let skin_id = extract(&item, "skin_id", |v| v.as_u64().map(|id| id as u32));
+                        let date = extract(&item, "date");
+                        let price_avg = extract(&item, "price_avg");
+                        let skin_id = extract(&item, "skin_id");
 
                         match (date, price_avg, skin_id) {
                             (Some(date), Some(price_avg), Some(skin_id)) => Some(PriceSummary {
