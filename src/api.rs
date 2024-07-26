@@ -100,14 +100,10 @@ impl Api {
                 let summaries = vec
                     .iter()
                     .filter_map(|item| {
-                        let date = extract(&item, "date")?;
-                        let price_avg = extract(&item, "price_avg")?;
-                        let skin_id = extract(&item, "skin_id")?;
-
                         Some(PriceSummary {
-                            date,
-                            price_avg,
-                            skin_id,
+                            date: extract(&item, "date")?,
+                            price_avg: extract(&item, "price_avg")?,
+                            skin_id: extract(&item, "skin_id")?,
                         })
                     })
                     .collect();
@@ -133,10 +129,10 @@ impl Api {
                 let skins = vec
                     .iter()
                     .filter_map(|skin_data| {
-                        let id = extract(skin_data, "id")?;
-                        let price = extract(skin_data, "price")?;
-
-                        Some(Skin { id, price })
+                        Some(Skin {
+                            id: extract(skin_data, "id")?,
+                            price: extract(skin_data, "price")?,
+                        })
                     })
                     .collect();
 
