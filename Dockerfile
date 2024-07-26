@@ -6,9 +6,15 @@ FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
+# Build the application
 FROM chef AS builder
 ARG DATABASE_URL
+ARG BITSKIN_API_KEY
+
+# Set environment variables for the build stage
 ENV DATABASE_URL=$DATABASE_URL
+ENV BITSKIN_API_KEY=$BITSKIN_API_KEY
+
 COPY --from=planner /app/recipe.json recipe.json
 # Build dependencies - this is the caching Docker layer!
 RUN cargo chef cook --release --recipe-path recipe.json

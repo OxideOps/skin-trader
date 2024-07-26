@@ -1,11 +1,11 @@
 use crate::progress_bar::ProgressTracker;
 use anyhow::{bail, Result};
 use futures::future::join_all;
-use log::{info, warn};
+use log::info;
 use reqwest::Client;
 use serde_json::{json, Value};
+use std::env;
 
-const API_KEY: &str = "37998e2152c5dd9507c060eb03ede9f71d7dfcc71c29308fa6f19149074735d7";
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 // 100000 is technically the max, just use this for now because of request caps
@@ -29,23 +29,19 @@ impl Api {
         }
     }
 
-    fn create_skin(skin_data: &Value) -> Option<Skin> {
-        let id = skin_data
-            .get("id")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<i64>().ok())
-            .or_else(|| {
-                warn!("Invalid or missing 'id' in skin_data. Skipping skin creation.");
-                None
-            })?;
+    fn extract<T>(value: &Value, field: &str, parse: impl Fn(&Value) -> Option<T>) -> Option<T> {
+        value.get(field).and_then(parse).or_else(|| {
+            log::error!("Invalid or missing '{}' in data", field);
+            None
+        })
+    }
 
-        let price = skin_data
-            .get("price")
-            .and_then(|v| v.as_i64())
-            .or_else(|| {
-                warn!("Invalid or missing 'price' in skin_data. Skipping skin creation.");
-                None
-            })?;
+    fn create_skin(skin_data: &Value) -> Option<Skin> {
+        let id = Self::extract(skin_data, "id", |v| v.as_str().and_then(|s| s.parse().ok()))?;
+        let price = Self::extract(skin_data, "price", |v| {
+            v.as_i64()
+                .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+        })?;
 
         Some(Skin { id, price })
     }
@@ -54,7 +50,7 @@ impl Api {
         let response = self
             .client
             .post(format!("{BASE_URL}/market/search/730"))
-            .header("x-apikey", API_KEY)
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .json(&json!({
                 "limit": limit,
                 "offset": offset,
