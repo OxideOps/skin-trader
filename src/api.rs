@@ -82,14 +82,14 @@ impl Api {
         date_to: Date,
     ) -> Result<Vec<PriceSummary>> {
         let url = format!("{BASE_URL}/market/pricing/summary");
-        
+
         let payload = json!({
             "app_id": CS2_APP_ID,
             "skin_id": skin_id,
             "date_from": date_from.to_string(),
             "date_to": date_to.to_string(),
         });
-        
+
         let response = self
             .client
             .post(url)
@@ -99,7 +99,7 @@ impl Api {
             .await?
             .json::<Value>()
             .await?;
-        
+
         match response {
             Value::Array(vec) => {
                 let summaries = vec
