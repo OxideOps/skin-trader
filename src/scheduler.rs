@@ -9,8 +9,9 @@ pub(crate) struct Scheduler {
 
 impl Scheduler {
     pub(crate) async fn new() -> Result<Self> {
-        let scheduler = JobScheduler::new().await?;
-        Ok(Self { scheduler })
+        Ok(Self {
+            scheduler: JobScheduler::new().await?,
+        })
     }
 
     pub(crate) async fn setup_jobs(&self, api: Api, db: Database) -> Result<()> {
