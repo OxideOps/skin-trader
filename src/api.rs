@@ -5,6 +5,7 @@ use log::{info, warn};
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::env;
+use std::fmt::Debug;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -29,23 +30,19 @@ impl Api {
         }
     }
 
-    fn create_skin(skin_data: &Value) -> Option<Skin> {
-        let id = skin_data
-            .get("id")
-            .and_then(|v| v.as_str())
-            .and_then(|s| s.parse::<i64>().ok())
-            .or_else(|| {
-                warn!("Invalid or missing 'id' in skin_data. Skipping skin creation.");
-                None
-            })?;
+    fn extract<T>(value: &Value, field: &str, parse: impl Fn(&Value) -> Option<T>) -> Option<T> {
+        value.get(field).and_then(parse).or_else(|| {
+            log::error!("Invalid or missing '{}' in data", field);
+            None
+        })
+    }
 
-        let price = skin_data
-            .get("price")
-            .and_then(|v| v.as_i64())
-            .or_else(|| {
-                warn!("Invalid or missing 'price' in skin_data. Skipping skin creation.");
-                None
-            })?;
+    fn create_skin(skin_data: &Value) -> Option<Skin> {
+        let id = Self::extract(skin_data, "id", |v| v.as_str().and_then(|s| s.parse().ok()))?;
+        let price = Self::extract(skin_data, "price", |v| {
+            v.as_i64()
+                .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+        })?;
 
         Some(Skin { id, price })
     }
