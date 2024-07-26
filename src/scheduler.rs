@@ -13,7 +13,7 @@ impl Scheduler {
         Ok(Self { scheduler })
     }
 
-    pub(crate) async fn setup_jobs(&mut self, api: Api, db: Database) -> Result<()> {
+    pub(crate) async fn setup_jobs(&self, api: Api, db: Database) -> Result<()> {
         let job = Job::new_async("0 0 0 * * * *", move |_uuid, _l| {
             let api = api.clone();
             let db = db.clone();
@@ -29,12 +29,12 @@ impl Scheduler {
         Ok(())
     }
 
-    pub(crate) async fn start(&mut self) -> Result<()> {
+    pub(crate) async fn start(&self) -> Result<()> {
         self.scheduler.start().await?;
         Ok(())
     }
 
-    pub(crate) async fn shutdown(&mut self) -> Result<()> {
+    pub(crate) async fn shutdown(mut self) -> Result<()> {
         self.scheduler.shutdown().await?;
         Ok(())
     }
