@@ -3,10 +3,10 @@ use anyhow::{bail, Result};
 use futures::future::join_all;
 use log::info;
 use reqwest::Client;
+use serde::{Deserialize, Deserializer};
 use serde_json::{json, Value};
 use std::env;
 use time::{format_description, Date};
-use serde::{Deserialize, Deserializer};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -98,7 +98,7 @@ impl Api {
         });
 
         let response = self.get_response(&url, payload).await?;
-        
+
         let skins_response: Skins = serde_json::from_value(response)
             .map_err(|e| anyhow::anyhow!("Failed to deserialize response: {}", e))?;
 
