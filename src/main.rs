@@ -14,7 +14,7 @@ fn setup_env() -> Result<()> {
     // Logger
     Builder::from_env(Env::default().default_filter_or("info")).init();
     // Environment variables
-    dotenvy::dotenv()?;
+    dotenvy::dotenv().ok();
     Ok(())
 }
 
