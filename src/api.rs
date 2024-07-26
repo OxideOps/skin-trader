@@ -90,7 +90,7 @@ impl Api {
         Ok(summaries)
     }
 
-    async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
+    pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
         let url = format!("{BASE_URL}/market/search/730");
         let payload = serde_json::json!({
             "limit": limit,
@@ -98,9 +98,13 @@ impl Api {
         });
 
         let response = self.get_response(&url, payload).await?;
+        
+        #[derive(Deserialize)]
+        struct SkinsResponse {
+            list: Vec<Skin>,
+        }
 
-        let skins_response: Skins = serde_json::from_value(response)
-            .map_err(|e| anyhow::anyhow!("Failed to deserialize response: {}", e))?;
+        let skins_response: SkinsResponse = serde_json::from_value(response)?;
 
         Ok(skins_response.list)
     }

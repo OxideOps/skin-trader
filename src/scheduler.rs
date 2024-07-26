@@ -15,7 +15,7 @@ impl Scheduler {
     }
 
     pub(crate) async fn setup_jobs(&self, api: Api, db: Database) -> Result<()> {
-        let job = Job::new_async("0 0 0 * * * *", move |_uuid, _l| {
+        let job = Job::new_async("*/10 * * * * *", move |_uuid, _l| {
             let api = api.clone();
             let db = db.clone();
             Box::pin(async move {
