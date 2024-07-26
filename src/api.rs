@@ -81,13 +81,6 @@ impl Api {
         Ok(response)
     }
 
-    fn create_skin(skin_data: &Value) -> Option<Skin> {
-        let id = extract(skin_data, "id")?;
-        let price = extract(skin_data, "price")?;
-
-        Some(Skin { id, price })
-    }
-
     pub(crate) async fn get_price_summary(
         &self,
         skin_id: u32,
@@ -106,7 +99,7 @@ impl Api {
         match self.get_response(&url, payload).await? {
             Value::Array(vec) => {
                 let summaries = vec
-                    .into_iter()
+                    .iter()
                     .filter_map(|item| {
                         let date = extract(&item, "date");
                         let price_avg = extract(&item, "price_avg");
@@ -128,21 +121,28 @@ impl Api {
             _ => bail!("Expected array response"),
         }
     }
-
+    
     async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
-        let response = self
-            .client
-            .post(format!("{BASE_URL}/market/search/730"))
-            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
-            .json(&json!({
-                "limit": limit,
-                "offset": offset,
-            }))
-            .send()
-            .await?;
-
-        match response.json::<Value>().await?.get("list") {
-            Some(Value::Array(list)) => Ok(list.iter().filter_map(Self::create_skin).collect()),
+        let url = format!("{BASE_URL}/market/search/730");
+        
+        let payload = json!({
+            "limit": limit,
+            "offset": offset,
+        });
+        
+        let response = self.get_response(&url, payload).await?;
+        
+        match response.get("list") {
+            Some(Value::Array(vec)) => {
+                let skins = vec.iter().filter_map(|skin_data| {
+                    let id = extract(skin_data, "id")?;
+                    let price = extract(skin_data, "price")?;
+            
+                    Some(Skin { id, price })
+                }).collect();
+                
+                Ok(skins)
+            },
             Some(_) => bail!("'list' field is not an array"),
             None => bail!("Response does not contain a 'list' field"),
         }
