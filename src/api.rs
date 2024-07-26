@@ -54,7 +54,7 @@ impl Api {
         let response = self
             .client
             .post(format!("{BASE_URL}/market/search/730"))
-            .header("x-apikey", env::var("API_KEY").unwrap())
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .json(&json!({
                 "limit": limit,
                 "offset": offset,
