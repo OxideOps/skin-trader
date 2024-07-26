@@ -48,7 +48,6 @@ impl FromValue for String {
         match v {
             Value::String(s) => Some(s.clone()),
             Value::Number(n) => Some(n.to_string()),
-            Value::Bool(b) => Some(b.to_string()),
             _ => None,
         }
     }
