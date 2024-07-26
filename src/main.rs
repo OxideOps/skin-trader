@@ -8,7 +8,6 @@ use crate::db::Database;
 use anyhow::Result;
 use env_logger::{Builder, Env};
 use scheduler::Scheduler;
-use time::{Date, Month};
 use tokio::signal;
 
 fn setup_env() -> Result<()> {
