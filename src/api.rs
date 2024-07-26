@@ -66,6 +66,20 @@ impl Api {
             client: Client::new(),
         }
     }
+    
+    async fn get_response(&self, url: &str, payload: Value) -> Result<Value> {
+        let response = self
+            .client
+            .post(url)
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
+            .json(&payload)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?;
+        
+        Ok(response)
+    }
 
     fn create_skin(skin_data: &Value) -> Option<Skin> {
         let id = extract(skin_data, "id")?;
@@ -89,17 +103,7 @@ impl Api {
             "date_to": date_to.to_string(),
         });
 
-        let response = self
-            .client
-            .post(url)
-            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
-            .json(&payload)
-            .send()
-            .await?
-            .json::<Value>()
-            .await?;
-
-        match response {
+        match self.get_response(&url, payload).await? {
             Value::Array(vec) => {
                 let summaries = vec
                     .into_iter()
