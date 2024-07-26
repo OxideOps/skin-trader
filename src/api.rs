@@ -101,18 +101,15 @@ impl Api {
                 let summaries = vec
                     .iter()
                     .filter_map(|item| {
-                        let date = extract(&item, "date");
-                        let price_avg = extract(&item, "price_avg");
-                        let skin_id = extract(&item, "skin_id");
+                        let date = extract(&item, "date")?;
+                        let price_avg = extract(&item, "price_avg")?;
+                        let skin_id = extract(&item, "skin_id")?;
 
-                        match (date, price_avg, skin_id) {
-                            (Some(date), Some(price_avg), Some(skin_id)) => Some(PriceSummary {
-                                date,
-                                price_avg,
-                                skin_id,
-                            }),
-                            _ => None,
-                        }
+                        Some(PriceSummary {
+                            date,
+                            price_avg,
+                            skin_id,
+                        })
                     })
                     .collect();
 
