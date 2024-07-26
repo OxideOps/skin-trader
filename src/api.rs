@@ -4,8 +4,8 @@ use futures::future::join_all;
 use log::{info, warn};
 use reqwest::Client;
 use serde_json::{json, Value};
+use std::env;
 
-const API_KEY: &str = "37998e2152c5dd9507c060eb03ede9f71d7dfcc71c29308fa6f19149074735d7";
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 // 100000 is technically the max, just use this for now because of request caps
@@ -54,7 +54,7 @@ impl Api {
         let response = self
             .client
             .post(format!("{BASE_URL}/market/search/730"))
-            .header("x-apikey", API_KEY)
+            .header("x-apikey", env::var("API_KEY").unwrap())
             .json(&json!({
                 "limit": limit,
                 "offset": offset,

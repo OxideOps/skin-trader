@@ -9,6 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  BITSKIN_API_KEY: ${{ secrets.BITSKIN_API_KEY }}
 
 jobs:
   check:

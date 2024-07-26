@@ -18,10 +18,9 @@ impl Scheduler {
             let api = api.clone();
             let db = db.clone();
             Box::pin(async move {
-                Self::update_skins(api, db)
-                    .await
-                    .map_err(|e| log::error!("{e}"))
-                    .ok();
+                if let Err(e) = Self::update_skins(api, db).await {
+                    log::error!("Error updating skins: {}", e);
+                }
             })
         })?;
 
