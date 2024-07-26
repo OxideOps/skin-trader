@@ -5,11 +5,15 @@ use log::info;
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::env;
+use time::Date;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 // 100000 is technically the max, just use this for now because of request caps
 const MAX_OFFSET: usize = 2000;
+
+const CS2_APP_ID: u32 = 730;
+const DOTA2_APP_ID: u32 = 570;
 
 #[derive(Debug)]
 pub(crate) struct Skin {
@@ -44,6 +48,34 @@ impl Api {
         })?;
 
         Some(Skin { id, price })
+    }
+
+    pub(crate) async fn get_price_summary(
+        &self,
+        skin_id: u32,
+        date_from: Date,
+        date_to: Date,
+    ) -> Result<Value> {
+        let url = format!("{BASE_URL}/market/pricing/summary");
+
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "skin_id": skin_id,
+            "date_from": date_from.to_string(),
+            "date_to": date_to.to_string(),
+        });
+
+        let response = self
+            .client
+            .post(url)
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
+            .json(&payload)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?;
+
+        Ok(response)
     }
 
     async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
