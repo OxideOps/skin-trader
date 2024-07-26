@@ -27,7 +27,7 @@ async fn setup_jobs(scheduler: &mut JobScheduler, api: Api, db: Database) -> Res
                 .ok();
         })
     })?;
-    
+
     scheduler.add(job).await?;
     Ok(())
 }
@@ -36,7 +36,7 @@ async fn update_skins(api: Api, db: Database) -> Result<()> {
     for skin in api.get_skins().await? {
         db.store_skin(&skin).await?;
     }
-    
+
     log::info!("Stored skins to database");
     Ok(())
 }
@@ -44,10 +44,10 @@ async fn update_skins(api: Api, db: Database) -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     setup_env()?;
-    
+
     let api = Api::new();
     let db = Database::new().await?;
-    
+
     let mut scheduler = JobScheduler::new().await?;
     setup_jobs(&mut scheduler, api, db).await?;
     scheduler.start().await?;

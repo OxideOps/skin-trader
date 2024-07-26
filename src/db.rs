@@ -18,7 +18,7 @@ impl Database {
             .connect(&env::var("DATABASE_URL")?)
             .await
             .context("Failed to connect to database")?;
-        
+
         log::info!("Connected to database");
         Ok(Self { pool })
     }
@@ -27,7 +27,7 @@ impl Database {
         let result = sqlx::query!("SELECT update_skin_price_ema($1, $2)", skin.id, skin.price)
             .execute(&self.pool)
             .await?;
-        
+
         Ok(result)
     }
 }
