@@ -18,13 +18,8 @@ const DOTA2_APP_ID: u32 = 570;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Skin {
-    pub id: i64,
+    pub id: String,
     pub price: i64,
-}
-
-#[derive(Debug, Deserialize)]
-struct Skins {
-    list: Vec<Skin>,
 }
 
 fn deserialize_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
@@ -98,15 +93,7 @@ impl Api {
         });
 
         let response = self.get_response(&url, payload).await?;
-        
-        #[derive(Deserialize)]
-        struct SkinsResponse {
-            list: Vec<Skin>,
-        }
-
-        let skins_response: SkinsResponse = serde_json::from_value(response)?;
-
-        Ok(skins_response.list)
+        Ok(serde_json::from_value(response.get("list").unwrap().to_owned())?)
     }
 
     pub async fn get_skins(&self) -> Result<Vec<Skin>> {
