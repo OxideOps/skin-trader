@@ -28,8 +28,8 @@ async fn main() -> Result<()> {
     let scheduler = Scheduler::new().await?;
     scheduler.setup_jobs(api, db).await?;
     scheduler.start().await?;
-
     signal::ctrl_c().await?;
     scheduler.shutdown().await?;
+
     Ok(())
 }

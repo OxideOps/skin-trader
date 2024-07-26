@@ -5,11 +5,15 @@ use log::info;
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::env;
+use time::Date;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 // 100000 is technically the max, just use this for now because of request caps
 const MAX_OFFSET: usize = 2000;
+
+const CS2_APP_ID: u32 = 730;
+const DOTA2_APP_ID: u32 = 570;
 
 #[derive(Debug)]
 pub(crate) struct Skin {
@@ -17,9 +21,43 @@ pub(crate) struct Skin {
     pub price: i64,
 }
 
+#[derive(Debug)]
+pub struct PriceSummary {
+    pub date: String,
+    pub price_avg: i64,
+    pub skin_id: i64,
+}
+
 #[derive(Clone)]
 pub(crate) struct Api {
     client: Client,
+}
+
+trait FromValue: Sized {
+    fn from_value(v: &Value) -> Option<Self>;
+}
+
+impl FromValue for i64 {
+    fn from_value(v: &Value) -> Option<Self> {
+        v.as_i64()
+    }
+}
+
+impl FromValue for String {
+    fn from_value(v: &Value) -> Option<Self> {
+        match v {
+            Value::String(s) => Some(s.clone()),
+            Value::Number(n) => Some(n.to_string()),
+            _ => None,
+        }
+    }
+}
+
+fn extract<T: FromValue>(value: &Value, field: &str) -> Option<T> {
+    value.get(field).and_then(T::from_value).or_else(|| {
+        log::error!("Invalid or missing '{}' in data", field);
+        None
+    })
 }
 
 impl Api {
@@ -29,37 +67,82 @@ impl Api {
         }
     }
 
-    fn extract<T>(value: &Value, field: &str, parse: impl Fn(&Value) -> Option<T>) -> Option<T> {
-        value.get(field).and_then(parse).or_else(|| {
-            log::error!("Invalid or missing '{}' in data", field);
-            None
-        })
+    async fn get_response(&self, url: &str, payload: Value) -> Result<Value> {
+        let response = self
+            .client
+            .post(url)
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
+            .json(&payload)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?;
+
+        Ok(response)
     }
 
-    fn create_skin(skin_data: &Value) -> Option<Skin> {
-        let id = Self::extract(skin_data, "id", |v| v.as_str().and_then(|s| s.parse().ok()))?;
-        let price = Self::extract(skin_data, "price", |v| {
-            v.as_i64()
-                .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
-        })?;
+    pub(crate) async fn get_price_summary(
+        &self,
+        skin_id: u32,
+        date_from: Date,
+        date_to: Date,
+    ) -> Result<Vec<PriceSummary>> {
+        let url = format!("{BASE_URL}/market/pricing/summary");
 
-        Some(Skin { id, price })
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "skin_id": skin_id,
+            "date_from": date_from.to_string(),
+            "date_to": date_to.to_string(),
+        });
+
+        match self.get_response(&url, payload).await? {
+            Value::Array(vec) => {
+                let summaries = vec
+                    .iter()
+                    .filter_map(|item| {
+                        let date = extract(&item, "date")?;
+                        let price_avg = extract(&item, "price_avg")?;
+                        let skin_id = extract(&item, "skin_id")?;
+
+                        Some(PriceSummary {
+                            date,
+                            price_avg,
+                            skin_id,
+                        })
+                    })
+                    .collect();
+
+                Ok(summaries)
+            }
+            _ => bail!("Expected array response"),
+        }
     }
 
     async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
-        let response = self
-            .client
-            .post(format!("{BASE_URL}/market/search/730"))
-            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
-            .json(&json!({
-                "limit": limit,
-                "offset": offset,
-            }))
-            .send()
-            .await?;
+        let url = format!("{BASE_URL}/market/search/730");
 
-        match response.json::<Value>().await?.get("list") {
-            Some(Value::Array(list)) => Ok(list.iter().filter_map(Self::create_skin).collect()),
+        let payload = json!({
+            "limit": limit,
+            "offset": offset,
+        });
+
+        let response = self.get_response(&url, payload).await?;
+
+        match response.get("list") {
+            Some(Value::Array(vec)) => {
+                let skins = vec
+                    .iter()
+                    .filter_map(|skin_data| {
+                        let id = extract(skin_data, "id")?;
+                        let price = extract(skin_data, "price")?;
+
+                        Some(Skin { id, price })
+                    })
+                    .collect();
+
+                Ok(skins)
+            }
             Some(_) => bail!("'list' field is not an array"),
             None => bail!("Response does not contain a 'list' field"),
         }
