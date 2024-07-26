@@ -5,7 +5,7 @@ use log::info;
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::env;
-use time::{Date, format_description};
+use time::{format_description, Date};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -22,7 +22,7 @@ pub(crate) struct Skin {
 }
 
 #[derive(Debug)]
-pub struct PriceSummary { 
+pub struct PriceSummary {
     pub date: Date,
     pub price_avg: i64,
     pub skin_id: i64,
