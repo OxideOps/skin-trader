@@ -66,7 +66,7 @@ impl Api {
             client: Client::new(),
         }
     }
-    
+
     async fn get_response(&self, url: &str, payload: Value) -> Result<Value> {
         let response = self
             .client
@@ -77,7 +77,7 @@ impl Api {
             .await?
             .json::<Value>()
             .await?;
-        
+
         Ok(response)
     }
 
@@ -121,28 +121,31 @@ impl Api {
             _ => bail!("Expected array response"),
         }
     }
-    
+
     async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
         let url = format!("{BASE_URL}/market/search/730");
-        
+
         let payload = json!({
             "limit": limit,
             "offset": offset,
         });
-        
+
         let response = self.get_response(&url, payload).await?;
-        
+
         match response.get("list") {
             Some(Value::Array(vec)) => {
-                let skins = vec.iter().filter_map(|skin_data| {
-                    let id = extract(skin_data, "id")?;
-                    let price = extract(skin_data, "price")?;
-            
-                    Some(Skin { id, price })
-                }).collect();
-                
+                let skins = vec
+                    .iter()
+                    .filter_map(|skin_data| {
+                        let id = extract(skin_data, "id")?;
+                        let price = extract(skin_data, "price")?;
+
+                        Some(Skin { id, price })
+                    })
+                    .collect();
+
                 Ok(skins)
-            },
+            }
             Some(_) => bail!("'list' field is not an array"),
             None => bail!("Response does not contain a 'list' field"),
         }
