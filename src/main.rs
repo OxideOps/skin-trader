@@ -7,8 +7,8 @@ use crate::api::Api;
 use crate::db::Database;
 use anyhow::Result;
 use env_logger::{Builder, Env};
-use tokio::signal;
 use scheduler::Scheduler;
+use tokio::signal;
 
 fn setup_env() -> Result<()> {
     // Logger

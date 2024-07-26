@@ -24,7 +24,7 @@ impl Scheduler {
                     .ok();
             })
         })?;
-        
+
         self.scheduler.add(job).await?;
         Ok(())
     }
