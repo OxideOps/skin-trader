@@ -96,7 +96,7 @@ impl Api {
         });
 
         match self.get_response(&url, payload).await? {
-            Value::Array(vec) => {
+            Value::Array(vec) => { 
                 let summaries = vec
                     .iter()
                     .filter_map(|item| {
