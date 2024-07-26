@@ -22,7 +22,7 @@ pub(crate) struct Skin {
 }
 
 #[derive(Debug)]
-pub struct PriceSummary {
+pub struct PriceSummary { 
     pub date: Date,
     pub price_avg: i64,
     pub skin_id: i64,
