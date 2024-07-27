@@ -1,7 +1,6 @@
 use anyhow::Result;
 use sqlx::{
-    postgres::{PgPoolOptions, PgQueryResult},
-    types::BigDecimal,
+    postgres::PgPoolOptions,
     PgPool,
 };
 use std::env;
