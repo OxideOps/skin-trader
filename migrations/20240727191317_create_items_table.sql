@@ -2,7 +2,7 @@ CREATE TABLE items (
     id SERIAL PRIMARY KEY,
     skin_id BIGINT NOT NULL,
     price BIGINT NOT NULL,
-    float_value DECIMAL(10, 8) NOT NULL,
+    float_value DOUBLE PRECISION NOT NULL,
     created_at DATE
 );
 

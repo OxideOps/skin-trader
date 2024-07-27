@@ -22,6 +22,13 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
+    
+    let skin_ids = api.fetch_skins().await?;
+    
+    for id in skin_ids {
+        let sales = api.fetch_sales(id).await?;
+        db.store_sales_to_items_table(id, sales).await?;
+    }
 
     Ok(())
 }

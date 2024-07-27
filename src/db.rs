@@ -1,9 +1,12 @@
 use anyhow::Result;
 use sqlx::{
     postgres::{PgPoolOptions, PgQueryResult},
+    types::BigDecimal,
     PgPool,
 };
 use std::env;
+
+use crate::api::Sale;
 
 const MAX_CONNECTIONS: u32 = 5;
 
@@ -21,5 +24,23 @@ impl Database {
 
         log::info!("Connected to database");
         Ok(Self { pool })
+    }
+
+    pub async fn store_sales_to_items_table(&self, skin_id: i64, sales: Vec<Sale>) -> Result<()> {
+        for sale in &sales {
+            sqlx::query!(
+                r#"
+                INSERT INTO items (skin_id, created_at, float_value, price)
+                VALUES ($1, $2, $3, $4)
+                "#,
+                skin_id,
+                sale.created_at,
+                sale.float_value,
+                sale.price
+            )
+            .execute(&self.pool)
+            .await?;
+        }
+        Ok(())
     }
 }
