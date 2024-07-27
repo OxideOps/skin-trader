@@ -24,7 +24,9 @@ impl Database {
     }
 
     pub async fn store_skin(&self, skin: &Skin) -> Result<PgQueryResult> {
-        let result = sqlx::query!("SELECT update_skin_price_ema($1, $2)", skin.id, skin.price)
+        let id: i64 = skin.id.parse().unwrap();
+        
+        let result = sqlx::query!("SELECT update_skin_price_ema($1, $2)", id, skin.price)
             .execute(&self.pool)
             .await?;
 

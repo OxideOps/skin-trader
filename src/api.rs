@@ -22,6 +22,11 @@ pub(crate) struct Skin {
     pub price: i64,
 }
 
+#[derive(Debug, Deserialize)]
+struct SkinResponse {
+    list: Vec<Skin>,
+}
+
 fn deserialize_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
     D: Deserializer<'de>,
@@ -93,7 +98,8 @@ impl Api {
         });
 
         let response = self.get_response(&url, payload).await?;
-        Ok(serde_json::from_value(response.get("list").unwrap().to_owned())?)
+        
+        Ok(serde_json::from_value::<SkinResponse>(response)?.list)
     }
 
     pub async fn get_skins(&self) -> Result<Vec<Skin>> {
