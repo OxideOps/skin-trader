@@ -25,24 +25,6 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
-
-    let v = api.fetch_skins().await?;
-    dbg!(v.len());
-
-    // let val = api
-    //     .get_price_summary(
-    //         30,
-    //         Date::from_calendar_date(2024, Month::January, 1)?,
-    //         Date::from_calendar_date(2024, Month::December, 31)?,
-    //     )
-    //     .await?;
-    // dbg!(val);
-
-    // let scheduler = Scheduler::new().await?;
-    // scheduler.setup_jobs(api, db).await?;
-    // scheduler.start().await?;
-    // signal::ctrl_c().await?;
-    // scheduler.shutdown().await?;
-
+    
     Ok(())
 }
