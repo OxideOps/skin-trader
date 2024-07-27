@@ -43,8 +43,7 @@ where
     let s = String::deserialize(deserializer)?;
     let format = format_description::parse("[year]-[month]-[day]")
         .map_err(|e| serde::de::Error::custom(e.to_string()))?;
-    Date::parse(&s, &format)
-        .map_err(|e| serde::de::Error::custom(e.to_string()))
+    Date::parse(&s, &format).map_err(|e| serde::de::Error::custom(e.to_string()))
 }
 
 #[derive(Debug, Deserialize)]
