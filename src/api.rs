@@ -35,6 +35,13 @@ pub(crate) struct Api {
     client: Client,
 }
 
+#[derive(Debug, Deserialize)]
+pub(crate) struct Sale {
+    created_at: String,
+    float_value: f64,
+    price: i64,
+}
+
 impl Api {
     pub fn new() -> Self {
         Self {
@@ -47,7 +54,7 @@ impl Api {
             .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .send()
             .await?;
-
+        
         let status = response.status();
         if !status.is_success() {
             let error_body = response.text().await?;
@@ -67,6 +74,18 @@ impl Api {
 
     pub async fn get<T: DeserializeOwned>(&self, url: impl IntoUrl) -> Result<T> {
         self.request(self.client.get(url)).await
+    }
+    
+    pub(crate) async fn fetch_sales(&self, skin_id: i64) -> Result<Vec<Sale>> {
+        let url = format!("{BASE_URL}/market/pricing/list");
+        
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "skin_id": skin_id,
+            "limit": MAX_LIMIT,
+        });
+        
+        Ok(self.post(url, &payload).await?)
     }
 
     pub(crate) async fn fetch_skins(&self) -> Result<Vec<i64>> {
