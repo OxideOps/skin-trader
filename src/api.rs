@@ -2,37 +2,39 @@ use anyhow::{bail, Context, Result};
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
+use sqlx::types::time::{Date, OffsetDateTime};
 use std::env;
-use time::{format_description, Date};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
-// 100000 is technically the max, just use this for now because of request caps
-const MAX_OFFSET: usize = 2000;
 
 const CS2_APP_ID: u32 = 730;
-const DOTA2_APP_ID: u32 = 570;
 
-fn deserialize_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
+fn deserialize_sqlx_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    let format = format_description::parse("[year]-[month]-[day]")
-        .map_err(|e| serde::de::Error::custom(e.to_string()))?;
-    Date::parse(&s, &format).map_err(|e| serde::de::Error::custom(e.to_string()))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PriceSummary {
-    #[serde(deserialize_with = "deserialize_date")]
-    pub date: Date,
-    pub price_avg: i64,
+    let datetime = OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339)
+        .map_err(serde::de::Error::custom)?;
+    let date = datetime.date();
+    Ok(
+        Date::from_calendar_date(date.year(), date.month(), date.day())
+            .map_err(serde::de::Error::custom)?,
+    )
 }
 
 #[derive(Clone)]
 pub(crate) struct Api {
     client: Client,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Sale {
+    #[serde(deserialize_with = "deserialize_sqlx_date")]
+    created_at: Date,
+    float_value: f64,
+    price: i64,
 }
 
 impl Api {
@@ -69,6 +71,18 @@ impl Api {
         self.request(self.client.get(url)).await
     }
 
+    pub(crate) async fn fetch_sales(&self, skin_id: i64) -> Result<Vec<Sale>> {
+        let url = format!("{BASE_URL}/market/pricing/list");
+
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "skin_id": skin_id,
+            "limit": MAX_LIMIT,
+        });
+
+        Ok(self.post(url, &payload).await?)
+    }
+
     pub(crate) async fn fetch_skins(&self) -> Result<Vec<i64>> {
         #[derive(Debug, Deserialize)]
         pub(crate) struct SkinID {
@@ -80,24 +94,6 @@ impl Api {
         let skin_ids: Vec<SkinID> = self.get(url).await?;
 
         Ok(skin_ids.into_iter().map(|s| s.id).collect())
-    }
-
-    pub(crate) async fn fetch_price_summary(
-        &self,
-        skin_id: u32,
-        date_from: Date,
-        date_to: Date,
-    ) -> Result<Vec<PriceSummary>> {
-        let url = format!("{BASE_URL}/market/pricing/summary");
-
-        let payload = json!({
-            "app_id": CS2_APP_ID,
-            "skin_id": skin_id,
-            "date_from": date_from.to_string(),
-            "date_to": date_to.to_string(),
-        });
-
-        Ok(self.post(url, &payload).await?)
     }
 
     pub async fn fetch_market_data<T: DeserializeOwned>(
