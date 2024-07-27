@@ -2,8 +2,8 @@ use anyhow::{bail, Context, Result};
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
-use std::env;
 use sqlx::types::time::{Date, OffsetDateTime};
+use std::env;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -18,8 +18,10 @@ where
     let datetime = OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339)
         .map_err(serde::de::Error::custom)?;
     let date = datetime.date();
-    Ok(Date::from_calendar_date(date.year(), date.month(), date.day())
-        .map_err(serde::de::Error::custom)?)
+    Ok(
+        Date::from_calendar_date(date.year(), date.month(), date.day())
+            .map_err(serde::de::Error::custom)?,
+    )
 }
 
 #[derive(Clone)]
