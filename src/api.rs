@@ -1,4 +1,4 @@
-use anyhow::{bail,Result};
+use anyhow::{bail, Result};
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};

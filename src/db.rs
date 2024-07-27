@@ -1,8 +1,5 @@
 use anyhow::Result;
-use sqlx::{
-    postgres::PgPoolOptions,
-    PgPool,
-};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
 
 use crate::api::Sale;
