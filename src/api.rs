@@ -1,5 +1,5 @@
 use crate::progress_bar::ProgressTracker;
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use futures::future::join_all;
 use log::info;
 use reqwest::{Client, IntoUrl};
@@ -65,41 +65,41 @@ impl Api {
         }
     }
 
-    async fn post<T, U>(&self, url: U, payload: Value) -> Result<T> 
-    where 
-        T: DeserializeOwned,
-        U: IntoUrl
-    {
-        let response = self
-            .client
-            .post(url)
-            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
-            .json(&payload)
+    async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
+        let response = builder
+            .header(
+                "x-apikey",
+                env::var("BITSKIN_API_KEY").context("Failed to get API key")?,
+            )
             .send()
-            .await?
-            .json::<T>()
             .await?;
 
-        Ok(response)
-    }
-    
-    async fn get<T, U>(&self, url: U) -> Result<T> 
-    where 
-        T: DeserializeOwned,
-        U: IntoUrl
-    {
-        let response = self
-            .client
-            .post(url)
-            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
-            .send()
-            .await?
-            .json::<T>()
-            .await?;
+        let status = response.status();
+        if !status.is_success() {
+            let error_body = response.text().await?;
+            bail!(
+                "API request failed: Status {}, Body: {}",
+                status,
+                error_body
+            );
+        }
 
-        Ok(response)
+        Ok(response.json::<T>().await?)
     }
-    
+
+    pub async fn post<T: DeserializeOwned>(&self, url: impl IntoUrl, payload: &Value) -> Result<T> {
+        self.request(self.client.post(url).json(payload)).await
+    }
+
+    pub async fn get<T: DeserializeOwned>(&self, url: impl IntoUrl) -> Result<T> {
+        self.request(self.client.get(url)).await
+    }
+
+    pub(crate) async fn get_all_skins_cs2(&self) -> Result<Skins> {
+        let url = format!("{BASE_URL}/market/skin/{CS2_APP_ID}");
+        Ok(self.get(url).await?)
+    }
+
     pub(crate) async fn get_price_summary(
         &self,
         skin_id: u32,
@@ -115,7 +115,7 @@ impl Api {
             "date_to": date_to.to_string(),
         });
 
-        Ok(self.post(&url, payload).await?)
+        Ok(self.post(url, &payload).await?)
     }
 
     pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Skins> {
@@ -126,7 +126,7 @@ impl Api {
             "offset": offset,
         });
 
-        Ok(self.post(&url, payload).await?)
+        Ok(self.post(url, &payload).await?)
     }
 
     pub async fn get_skins(&self) -> Result<Vec<Skin>> {

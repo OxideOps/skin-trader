@@ -26,6 +26,9 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
 
+    let v = api.get_all_skins_cs2().await?;
+    dbg!(v);
+
     // let val = api
     //     .get_price_summary(
     //         30,
