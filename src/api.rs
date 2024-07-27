@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
@@ -32,9 +32,9 @@ pub(crate) struct Api {
 #[derive(Debug, Deserialize)]
 pub(crate) struct Sale {
     #[serde(deserialize_with = "deserialize_sqlx_date")]
-    created_at: Date,
-    float_value: f64,
-    price: i64,
+    pub created_at: Date,
+    pub float_value: f64,
+    pub price: i64,
 }
 
 impl Api {
