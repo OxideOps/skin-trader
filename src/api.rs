@@ -23,7 +23,7 @@ pub(crate) struct Skin {
 }
 
 #[derive(Debug, Deserialize)]
-struct SkinResponse {
+struct Skins {
     list: Vec<Skin>,
 }
 
@@ -86,11 +86,10 @@ impl Api {
         });
 
         let response = self.get_response(&url, payload).await?;
-        let summaries: Vec<PriceSummary> = serde_json::from_value(response)?;
-        Ok(summaries)
+        Ok(serde_json::from_value(response)?)
     }
 
-    pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
+    pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Skins> {
         let url = format!("{BASE_URL}/market/search/730");
         let payload = serde_json::json!({
             "limit": limit,
@@ -99,7 +98,7 @@ impl Api {
 
         let response = self.get_response(&url, payload).await?;
         
-        Ok(serde_json::from_value::<SkinResponse>(response)?.list)
+        Ok(serde_json::from_value::<Skins>(response)?)
     }
 
     pub async fn get_skins(&self) -> Result<Vec<Skin>> {
