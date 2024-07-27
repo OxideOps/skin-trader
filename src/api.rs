@@ -1,7 +1,4 @@
-use crate::progress_bar::ProgressTracker;
 use anyhow::{bail, Context, Result};
-use futures::future::join_all;
-use log::info;
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
