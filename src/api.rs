@@ -106,7 +106,7 @@ impl Api {
         });
 
         let response = self.get_response(&url, payload).await?;
-        
+
         Ok(serde_json::from_value(response)?)
     }
 

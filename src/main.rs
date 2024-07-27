@@ -8,8 +8,8 @@ use crate::db::Database;
 use anyhow::Result;
 use env_logger::{Builder, Env};
 use scheduler::Scheduler;
-use tokio::signal;
 use time::{Date, Month};
+use tokio::signal;
 
 fn setup_env() -> Result<()> {
     // Logger
@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
-    
+
     // let val = api
     //     .get_price_summary(
     //         30,
