@@ -1,5 +1,5 @@
 use crate::progress_bar::ProgressTracker;
-use anyhow::{bail, Result};
+use anyhow::Result;
 use futures::future::join_all;
 use log::info;
 use reqwest::Client;
@@ -41,8 +41,10 @@ where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    let format = format_description::parse("[year]-[month]-[day]").unwrap();
-    Date::parse(&s, &format).map_err(serde::de::Error::custom)
+    let format = format_description::parse("[year]-[month]-[day]")
+        .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+    Date::parse(&s, &format)
+        .map_err(|e| serde::de::Error::custom(e.to_string()))
 }
 
 #[derive(Debug, Deserialize)]
