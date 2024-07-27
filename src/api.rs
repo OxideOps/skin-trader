@@ -74,7 +74,7 @@ impl Api {
             .await?
             .json::<T>()
             .await?;
-        
+
         Ok(response)
     }
     pub(crate) async fn get_price_summary(
