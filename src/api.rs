@@ -65,7 +65,7 @@ impl Api {
         }
     }
 
-    async fn get_response<T: DeserializeOwned>(&self, url: &str, payload: Value) -> Result<T> {
+    async fn post<T: DeserializeOwned>(&self, url: &str, payload: Value) -> Result<T> {
         let response = self
             .client
             .post(url)
@@ -78,6 +78,7 @@ impl Api {
 
         Ok(response)
     }
+    
     pub(crate) async fn get_price_summary(
         &self,
         skin_id: u32,
@@ -93,7 +94,7 @@ impl Api {
             "date_to": date_to.to_string(),
         });
 
-        Ok(self.get_response(&url, payload).await?)
+        Ok(self.post(&url, payload).await?)
     }
 
     pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Skins> {
@@ -104,7 +105,7 @@ impl Api {
             "offset": offset,
         });
 
-        Ok(self.get_response(&url, payload).await?)
+        Ok(self.post(&url, payload).await?)
     }
 
     pub async fn get_skins(&self) -> Result<Vec<Skin>> {
