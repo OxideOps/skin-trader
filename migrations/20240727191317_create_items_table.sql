@@ -1,6 +1,6 @@
 CREATE TABLE items (
     id SERIAL PRIMARY KEY,
-    created_at TIMESTAMP WITH TIME ZONE,
+    created_at DATE,
     float_value DECIMAL(10, 8) NOT NULL,
     price BIGINT NOT NULL,
     skin_id BIGINT NOT NULL
