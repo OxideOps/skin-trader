@@ -103,7 +103,11 @@ impl Api {
         Ok(self.post(url, &payload).await?)
     }
 
-    pub async fn fetch_market_data<T: DeserializeOwned>(&self, limit: usize, offset: usize) -> Result<T> {
+    pub async fn fetch_market_data<T: DeserializeOwned>(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<T> {
         let url = format!("{BASE_URL}/market/search/730");
 
         let payload = serde_json::json!({
@@ -112,4 +116,5 @@ impl Api {
         });
 
         Ok(self.post(url, &payload).await?)
+    }
 }
