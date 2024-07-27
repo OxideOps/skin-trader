@@ -7,9 +7,6 @@ use crate::api::Api;
 use crate::db::Database;
 use anyhow::Result;
 use env_logger::{Builder, Env};
-use scheduler::Scheduler;
-use time::{Date, Month};
-use tokio::signal;
 
 fn setup_env() -> Result<()> {
     // Logger
@@ -25,24 +22,6 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
-
-    let v = api.get_all_skins_cs2().await?;
-    dbg!(v);
-
-    // let val = api
-    //     .get_price_summary(
-    //         30,
-    //         Date::from_calendar_date(2024, Month::January, 1)?,
-    //         Date::from_calendar_date(2024, Month::December, 31)?,
-    //     )
-    //     .await?;
-    // dbg!(val);
-
-    let scheduler = Scheduler::new().await?;
-    scheduler.setup_jobs(api, db).await?;
-    scheduler.start().await?;
-    signal::ctrl_c().await?;
-    scheduler.shutdown().await?;
 
     Ok(())
 }

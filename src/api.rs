@@ -1,7 +1,4 @@
-use crate::progress_bar::ProgressTracker;
 use anyhow::{bail, Context, Result};
-use futures::future::join_all;
-use log::info;
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
@@ -17,23 +14,8 @@ const CS2_APP_ID: u32 = 730;
 const DOTA2_APP_ID: u32 = 570;
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct Skin {
-    pub id: String,
-    pub price: i64,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct Skins {
-    list: Vec<Skin>,
-}
-
-impl IntoIterator for Skins {
-    type Item = Skin;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.list.into_iter()
-    }
+pub(crate) struct SkinID {
+    pub id: i64,
 }
 
 fn deserialize_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
@@ -67,10 +49,7 @@ impl Api {
 
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
         let response = builder
-            .header(
-                "x-apikey",
-                env::var("BITSKIN_API_KEY").context("Failed to get API key")?,
-            )
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .send()
             .await?;
 
@@ -95,12 +74,12 @@ impl Api {
         self.request(self.client.get(url)).await
     }
 
-    pub(crate) async fn get_all_skins_cs2(&self) -> Result<Skins> {
+    pub(crate) async fn fetch_skins(&self) -> Result<Vec<SkinID>> {
         let url = format!("{BASE_URL}/market/skin/{CS2_APP_ID}");
         Ok(self.get(url).await?)
     }
 
-    pub(crate) async fn get_price_summary(
+    pub(crate) async fn fetch_price_summary(
         &self,
         skin_id: u32,
         date_from: Date,
@@ -118,7 +97,11 @@ impl Api {
         Ok(self.post(url, &payload).await?)
     }
 
-    pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Skins> {
+    pub async fn fetch_market_data<T: DeserializeOwned>(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<T> {
         let url = format!("{BASE_URL}/market/search/730");
 
         let payload = serde_json::json!({
@@ -127,34 +110,5 @@ impl Api {
         });
 
         Ok(self.post(url, &payload).await?)
-    }
-
-    pub async fn get_skins(&self) -> Result<Vec<Skin>> {
-        let total_batches = (MAX_OFFSET / MAX_LIMIT) + 1;
-        let progress_tracker = ProgressTracker::new(
-            total_batches as u64,
-            "[{elapsed_precise}] {bar:40.cyan/blue} {pos}/{len} batches {msg}",
-        );
-
-        let futures = (0..=MAX_OFFSET).step_by(MAX_LIMIT).map(|offset| {
-            let tracker = progress_tracker.clone();
-            async move {
-                let result = self._get_skins(MAX_LIMIT, offset).await;
-                tracker.increment().await;
-                result
-            }
-        });
-
-        info!("Fetching skins data...");
-        let results = join_all(futures).await;
-
-        let mut all_results = Vec::new();
-        for batch in results {
-            all_results.extend(batch?);
-        }
-
-        progress_tracker.finish("Done!".to_string()).await;
-        info!("All skins data fetched successfully");
-        Ok(all_results)
     }
 }
