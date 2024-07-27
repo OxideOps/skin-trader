@@ -13,11 +13,6 @@ const MAX_OFFSET: usize = 2000;
 const CS2_APP_ID: u32 = 730;
 const DOTA2_APP_ID: u32 = 570;
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct SkinID {
-    pub id: i64,
-}
-
 fn deserialize_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
     D: Deserializer<'de>,
@@ -74,9 +69,17 @@ impl Api {
         self.request(self.client.get(url)).await
     }
 
-    pub(crate) async fn fetch_skins(&self) -> Result<Vec<SkinID>> {
+    pub(crate) async fn fetch_skins(&self) -> Result<Vec<i64>> {
+        #[derive(Debug, Deserialize)]
+        pub(crate) struct SkinID {
+            id: i64,
+        }
+
         let url = format!("{BASE_URL}/market/skin/{CS2_APP_ID}");
-        Ok(self.get(url).await?)
+
+        let skin_ids: Vec<SkinID> = self.get(url).await?;
+
+        Ok(skin_ids.into_iter().map(|s| s.id).collect())
     }
 
     pub(crate) async fn fetch_price_summary(
