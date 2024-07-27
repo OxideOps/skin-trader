@@ -3,7 +3,7 @@ use anyhow::{bail, Result};
 use futures::future::join_all;
 use log::info;
 use reqwest::Client;
-use serde::{Deserialize, Deserializer};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
 use std::env;
 use time::{format_description, Date};
@@ -64,7 +64,7 @@ impl Api {
         }
     }
 
-    async fn get_response(&self, url: &str, payload: Value) -> Result<Value> {
+    async fn get_response<T: DeserializeOwned>(&self, url: &str, payload: Value) -> Result<T> {
         let response = self
             .client
             .post(url)
@@ -72,9 +72,9 @@ impl Api {
             .json(&payload)
             .send()
             .await?
-            .json::<Value>()
+            .json::<T>()
             .await?;
-
+        
         Ok(response)
     }
     pub(crate) async fn get_price_summary(
@@ -92,9 +92,7 @@ impl Api {
             "date_to": date_to.to_string(),
         });
 
-        let response = self.get_response(&url, payload).await?;
-
-        Ok(serde_json::from_value(response)?)
+        Ok(self.get_response(&url, payload).await?)
     }
 
     pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Skins> {
@@ -105,9 +103,7 @@ impl Api {
             "offset": offset,
         });
 
-        let response = self.get_response(&url, payload).await?;
-
-        Ok(serde_json::from_value(response)?)
+        Ok(self.get_response(&url, payload).await?)
     }
 
     pub async fn get_skins(&self) -> Result<Vec<Skin>> {
