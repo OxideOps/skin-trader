@@ -3,6 +3,7 @@ use anyhow::{bail, Result};
 use futures::future::join_all;
 use log::info;
 use reqwest::Client;
+use serde::{Deserialize, Deserializer};
 use serde_json::{json, Value};
 use std::env;
 use time::{format_description, Date};
@@ -15,48 +16,45 @@ const MAX_OFFSET: usize = 2000;
 const CS2_APP_ID: u32 = 730;
 const DOTA2_APP_ID: u32 = 570;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct Skin {
-    pub id: i64,
+    pub id: String,
     pub price: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+pub(crate) struct Skins {
+    list: Vec<Skin>,
+}
+
+impl IntoIterator for Skins {
+    type Item = Skin;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.list.into_iter()
+    }
+}
+
+fn deserialize_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let format = format_description::parse("[year]-[month]-[day]").unwrap();
+    Date::parse(&s, &format).map_err(serde::de::Error::custom)
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PriceSummary {
+    #[serde(deserialize_with = "deserialize_date")]
     pub date: Date,
     pub price_avg: i64,
-    pub skin_id: i64,
 }
 
 #[derive(Clone)]
 pub(crate) struct Api {
     client: Client,
-}
-
-trait FromValue: Sized {
-    fn from_value(v: &Value) -> Option<Self>;
-}
-
-impl FromValue for i64 {
-    fn from_value(v: &Value) -> Option<Self> {
-        v.as_i64()
-    }
-}
-
-impl FromValue for Date {
-    fn from_value(v: &Value) -> Option<Self> {
-        v.as_str().and_then(|s| {
-            let format = format_description::parse("[year]-[month]-[day]").ok()?;
-            Date::parse(s, &format).ok()
-        })
-    }
-}
-
-fn extract<T: FromValue>(value: &Value, field: &str) -> Option<T> {
-    value.get(field).and_then(T::from_value).or_else(|| {
-        log::error!("Invalid or missing '{}' in data", field);
-        None
-    })
 }
 
 impl Api {
@@ -79,7 +77,6 @@ impl Api {
 
         Ok(response)
     }
-
     pub(crate) async fn get_price_summary(
         &self,
         skin_id: u32,
@@ -95,52 +92,22 @@ impl Api {
             "date_to": date_to.to_string(),
         });
 
-        match self.get_response(&url, payload).await? {
-            Value::Array(vec) => {
-                let summaries = vec
-                    .iter()
-                    .filter_map(|item| {
-                        Some(PriceSummary {
-                            date: extract(&item, "date")?,
-                            price_avg: extract(&item, "price_avg")?,
-                            skin_id: extract(&item, "skin_id")?,
-                        })
-                    })
-                    .collect();
+        let response = self.get_response(&url, payload).await?;
 
-                Ok(summaries)
-            }
-            _ => bail!("Expected array response"),
-        }
+        Ok(serde_json::from_value(response)?)
     }
 
-    async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Vec<Skin>> {
+    pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Skins> {
         let url = format!("{BASE_URL}/market/search/730");
 
-        let payload = json!({
+        let payload = serde_json::json!({
             "limit": limit,
             "offset": offset,
         });
 
         let response = self.get_response(&url, payload).await?;
 
-        match response.get("list") {
-            Some(Value::Array(vec)) => {
-                let skins = vec
-                    .iter()
-                    .filter_map(|skin_data| {
-                        Some(Skin {
-                            id: extract(skin_data, "id")?,
-                            price: extract(skin_data, "price")?,
-                        })
-                    })
-                    .collect();
-
-                Ok(skins)
-            }
-            Some(_) => bail!("'list' field is not an array"),
-            None => bail!("Response does not contain a 'list' field"),
-        }
+        Ok(serde_json::from_value(response)?)
     }
 
     pub async fn get_skins(&self) -> Result<Vec<Skin>> {

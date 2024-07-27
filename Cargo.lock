@@ -1577,6 +1577,7 @@ dependencies = [
  "indicatif",
  "log",
  "reqwest",
+ "serde",
  "serde_json",
  "sqlx",
  "time",
