@@ -1,4 +1,3 @@
-use crate::api::Skin;
 use anyhow::{Context, Result};
 use sqlx::{
     postgres::{PgPoolOptions, PgQueryResult},
@@ -21,17 +20,5 @@ impl Database {
 
         log::info!("Connected to database");
         Ok(Self { pool })
-    }
-
-    pub async fn store_skin(&self, skin: &Skin) -> Result<PgQueryResult> {
-        let result = sqlx::query!(
-            "SELECT update_skin_price_ema($1, $2)",
-            skin.id.parse::<i64>()?,
-            skin.price
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(result)
     }
 }

@@ -26,8 +26,8 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
 
-    let v = api.get_all_skins_cs2().await?;
-    dbg!(v);
+    let v = api.fetch_skins().await?;
+    dbg!(v.len());
 
     // let val = api
     //     .get_price_summary(
@@ -38,11 +38,11 @@ async fn main() -> Result<()> {
     //     .await?;
     // dbg!(val);
 
-    let scheduler = Scheduler::new().await?;
-    scheduler.setup_jobs(api, db).await?;
-    scheduler.start().await?;
-    signal::ctrl_c().await?;
-    scheduler.shutdown().await?;
+    // let scheduler = Scheduler::new().await?;
+    // scheduler.setup_jobs(api, db).await?;
+    // scheduler.start().await?;
+    // signal::ctrl_c().await?;
+    // scheduler.shutdown().await?;
 
     Ok(())
 }
