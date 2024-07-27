@@ -50,7 +50,6 @@ pub struct PriceSummary {
     #[serde(deserialize_with = "deserialize_date")]
     pub date: Date,
     pub price_avg: i64,
-    pub skin_id: i64,
 }
 
 #[derive(Clone)]
@@ -78,7 +77,6 @@ impl Api {
 
         Ok(response)
     }
-
     pub(crate) async fn get_price_summary(
         &self,
         skin_id: u32,
@@ -95,11 +93,13 @@ impl Api {
         });
 
         let response = self.get_response(&url, payload).await?;
+
         Ok(serde_json::from_value(response)?)
     }
 
     pub async fn _get_skins(&self, limit: usize, offset: usize) -> Result<Skins> {
         let url = format!("{BASE_URL}/market/search/730");
+
         let payload = serde_json::json!({
             "limit": limit,
             "offset": offset,
