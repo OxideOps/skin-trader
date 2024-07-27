@@ -1,9 +1,11 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use sqlx::{
     postgres::{PgPoolOptions, PgQueryResult},
     PgPool,
 };
 use std::env;
+
+const MAX_CONNECTIONS: u32 = 5;
 
 #[derive(Clone)]
 pub(crate) struct Database {
@@ -13,10 +15,9 @@ pub(crate) struct Database {
 impl Database {
     pub async fn new() -> Result<Self> {
         let pool = PgPoolOptions::new()
-            .max_connections(5)
+            .max_connections(MAX_CONNECTIONS)
             .connect(&env::var("DATABASE_URL")?)
-            .await
-            .context("Failed to connect to database")?;
+            .await?;
 
         log::info!("Connected to database");
         Ok(Self { pool })
