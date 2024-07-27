@@ -76,9 +76,10 @@ impl Api {
         }
 
         let url = format!("{BASE_URL}/market/skin/{CS2_APP_ID}");
-        let result: Vec<SkinID> = self.get(url).await?;
 
-        Ok(result.iter().map(|skin_id| skin_id.id).collect())
+        let skin_ids: Vec<SkinID> = self.get(url).await?;
+
+        Ok(skin_ids.iter().map(|skin_id| skin_id.id).collect())
     }
 
     pub(crate) async fn fetch_price_summary(
