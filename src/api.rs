@@ -23,8 +23,17 @@ pub(crate) struct Skin {
 }
 
 #[derive(Debug, Deserialize)]
-struct Skins {
+pub(crate) struct Skins {
     list: Vec<Skin>,
+}
+
+impl IntoIterator for Skins {
+    type Item = Skin;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.list.into_iter()
+    }
 }
 
 fn deserialize_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
@@ -98,7 +107,7 @@ impl Api {
 
         let response = self.get_response(&url, payload).await?;
         
-        Ok(serde_json::from_value::<Skins>(response)?)
+        Ok(serde_json::from_value(response)?)
     }
 
     pub async fn get_skins(&self) -> Result<Vec<Skin>> {
