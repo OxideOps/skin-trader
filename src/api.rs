@@ -112,5 +112,4 @@ impl Api {
         });
 
         Ok(self.post(url, &payload).await?)
-    }
 }
