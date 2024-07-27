@@ -70,8 +70,15 @@ impl Api {
     }
 
     pub(crate) async fn fetch_skins(&self) -> Result<Vec<i64>> {
+        #[derive(Debug, Deserialize)]
+        pub(crate) struct SkinID {
+            id: i64,
+        }
+
         let url = format!("{BASE_URL}/market/skin/{CS2_APP_ID}");
-        Ok(self.get(url).await?)
+        let result: Vec<SkinID> = self.get(url).await?;
+
+        Ok(result.iter().map(|skin_id| skin_id.id).collect())
     }
 
     pub(crate) async fn fetch_price_summary(
