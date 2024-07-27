@@ -79,7 +79,7 @@ impl Api {
 
         let skin_ids: Vec<SkinID> = self.get(url).await?;
 
-        Ok(skin_ids.iter().map(|skin_id| skin_id.id).collect())
+        Ok(skin_ids.into_iter().map(|s| s.id).collect())
     }
 
     pub(crate) async fn fetch_price_summary(
