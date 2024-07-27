@@ -2,7 +2,7 @@ use crate::progress_bar::ProgressTracker;
 use anyhow::Result;
 use futures::future::join_all;
 use log::info;
-use reqwest::Client;
+use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
 use std::env;
@@ -65,12 +65,33 @@ impl Api {
         }
     }
 
-    async fn post<T: DeserializeOwned>(&self, url: &str, payload: Value) -> Result<T> {
+    async fn post<T, U>(&self, url: U, payload: Value) -> Result<T> 
+    where 
+        T: DeserializeOwned,
+        U: IntoUrl
+    {
         let response = self
             .client
             .post(url)
             .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .json(&payload)
+            .send()
+            .await?
+            .json::<T>()
+            .await?;
+
+        Ok(response)
+    }
+    
+    async fn get<T, U>(&self, url: U) -> Result<T> 
+    where 
+        T: DeserializeOwned,
+        U: IntoUrl
+    {
+        let response = self
+            .client
+            .post(url)
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .send()
             .await?
             .json::<T>()
