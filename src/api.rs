@@ -52,10 +52,7 @@ impl Api {
 
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
         let response = builder
-            .header(
-                "x-apikey",
-                env::var("BITSKIN_API_KEY").context("Failed to get API key")?,
-            )
+            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .send()
             .await?;
 
