@@ -43,6 +43,16 @@ pub(crate) struct Sale {
 }
 
 #[derive(Debug, Deserialize)]
+pub(crate) struct Sales(Vec<Sale>);
+
+impl Sales {
+    pub fn average_price(&self) -> f64 {
+        let total_price: f64 = self.0.iter().map(|sale| sale.price).sum();
+        total_price / self.0.len() as f64
+    }
+}
+
+#[derive(Debug, Deserialize)]
 struct Sticker {
     image: Option<String>,
     name: String,

@@ -6,6 +6,7 @@ mod scheduler;
 use crate::api::Api;
 use crate::db::Database;
 use anyhow::Result;
+use api::Sales;
 use env_logger::{Builder, Env};
 
 fn setup_env() -> Result<()> {
@@ -22,6 +23,10 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
+    
+    let sales: Sales = api.fetch_sales(1).await?;
+    
+    dbg!(sales);
 
     Ok(())
 }
