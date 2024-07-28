@@ -3,10 +3,6 @@ use serde_json::Value;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
 
-
-
-use crate::api::Sale;
-
 const MAX_CONNECTIONS: u32 = 5;
 
 #[derive(Clone)]
