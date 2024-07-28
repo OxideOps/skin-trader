@@ -33,10 +33,10 @@ impl Database {
         )
         .execute(&self.pool)
         .await?;
-    
+
         Ok(())
     }
-    
+
     pub async fn select_json_sales(&self, skin_id: i32) -> Result<Value> {
         let record = sqlx::query!(
             r#"
@@ -48,7 +48,7 @@ impl Database {
         )
         .fetch_one(&self.pool)
         .await?;
-        
+
         Ok(record.json)
     }
 }
