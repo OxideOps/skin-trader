@@ -85,6 +85,7 @@ impl Api {
     }
 
     pub(crate) async fn fetch_sales<T: DeserializeOwned>(&self, skin_id: i32) -> Result<T> {
+        log::info!("Fetching sales for skin {skin_id}");
         let url = format!("{BASE_URL}/market/pricing/list");
 
         let payload = json!({
