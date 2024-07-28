@@ -22,6 +22,12 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
+    
+    let skin_ids = api.fetch_skins().await?;
+    let json = api.fetch_sales(skin_ids[0]).await?;
+    
+    db.insert_skin_json(skin_ids[0], json);
+    
 
     Ok(())
 }
