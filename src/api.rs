@@ -32,9 +32,22 @@ pub(crate) struct Api {
 #[derive(Debug, Deserialize)]
 pub(crate) struct Sale {
     #[serde(deserialize_with = "deserialize_sqlx_date")]
-    pub created_at: Date,
-    pub float_value: f64,
-    pub price: i64,
+    created_at: Date,
+    extras_1: Option<Value>,
+    float_value: f64,
+    paint_index: u32,
+    paint_seed: u32,
+    phase_id: Option<Value>,
+    price: f64,
+    stickers: Option<Vec<Sticker>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Sticker {
+    image: Option<String>,
+    name: String,
+    slot: u8,
+    wear: f64,
 }
 
 impl Api {
