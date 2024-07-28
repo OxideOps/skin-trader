@@ -23,11 +23,11 @@ impl Database {
 
     pub async fn insert_sales(&self, skin_id: i32, json: Value) -> Result<()> {
         sqlx::query!(
-            r#"
+            "
             INSERT INTO sales (skin_id, json)
             VALUES ($1, $2)
             ON CONFLICT (skin_id) DO NOTHING
-            "#,
+            ",
             skin_id,
             json
         )
@@ -38,16 +38,9 @@ impl Database {
     }
 
     pub async fn select_json_sales(&self, skin_id: i32) -> Result<Value> {
-        let record = sqlx::query!(
-            r#"
-            SELECT json
-            FROM sales
-            WHERE skin_id = $1
-            "#,
-            skin_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let record = sqlx::query!("SELECT json FROM sales WHERE skin_id = $1", skin_id)
+            .fetch_one(&self.pool)
+            .await?;
 
         Ok(record.json)
     }
