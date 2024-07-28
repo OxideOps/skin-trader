@@ -20,8 +20,8 @@ fn setup_env() -> Result<()> {
 async fn main() -> Result<()> {
     setup_env()?;
 
-    let api = Api::new();
-    let db = Database::new().await?;
+    let _api = Api::new();
+    let _db = Database::new().await?;
 
     Ok(())
 }

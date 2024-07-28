@@ -1,7 +1,5 @@
-use crate::api::Api;
-use crate::db::Database;
 use anyhow::Result;
-use tokio_cron_scheduler::{Job, JobScheduler};
+use tokio_cron_scheduler::JobScheduler;
 
 pub(crate) struct Scheduler {
     scheduler: JobScheduler,

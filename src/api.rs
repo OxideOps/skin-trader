@@ -73,7 +73,7 @@ impl Api {
             );
         }
 
-        Ok(response.json::<T>().await?)
+        Ok(response.json().await?)
     }
 
     pub async fn post<T: DeserializeOwned>(&self, url: impl IntoUrl, payload: &Value) -> Result<T> {
@@ -109,15 +109,11 @@ impl Api {
         Ok(skin_ids.into_iter().map(|s| s.id).collect())
     }
 
-    pub async fn fetch_market_data<T: DeserializeOwned>(
-        &self,
-        limit: usize,
-        offset: usize,
-    ) -> Result<T> {
-        let url = format!("{BASE_URL}/market/search/730");
+    pub async fn fetch_market_data<T: DeserializeOwned>(&self, offset: usize) -> Result<T> {
+        let url = format!("{BASE_URL}/market/search/{CS2_APP_ID}");
 
-        let payload = serde_json::json!({
-            "limit": limit,
+        let payload = json!({
+            "limit": MAX_LIMIT,
             "offset": offset,
         });
 
