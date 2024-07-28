@@ -1,8 +1,7 @@
 use anyhow::Result;
+use serde_json::Value;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
-
-use crate::api::Sale;
 
 const MAX_CONNECTIONS: u32 = 5;
 
@@ -22,21 +21,27 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn store_sales_to_items_table(&self, skin_id: i64, sales: Vec<Sale>) -> Result<()> {
-        for sale in &sales {
-            sqlx::query!(
-                r#"
-                INSERT INTO items (skin_id, created_at, float_value, price)
-                VALUES ($1, $2, $3, $4)
-                "#,
-                skin_id,
-                sale.created_at,
-                sale.float_value,
-                sale.price
-            )
-            .execute(&self.pool)
-            .await?;
-        }
+    pub async fn insert_sales(&self, skin_id: i32, json: Value) -> Result<()> {
+        sqlx::query!(
+            "
+            INSERT INTO sales (skin_id, json)
+            VALUES ($1, $2)
+            ON CONFLICT (skin_id) DO NOTHING
+            ",
+            skin_id,
+            json
+        )
+        .execute(&self.pool)
+        .await?;
+
         Ok(())
+    }
+
+    pub async fn select_json_sales(&self, skin_id: i32) -> Result<Value> {
+        let record = sqlx::query!("SELECT json FROM sales WHERE skin_id = $1", skin_id)
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(record.json)
     }
 }

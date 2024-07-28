@@ -71,7 +71,7 @@ impl Api {
         self.request(self.client.get(url)).await
     }
 
-    pub(crate) async fn fetch_sales(&self, skin_id: i64) -> Result<Vec<Sale>> {
+    pub(crate) async fn fetch_sales<T: DeserializeOwned>(&self, skin_id: i32) -> Result<T> {
         let url = format!("{BASE_URL}/market/pricing/list");
 
         let payload = json!({
@@ -83,10 +83,10 @@ impl Api {
         Ok(self.post(url, &payload).await?)
     }
 
-    pub(crate) async fn fetch_skins(&self) -> Result<Vec<i64>> {
+    pub(crate) async fn fetch_skins(&self) -> Result<Vec<i32>> {
         #[derive(Debug, Deserialize)]
         pub(crate) struct SkinID {
-            id: i64,
+            id: i32,
         }
 
         let url = format!("{BASE_URL}/market/skin/{CS2_APP_ID}");
