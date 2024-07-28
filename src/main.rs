@@ -1,5 +1,6 @@
 mod api;
 mod db;
+mod plotter;
 mod progress_bar;
 mod scheduler;
 
