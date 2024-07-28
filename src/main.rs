@@ -23,9 +23,9 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
-    
+
     let sales: Sales = api.fetch_sales(1).await?;
-    
+
     dbg!(sales);
 
     Ok(())
