@@ -1,4 +1,4 @@
 CREATE TABLE sales (
     skin_id SERIAL PRIMARY KEY,
-    json JSONB
+    json JSONB NOT NULL
 );

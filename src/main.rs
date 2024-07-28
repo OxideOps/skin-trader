@@ -23,11 +23,10 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
     
-    let skin_ids = api.fetch_skins().await?;
-    let json = api.fetch_sales(skin_ids[0]).await?;
+    let json = api.fetch_sales(720).await?;
+    db.insert_sale_json(720, json.clone()).await?;
+    let new_json = db.select_sale_json(720).await?;
     
-    db.insert_skin_json(skin_ids[0], json);
-    
-
+    assert_eq!(json, new_json);
     Ok(())
 }
