@@ -23,10 +23,5 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
     
-    let json = api.fetch_sales(720).await?;
-    db.insert_sales(720, json.clone()).await?;
-    let new_json = db.select_json_sales(720).await?;
-    
-    assert_eq!(json, new_json);
     Ok(())
 }
