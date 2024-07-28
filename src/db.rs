@@ -25,7 +25,7 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn insert_json_sale(&self, skin_id: i32, json: Value) -> Result<()> {
+    pub async fn insert_sales(&self, skin_id: i32, json: Value) -> Result<()> {
         sqlx::query!(
             r#"
             INSERT INTO sales (skin_id, json)
@@ -41,7 +41,7 @@ impl Database {
         Ok(())
     }
     
-    pub async fn select_json_sale(&self, skin_id: i32) -> Result<Value> {
+    pub async fn select_json_sales(&self, skin_id: i32) -> Result<Value> {
         let record = sqlx::query!(
             r#"
             SELECT json
