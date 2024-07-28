@@ -3,7 +3,7 @@ mod db;
 mod progress_bar;
 mod scheduler;
 
-use crate::api::{Api, Sale};
+use crate::api::Api;
 use crate::db::Database;
 use anyhow::Result;
 use env_logger::{Builder, Env};
