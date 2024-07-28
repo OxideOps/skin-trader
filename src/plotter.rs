@@ -1,14 +1,15 @@
 // File: src/plotter.rs
 use plotters::prelude::*;
+use anyhow::{bail, Result};
 
 pub fn plot_float_vs_price(
     float_ids: &[f64],
     prices: &[f64],
     output_file: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     // Ensure input vectors have the same length
     if float_ids.len() != prices.len() {
-        return Err("Input vectors must have the same length".into());
+        bail!("Input vectors must have the same length")
     }
 
     // Combine float_ids and prices into a single vector of tuples
