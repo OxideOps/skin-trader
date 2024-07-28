@@ -83,7 +83,7 @@ impl Api {
         Ok(self.post(url, &payload).await?)
     }
 
-    pub(crate) async fn fetch_skins<T: DeserializeOwned>(&self) -> Result<Vec<i32>> {
+    pub(crate) async fn fetch_skins(&self) -> Result<Vec<i32>> {
         #[derive(Debug, Deserialize)]
         pub(crate) struct SkinID {
             id: i32,
