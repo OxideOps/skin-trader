@@ -2,6 +2,7 @@ mod api;
 mod db;
 mod progress_bar;
 mod scheduler;
+mod plotter;
 
 use crate::api::Api;
 use crate::db::Database;
