@@ -25,8 +25,9 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
 
-    for skin_id in api.fetch_skins().await? {
-        let json = match api.fetch_sales(skin_id).await {
+    let skin_ids = api.fetch_skins().await?;
+    for skin_id in skin_ids {
+        let mut json = match api.fetch_sales(skin_id).await {
             Ok(json) => json,
             Err(_) => {
                 log::info!("Sleeping for 1 second...");
@@ -34,7 +35,13 @@ async fn main() -> Result<()> {
                 api.fetch_sales(skin_id).await?
             }
         };
-        db.insert_sales(skin_id, json).await?;
+        if let Value::Array(ref arr) = json {
+            if !arr.is_empty() {
+                db.insert_sales(skin_id, json).await?;
+            }
+        } else {
+            log::error!("Unexpected response: {:?}", json);
+        }
     }
 
     Ok(())
