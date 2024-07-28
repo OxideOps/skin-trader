@@ -1,8 +1,8 @@
 mod api;
 mod db;
+mod plotter;
 mod progress_bar;
 mod scheduler;
-mod plotter;
 
 use crate::api::Api;
 use crate::db::Database;

@@ -1,19 +1,19 @@
 // File: src/plotter.rs
-use plotters::prelude::*;
 use anyhow::{bail, Result};
+use plotters::prelude::*;
 
-pub fn plot_float_vs_price(
-    float_ids: &[f64],
-    prices: &[f64],
-    output_file: &str,
-) -> Result<()> {
+pub fn plot_float_vs_price(float_ids: &[f64], prices: &[f64], output_file: &str) -> Result<()> {
     // Ensure input vectors have the same length
     if float_ids.len() != prices.len() {
         bail!("Input vectors must have the same length")
     }
 
     // Combine float_ids and prices into a single vector of tuples
-    let data: Vec<(f64, f64)> = float_ids.iter().zip(prices.iter()).map(|(&x, &y)| (x, y)).collect();
+    let data: Vec<(f64, f64)> = float_ids
+        .iter()
+        .zip(prices.iter())
+        .map(|(&x, &y)| (x, y))
+        .collect();
 
     // Find the max values for scaling
     let max_float_id = float_ids.iter().fold(0.0f64, |a, &b| a.max(b));
@@ -40,7 +40,8 @@ pub fn plot_float_vs_price(
 
     // Plot the data points
     chart.draw_series(
-        data.iter().map(|point| Circle::new(*point, 3, &RED.mix(0.5))),
+        data.iter()
+            .map(|point| Circle::new(*point, 3, &RED.mix(0.5))),
     )?;
 
     // Add a title to the plot
