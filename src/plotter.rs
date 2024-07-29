@@ -39,10 +39,15 @@ where
 
     // Convert x and y into a single vector of tuples and find min/max values
     let data: Vec<(f64, f64)> = x.iter().zip(y.iter()).map(|(&x, &y)| (x.into_f64(), y.into_f64())).collect();
-    let min_x = x.iter().map(|&v| v.into_f64()).fold(f64::INFINITY, f64::min);
-    let max_x = x.iter().map(|&v| v.into_f64()).fold(f64::NEG_INFINITY, f64::max);
-    let min_y = y.iter().map(|&v| v.into_f64()).fold(f64::INFINITY, f64::min);
-    let max_y = y.iter().map(|&v| v.into_f64()).fold(f64::NEG_INFINITY, f64::max);
+    let (min_x, max_x, min_y, max_y) = data.iter().fold(
+        (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY),
+        |(min_x, max_x, min_y, max_y), &(x, y)| (
+            min_x.min(x),
+            max_x.max(x),
+            min_y.min(y),
+            max_y.max(y)
+        )
+    );
 
     // Set up the plot area
     let root = BitMapBackend::new(output_file, (1600, 1200)).into_drawing_area();
