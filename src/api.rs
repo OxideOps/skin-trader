@@ -39,15 +39,17 @@ pub(crate) struct Sale {
     pub paint_seed: Option<u32>,
     pub phase_id: Value,
     pub price: f64,
-    pub stickers: Value,
+    pub stickers: Option<Vec<Sticker>>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Sticker {
-    image: Option<String>,
-    name: String,
-    slot: u8,
-    wear: f64,
+    pub class_id: Option<String>,
+    pub skin_id: Option<i32>,
+    pub image: Option<String>,
+    pub name: Option<String>,
+    pub slot: Option<u8>,
+    pub wear: Option<f64>,
 }
 
 #[derive(Eq, PartialEq, Hash, Debug)]
