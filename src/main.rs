@@ -26,8 +26,8 @@ async fn plot_by_floats(db: Database, skin_id: i32) -> Result<()> {
     let floats: Vec<f64> = arr.iter().map(|sale| sale.float_value.unwrap()).collect();
     let prices: Vec<f64> = arr.iter().map(|sale| sale.price).collect();
     plot_data(
-        &floats, 
-        &prices, 
+        &floats,
+        &prices,
         &format!("plots/floats/{skin_id}.png"),
         &format!("Floats vs Price"),
         &format!("Float"),
@@ -38,15 +38,12 @@ async fn plot_by_floats(db: Database, skin_id: i32) -> Result<()> {
 
 async fn plot_by_dates(db: Database, skin_id: i32) -> Result<()> {
     let arr: Vec<Sale> = serde_json::from_value(db.select_json_sales(skin_id).await?)?;
-    let dates: Vec<Date> = arr
-        .iter()
-        .map(|sale| sale.created_at)
-        .collect();
+    let dates: Vec<Date> = arr.iter().map(|sale| sale.created_at).collect();
     let prices: Vec<f64> = arr.iter().map(|sale| sale.price).collect();
     plot_data(
-        &dates, 
-        &prices, 
-        &format!("plots/floats/{skin_id}.png"),
+        &dates,
+        &prices,
+        &format!("plots/dates/{skin_id}.png"),
         &format!("Floats vs Price"),
         &format!("Float"),
         &format!("Price"),
@@ -88,7 +85,7 @@ async fn main() -> Result<()> {
 
     let interesting_skins = filter_interesting_skins(db.clone()).await?;
     for skin_id in interesting_skins {
-        plot_by_floats(db.clone(), skin_id).await?;
+        plot_by_dates(db.clone(), skin_id).await?;
     }
 
     Ok(())

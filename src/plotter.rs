@@ -1,8 +1,8 @@
 // File: src/plotter.rs
 use anyhow::{bail, Result};
 use plotters::prelude::*;
-use std::fmt::Debug;
 use sqlx::types::time::Date;
+use std::fmt::Debug;
 
 pub trait IntoF64 {
     fn into_f64(&self) -> f64;
@@ -26,7 +26,7 @@ pub fn plot_data<T, U>(
     output_file: &str,
     chart_title: &str,
     x_label: &str,
-    y_label: &str
+    y_label: &str,
 ) -> Result<()>
 where
     T: Copy + IntoF64 + PartialOrd + Debug,
@@ -38,15 +38,21 @@ where
     }
 
     // Convert x and y into a single vector of tuples and find min/max values
-    let data: Vec<(f64, f64)> = x.iter().zip(y.iter()).map(|(&x, &y)| (x.into_f64(), y.into_f64())).collect();
+    let data: Vec<(f64, f64)> = x
+        .iter()
+        .zip(y.iter())
+        .map(|(&x, &y)| (x.into_f64(), y.into_f64()))
+        .collect();
     let (min_x, max_x, min_y, max_y) = data.iter().fold(
-        (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY),
-        |(min_x, max_x, min_y, max_y), &(x, y)| (
-            min_x.min(x),
-            max_x.max(x),
-            min_y.min(y),
-            max_y.max(y)
-        )
+        (
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        ),
+        |(min_x, max_x, min_y, max_y), &(x, y)| {
+            (min_x.min(x), max_x.max(x), min_y.min(y), max_y.max(y))
+        },
     );
 
     // Set up the plot area
@@ -76,16 +82,10 @@ where
 
     // Add a title to the plot
     let text_style = ("sans-serif", 30).into_font();
-    root.draw_text(
-        chart_title,
-        &text_style.into(),
-        (300, 30),
-    )?;
+    root.draw_text(chart_title, &text_style.into(), (300, 30))?;
 
     // Save the plot
     root.present()?;
 
     Ok(())
 }
-
-
