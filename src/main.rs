@@ -44,8 +44,8 @@ async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
         &dates,
         &prices,
         &format!("plots/dates/{skin_id}.png"),
-        &format!("Floats vs Price"),
-        &format!("Float"),
+        &format!("Dates vs Price"),
+        &format!("Date"),
         &format!("Price"),
     )?;
     Ok(())
