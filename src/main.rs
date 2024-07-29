@@ -6,11 +6,11 @@ mod scheduler;
 
 use crate::api::{Api, Sale, Wear};
 use crate::db::Database;
-use crate::plotter::plot_prices;
+use crate::plotter::plot_data;
 use anyhow::Result;
 use env_logger::{Builder, Env};
 use serde_json::Value;
-use std::cmp::PartialEq;
+use sqlx::types::time::Date;
 use std::collections::HashSet;
 
 fn setup_env() -> Result<()> {
@@ -25,24 +25,32 @@ async fn plot_by_floats(db: Database, skin_id: i32) -> Result<()> {
     let arr: Vec<Sale> = serde_json::from_value(db.select_json_sales(skin_id).await?)?;
     let floats: Vec<f64> = arr.iter().map(|sale| sale.float_value.unwrap()).collect();
     let prices: Vec<f64> = arr.iter().map(|sale| sale.price).collect();
-    plot_prices(&floats, &prices, &format!("plots/floats/{skin_id}.png"))?;
+    plot_data(
+        &floats, 
+        &prices, 
+        &format!("plots/floats/{skin_id}.png"),
+        &format!("Floats vs Price"),
+        &format!("Float"),
+        &format!("Price"),
+    )?;
     Ok(())
 }
 
 async fn plot_by_dates(db: Database, skin_id: i32) -> Result<()> {
     let arr: Vec<Sale> = serde_json::from_value(db.select_json_sales(skin_id).await?)?;
-    let dates: Vec<f64> = arr
+    let dates: Vec<Date> = arr
         .iter()
-        .map(|sale| sale.created_at.to_julian_day() as f64)
+        .map(|sale| sale.created_at)
         .collect();
     let prices: Vec<f64> = arr.iter().map(|sale| sale.price).collect();
-    let min_date = dates
-        .iter()
-        .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-        .cloned()
-        .unwrap();
-    let dates: Vec<f64> = dates.iter().map(|date| date - min_date).collect();
-    plot_prices(&dates, &prices, &format!("plots/dates/{skin_id}.png"))?;
+    plot_data(
+        &dates, 
+        &prices, 
+        &format!("plots/floats/{skin_id}.png"),
+        &format!("Floats vs Price"),
+        &format!("Float"),
+        &format!("Price"),
+    )?;
     Ok(())
 }
 
