@@ -21,7 +21,7 @@ fn setup_env() -> Result<()> {
     Ok(())
 }
 
-async fn plot_by_floats(db: Database, skin_id: i32) -> Result<()> {
+async fn plot_by_floats(db: &Database, skin_id: i32) -> Result<()> {
     let arr: Vec<Sale> = serde_json::from_value(db.select_json_sales(skin_id).await?)?;
     let floats: Vec<f64> = arr.iter().map(|sale| sale.float_value.unwrap()).collect();
     let prices: Vec<f64> = arr.iter().map(|sale| sale.price).collect();
@@ -36,7 +36,7 @@ async fn plot_by_floats(db: Database, skin_id: i32) -> Result<()> {
     Ok(())
 }
 
-async fn plot_by_dates(db: Database, skin_id: i32) -> Result<()> {
+async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
     let arr: Vec<Sale> = serde_json::from_value(db.select_json_sales(skin_id).await?)?;
     let dates: Vec<Date> = arr.iter().map(|sale| sale.created_at).collect();
     let prices: Vec<f64> = arr.iter().map(|sale| sale.price).collect();
@@ -51,7 +51,7 @@ async fn plot_by_dates(db: Database, skin_id: i32) -> Result<()> {
     Ok(())
 }
 
-async fn filter_interesting_skins(db: Database) -> Result<Vec<i32>> {
+async fn filter_interesting_skins(db: &Database) -> Result<Vec<i32>> {
     let mut interesting_skins = HashSet::new();
     for (skin_id, json) in db.select_all_json_sales().await? {
         if let Value::Array(ref arr) = json {
@@ -83,9 +83,9 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
 
-    let interesting_skins = filter_interesting_skins(db.clone()).await?;
+    let interesting_skins = filter_interesting_skins(&db).await?;
     for skin_id in interesting_skins {
-        plot_by_dates(db.clone(), skin_id).await?;
+        plot_by_dates(&db, skin_id).await?;
     }
 
     Ok(())
