@@ -7,12 +7,11 @@ mod scheduler;
 use crate::api::{Api, Sale, Wear};
 use crate::db::Database;
 use crate::plotter::plot_prices;
-use anyhow::{bail, Result};
+use anyhow::Result;
 use env_logger::{Builder, Env};
 use serde_json::Value;
-use sqlx::types::time::Date;
 use std::cmp::PartialEq;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 fn setup_env() -> Result<()> {
     // Logger
