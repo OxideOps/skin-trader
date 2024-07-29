@@ -32,22 +32,47 @@ pub(crate) struct Api {
 #[derive(Debug, Deserialize)]
 pub(crate) struct Sale {
     #[serde(deserialize_with = "deserialize_sqlx_date")]
-    created_at: Date,
-    extras_1: Option<Value>,
-    float_value: f64,
-    paint_index: u32,
-    paint_seed: u32,
-    phase_id: Option<Value>,
-    price: f64,
-    stickers: Option<Vec<Sticker>>,
+    pub created_at: Date,
+    pub extras_1: Value,
+    pub float_value: Option<f64>,
+    pub paint_index: Option<u32>,
+    pub paint_seed: Option<u32>,
+    pub phase_id: Value,
+    pub price: f64,
+    pub stickers: Value,
 }
 
 #[derive(Debug, Deserialize)]
-struct Sticker {
+pub struct Sticker {
     image: Option<String>,
     name: String,
     slot: u8,
     wear: f64,
+}
+
+#[derive(Eq, PartialEq, Hash, Debug)]
+pub(crate) enum Wear {
+    FactoryNew,
+    MinimalWear,
+    FieldTested,
+    WellWorn,
+    BattleScarred,
+}
+
+impl Wear {
+    pub(crate) fn new(wear: f64) -> Self {
+        if wear < 0.07 {
+            Self::FactoryNew
+        } else if wear < 0.15 {
+            Self::MinimalWear
+        } else if wear < 0.38 {
+            Self::FieldTested
+        } else if wear < 0.45 {
+            Self::WellWorn
+        } else {
+            Self::BattleScarred
+        }
+    }
 }
 
 impl Api {
@@ -109,10 +134,15 @@ impl Api {
         Ok(skin_ids.into_iter().map(|s| s.id).collect())
     }
 
-    pub async fn fetch_market_data<T: DeserializeOwned>(&self, offset: usize) -> Result<T> {
+    pub async fn fetch_market_data<T: DeserializeOwned>(
+        &self,
+        skin_id: i32,
+        offset: usize,
+    ) -> Result<T> {
         let url = format!("{BASE_URL}/market/search/{CS2_APP_ID}");
 
         let payload = json!({
+            "where": { "skin_id": [skin_id] },
             "limit": MAX_LIMIT,
             "offset": offset,
         });

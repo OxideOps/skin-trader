@@ -1,5 +1,5 @@
 use anyhow::Result;
-use serde_json::Value;
+use serde_json::{json, Value};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
 
@@ -43,5 +43,13 @@ impl Database {
             .await?;
 
         Ok(record.json)
+    }
+
+    pub async fn select_all_json_sales(&self) -> Result<Vec<(i32, Value)>> {
+        let record = sqlx::query!("SELECT * FROM sales")
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(record.into_iter().map(|r| (r.skin_id, r.json)).collect())
     }
 }
