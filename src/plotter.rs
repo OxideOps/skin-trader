@@ -2,34 +2,30 @@
 use anyhow::{bail, Result};
 use plotters::prelude::*;
 
-pub fn plot_float_vs_price(float_ids: &[f64], prices: &[f64], output_file: &str) -> Result<()> {
+pub fn plot_prices(x: &[f64], prices: &[f64], output_file: &str) -> Result<()> {
     // Ensure input vectors have the same length
-    if float_ids.len() != prices.len() {
+    if x.len() != prices.len() {
         bail!("Input vectors must have the same length")
     }
 
-    // Combine float_ids and prices into a single vector of tuples
-    let data: Vec<(f64, f64)> = float_ids
-        .iter()
-        .zip(prices.iter())
-        .map(|(&x, &y)| (x, y))
-        .collect();
+    // Combine x and prices into a single vector of tuples
+    let data: Vec<(f64, f64)> = x.iter().zip(prices.iter()).map(|(&x, &y)| (x, y)).collect();
 
     // Find the max values for scaling
-    let max_float_id = float_ids.iter().fold(0.0f64, |a, &b| a.max(b));
+    let max_x = x.iter().fold(0.0f64, |a, &b| a.max(b));
     let max_price = prices.iter().fold(0.0f64, |a, &b| a.max(b));
 
     // Set up the plot area
-    let root = BitMapBackend::new(output_file, (800, 600)).into_drawing_area();
+    let root = BitMapBackend::new(output_file, (1600, 1200)).into_drawing_area();
     root.fill(&WHITE)?;
 
     // Define the chart area
     let mut chart = ChartBuilder::on(&root)
         .caption("Float ID vs Price", ("sans-serif", 50))
-        .margin(5)
-        .x_label_area_size(30)
-        .y_label_area_size(30)
-        .build_cartesian_2d(0f64..max_float_id, 0f64..max_price)?;
+        .margin(50)
+        .x_label_area_size(50)
+        .y_label_area_size(50)
+        .build_cartesian_2d(0f64..max_x, 0f64..max_price)?;
 
     // Configure and draw the chart
     chart
