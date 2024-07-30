@@ -69,14 +69,17 @@ fn plot_generic<X: Plottable, Y: Plottable>(
     x_label: &str,
     y_label: &str,
 ) -> Result<()> {
-    let converted_data: Vec<(f64, f64)> = data
-        .x
+    let converted_data: Vec<(f64, f64)> = data.x
         .iter()
         .zip(data.y.iter())
         .map(|(&x, &y)| (x.into(), y.into()))
         .collect();
 
-    let (x_range, y_range) = find_bounds(&converted_data);
+    let x_values: Vec<f64> = converted_data.iter().map(|&(x, _)| x).collect();
+    let y_values: Vec<f64> = converted_data.iter().map(|&(_, y)| y).collect();
+
+    let x_range = find_bounds(&x_values);
+    let y_range = find_bounds(&y_values);
 
     let root = BitMapBackend::new(output_file, (1600, 1200)).into_drawing_area();
     root.fill(&WHITE)?;
@@ -97,25 +100,26 @@ fn plot_generic<X: Plottable, Y: Plottable>(
     match plot_type {
         PlotType::Scatter => {
             chart.draw_series(
-                converted_data
-                    .iter()
+                converted_data.iter()
                     .map(|point| Circle::new(*point, 3, RED.mix(0.5))),
             )?;
         }
         PlotType::Line => {
-            chart.draw_series(LineSeries::new(converted_data, &RED))?;
+            chart.draw_series(LineSeries::new(
+                converted_data,
+                &RED,
+            ))?;
         }
         PlotType::Bar => {
             let bar_width = (x_range.end - x_range.start) / (converted_data.len() as f64) * 0.8;
-            chart.draw_series(converted_data.iter().map(|&(x, y)| {
-                Rectangle::new(
-                    [
-                        (x - bar_width / 2.0, y_range.start),
-                        (x + bar_width / 2.0, y),
-                    ],
-                    RED.filled(),
-                )
-            }))?;
+            chart.draw_series(
+                converted_data.iter().map(|&(x, y)| {
+                    Rectangle::new(
+                        [(x - bar_width / 2.0, y_range.start), (x + bar_width / 2.0, y)],
+                        RED.filled(),
+                    )
+                }),
+            )?;
         }
     }
 
@@ -127,17 +131,8 @@ fn plot_generic<X: Plottable, Y: Plottable>(
     Ok(())
 }
 
-fn find_bounds(data: &[(f64, f64)]) -> (Range<f64>, Range<f64>) {
-    let (min_x, max_x, min_y, max_y) = data.iter().fold(
-        (
-            f64::INFINITY,
-            f64::NEG_INFINITY,
-            f64::INFINITY,
-            f64::NEG_INFINITY,
-        ),
-        |(min_x, max_x, min_y, max_y), &(x, y)| {
-            (min_x.min(x), max_x.max(x), min_y.min(y), max_y.max(y))
-        },
-    );
-    (min_x..max_x, min_y..max_y)
+fn find_bounds(values: &[f64]) -> Range<f64> {
+    let min = values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+    let max = values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+    min..max
 }
