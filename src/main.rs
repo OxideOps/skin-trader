@@ -6,7 +6,7 @@ mod scheduler;
 
 use crate::api::{Api, Sale, Wear};
 use crate::db::Database;
-use crate::plotter::{plot_by_dates, plot_by_floats};
+use crate::plotter::plot_by_dates;
 use anyhow::Result;
 use env_logger::{Builder, Env};
 
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
 
     let interesting_skins = filter_interesting_skins(&db).await?;
     for skin_id in interesting_skins {
-        plot_by_floats(&db, skin_id).await?;
+        plot_by_dates(&db, skin_id).await?;
     }
 
     Ok(())
