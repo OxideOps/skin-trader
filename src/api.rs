@@ -18,10 +18,8 @@ where
     let datetime = OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339)
         .map_err(serde::de::Error::custom)?;
     let date = datetime.date();
-    Ok(
-        Date::from_calendar_date(date.year(), date.month(), date.day())
-            .map_err(serde::de::Error::custom)?,
-    )
+    Date::from_calendar_date(date.year(), date.month(), date.day())
+        .map_err(serde::de::Error::custom)
 }
 
 #[derive(Clone)]
@@ -120,7 +118,7 @@ impl Api {
             "limit": MAX_LIMIT,
         });
 
-        Ok(self.post(url, &payload).await?)
+        self.post(url, &payload).await
     }
 
     pub(crate) async fn fetch_skins(&self) -> Result<Vec<i32>> {
@@ -149,6 +147,6 @@ impl Api {
             "offset": offset,
         });
 
-        Ok(self.post(url, &payload).await?)
+        self.post(url, &payload).await
     }
 }

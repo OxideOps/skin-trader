@@ -1,26 +1,58 @@
 // File: src/plotter.rs
+use crate::api::Sale;
+use crate::db::Database;
 use anyhow::{bail, Result};
 use plotters::prelude::*;
 use sqlx::types::time::Date;
 use std::fmt::Debug;
 
 pub trait IntoF64 {
-    fn into_f64(&self) -> f64;
+    fn into_f64(self) -> f64;
 }
 
 impl IntoF64 for Date {
-    fn into_f64(&self) -> f64 {
+    fn into_f64(self) -> f64 {
         self.to_julian_day().as_f64()
     }
 }
 
 impl IntoF64 for f64 {
-    fn into_f64(&self) -> f64 {
-        *self
+    fn into_f64(self) -> f64 {
+        self
     }
 }
 
-pub fn plot_data<T, U>(
+pub async fn plot_by_floats(db: &Database, skin_id: i32) -> Result<()> {
+    let arr: Vec<Sale> = db.select_sales(skin_id).await?;
+    let floats: Vec<f64> = arr.iter().map(|sale| sale.float_value.unwrap()).collect();
+    let prices: Vec<f64> = arr.iter().map(|sale| sale.price).collect();
+    plot_data(
+        &floats,
+        &prices,
+        &format!("plots/floats/{skin_id}.png"),
+        "Floats vs Price",
+        "Float",
+        "Price",
+    )?;
+    Ok(())
+}
+
+pub async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
+    let arr: Vec<Sale> = db.select_sales(skin_id).await?;
+    let dates: Vec<Date> = arr.iter().map(|sale| sale.created_at).collect();
+    let prices: Vec<f64> = arr.iter().map(|sale| sale.price).collect();
+    plot_data(
+        &dates,
+        &prices,
+        &format!("plots/dates/{skin_id}.png"),
+        "Dates vs Price",
+        "Date",
+        "Price",
+    )?;
+    Ok(())
+}
+
+fn plot_data<T, U>(
     x: &[T],
     y: &[U],
     output_file: &str,
@@ -77,7 +109,7 @@ where
     // Plot the data points
     chart.draw_series(
         data.iter()
-            .map(|point| Circle::new(*point, 3, &RED.mix(0.5))),
+            .map(|point| Circle::new(*point, 3, RED.mix(0.5))),
     )?;
 
     // Add a title to the plot
