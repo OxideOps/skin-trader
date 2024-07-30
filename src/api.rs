@@ -1,9 +1,12 @@
 use anyhow::{bail, Result};
+use plotters::prelude::LogScalable;
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
-use sqlx::types::time::{Date, OffsetDateTime};
+use sqlx::types::time::Date as SqlxDate;
+use sqlx::types::time::OffsetDateTime;
 use std::env;
+use std::ops::{Deref, DerefMut};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -18,13 +21,42 @@ where
     let datetime = OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339)
         .map_err(serde::de::Error::custom)?;
     let date = datetime.date();
-    Date::from_calendar_date(date.year(), date.month(), date.day())
+    SqlxDate::from_calendar_date(date.year(), date.month(), date.day())
         .map_err(serde::de::Error::custom)
+        .map(Date::new)
 }
 
 #[derive(Clone)]
 pub(crate) struct Api {
     client: Client,
+}
+
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+pub(crate) struct Date(SqlxDate);
+
+impl Deref for Date {
+    type Target = SqlxDate;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Date {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<Date> for f64 {
+    fn from(date: Date) -> Self {
+        date.to_julian_day().as_f64()
+    }
+}
+
+impl Date {
+    pub fn new(date: SqlxDate) -> Self {
+        Self(date)
+    }
 }
 
 #[derive(Debug, Deserialize)]
