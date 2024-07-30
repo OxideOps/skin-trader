@@ -1,5 +1,6 @@
+use crate::api::Sale;
 use anyhow::Result;
-use serde_json::{json, Value};
+use serde_json::{from_value, json, Value};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
 
@@ -37,19 +38,22 @@ impl Database {
         Ok(())
     }
 
-    pub async fn select_json_sales(&self, skin_id: i32) -> Result<Value> {
+    pub async fn select_sales(&self, skin_id: i32) -> Result<Vec<Sale>> {
         let record = sqlx::query!("SELECT json FROM sales WHERE skin_id = $1", skin_id)
             .fetch_one(&self.pool)
             .await?;
 
-        Ok(record.json)
+        Ok(from_value(record.json)?)
     }
 
-    pub async fn select_all_json_sales(&self) -> Result<Vec<(i32, Value)>> {
+    pub async fn select_all_sales(&self) -> Result<Vec<(i32, Vec<Sale>)>> {
         let record = sqlx::query!("SELECT * FROM sales")
             .fetch_all(&self.pool)
             .await?;
 
-        Ok(record.into_iter().map(|r| (r.skin_id, r.json)).collect())
+        record
+            .into_iter()
+            .map(|r| Ok((r.skin_id, from_value(r.json)?)))
+            .collect()
     }
 }
