@@ -6,6 +6,12 @@ use plotters::prelude::*;
 use sqlx::types::time::Date;
 use std::fmt::Debug;
 
+pub enum PlotType {
+    Scatter,
+    Line,
+    Bar,
+}
+
 pub trait IntoF64 {
     fn into_f64(self) -> f64;
 }
@@ -29,6 +35,7 @@ pub async fn plot_by_floats(db: &Database, skin_id: i32) -> Result<()> {
     plot_data(
         &floats,
         &prices,
+        PlotType::Bar,
         &format!("plots/floats/{skin_id}.png"),
         "Floats vs Price",
         "Float",
@@ -44,6 +51,7 @@ pub async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
     plot_data(
         &dates,
         &prices,
+        PlotType::Scatter,
         &format!("plots/dates/{skin_id}.png"),
         "Dates vs Price",
         "Date",
@@ -55,6 +63,7 @@ pub async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
 fn plot_data<T, U>(
     x: &[T],
     y: &[U],
+    plot_type: PlotType,
     output_file: &str,
     chart_title: &str,
     x_label: &str,
@@ -106,11 +115,20 @@ where
         .y_desc(y_label)
         .draw()?;
 
-    // Plot the data points
-    chart.draw_series(
-        data.iter()
-            .map(|point| Circle::new(*point, 3, RED.mix(0.5))),
-    )?;
+    match plot_type {
+        PlotType::Scatter => {
+            chart.draw_series(
+                data.iter()
+                    .map(|point| Circle::new(*point, 3, RED.mix(0.5))),
+            )?;
+        }
+        PlotType::Line => {
+            todo!()
+        }
+        PlotType::Bar => {
+            todo!()
+        }
+    }
 
     // Add a title to the plot
     let text_style = ("sans-serif", 30).into_font();
