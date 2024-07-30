@@ -69,18 +69,13 @@ fn plot_generic<X: Plottable, Y: Plottable>(
     x_label: &str,
     y_label: &str,
 ) -> Result<()> {
-    let converted_data: Vec<(f64, f64)> = data
-        .x
-        .iter()
-        .zip(data.y.iter())
-        .map(|(&x, &y)| (x.into(), y.into()))
-        .collect();
-
-    let x_values: Vec<f64> = converted_data.iter().map(|&(x, _)| x).collect();
-    let y_values: Vec<f64> = converted_data.iter().map(|&(_, y)| y).collect();
+    let x_values: Vec<f64> = data.x.iter().map(|&x| x.into()).collect();
+    let y_values: Vec<f64> = data.y.iter().map(|&y| y.into()).collect();
 
     let x_range = find_bounds(&x_values);
     let y_range = find_bounds(&y_values);
+
+    let converted_data: Vec<(f64, f64)> = x_values.into_iter().zip(y_values).collect();
 
     let root = BitMapBackend::new(output_file, (1600, 1200)).into_drawing_area();
     root.fill(&WHITE)?;
