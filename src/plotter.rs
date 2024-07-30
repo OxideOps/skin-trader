@@ -1,26 +1,11 @@
 // File: src/plotter.rs
+use crate::api;
 use crate::api::Sale;
 use crate::db::Database;
 use anyhow::{bail, Result};
+use api::Date;
 use plotters::prelude::*;
-use sqlx::types::time::Date;
 use std::fmt::Debug;
-
-pub trait IntoF64 {
-    fn into_f64(self) -> f64;
-}
-
-impl IntoF64 for Date {
-    fn into_f64(self) -> f64 {
-        self.to_julian_day().as_f64()
-    }
-}
-
-impl IntoF64 for f64 {
-    fn into_f64(self) -> f64 {
-        self
-    }
-}
 
 pub async fn plot_by_floats(db: &Database, skin_id: i32) -> Result<()> {
     let arr: Vec<Sale> = db.select_sales(skin_id).await?;
@@ -61,8 +46,8 @@ fn plot_data<T, U>(
     y_label: &str,
 ) -> Result<()>
 where
-    T: Copy + IntoF64 + PartialOrd + Debug,
-    U: Copy + IntoF64 + PartialOrd + Debug,
+    T: Copy + Into<f64> + PartialOrd + Debug,
+    U: Copy + Into<f64> + PartialOrd + Debug,
 {
     // Ensure input vectors have the same length
     if x.len() != y.len() {
@@ -73,7 +58,7 @@ where
     let data: Vec<(f64, f64)> = x
         .iter()
         .zip(y.iter())
-        .map(|(&x, &y)| (x.into_f64(), y.into_f64()))
+        .map(|(&x, &y)| (x.into(), y.into()))
         .collect();
     let (min_x, max_x, min_y, max_y) = data.iter().fold(
         (
