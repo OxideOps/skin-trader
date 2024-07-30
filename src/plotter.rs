@@ -7,6 +7,12 @@ use api::Date;
 use plotters::prelude::*;
 use std::fmt::Debug;
 
+pub enum Plot {
+    Scatter,
+    Line,
+    Bar,
+}
+
 pub async fn plot_by_floats(db: &Database, skin_id: i32) -> Result<()> {
     let arr: Vec<Sale> = db.select_sales(skin_id).await?;
     let floats: Vec<f64> = arr.iter().map(|sale| sale.float_value.unwrap()).collect();
@@ -30,7 +36,7 @@ pub async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
     plot_data(
         &dates,
         &prices,
-        PlotType::Scatter,
+        Plot::Scatter,
         &format!("plots/dates/{skin_id}.png"),
         "Dates vs Price",
         "Date",
@@ -42,7 +48,7 @@ pub async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
 fn plot_data<T, U>(
     x: &[T],
     y: &[U],
-    plot_type: PlotType,
+    plot: Plot,
     output_file: &str,
     chart_title: &str,
     x_label: &str,
@@ -94,17 +100,17 @@ where
         .y_desc(y_label)
         .draw()?;
 
-    match plot_type {
-        PlotType::Scatter => {
+    match plot {
+        Plot::Scatter => {
             chart.draw_series(
                 data.iter()
                     .map(|point| Circle::new(*point, 3, RED.mix(0.5))),
             )?;
         }
-        PlotType::Line => {
+        Plot::Line => {
             todo!()
         }
-        PlotType::Bar => {
+        Plot::Bar => {
             todo!()
         }
     }
