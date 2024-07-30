@@ -35,7 +35,7 @@ pub async fn plot_by_floats(db: &Database, skin_id: i32) -> Result<()> {
     plot_data(
         &floats,
         &prices,
-        PlotType::Bar,
+        PlotType::Scatter,
         &format!("plots/floats/{skin_id}.png"),
         "Floats vs Price",
         "Float",
