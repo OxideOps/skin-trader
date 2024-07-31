@@ -31,13 +31,21 @@ async fn filter_interesting_skins(db: &Database) -> Result<Vec<i32>> {
     filter_skins(db, |sales| {
         sales.len() == 500
             && sales.iter().all(|sale| {
-                sale.float_value.is_some() && sale.extras_1.is_null() && sale.phase_id.is_null()
+                sale.float_value.is_some() && sale.extras_1.is_none() && sale.phase_id.is_none()
             })
             && sales
                 .iter()
                 .any(|sale| matches!(sale.float_value.map(Wear::new), Some(Wear::FactoryNew)))
     })
     .await
+}
+
+fn count<T, U: AsRef<[T]>>(iterable: &U, condition: impl Fn(&T) -> bool) -> usize {
+    iterable
+        .as_ref()
+        .iter()
+        .filter(|&item| condition(item))
+        .count()
 }
 
 #[tokio::main]
@@ -47,10 +55,21 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
 
-    let interesting_skins = filter_interesting_skins(&db).await?;
-    for skin_id in interesting_skins {
-        plot_by_dates(&db, skin_id).await?;
-    }
+    let sales: Vec<Sale> = db
+        .select_all_sales()
+        .await?
+        .into_iter()
+        .flat_map(|(_, sales)| sales.into_iter())
+        .collect();
+
+    let stickers = count(&sales, |sale| sale.stickers.is_some());
+    let phase_ids = count(&sales, |sale| sale.phase_id.is_some());
+    let extra_1s = count(&sales, |sale| sale.extras_1.is_some());
+    let total_percent = sales.len() as f32 / 100.0;
+
+    println!("Stickers: {}%", stickers as f32 / total_percent);
+    println!("Phase IDs: {}%", phase_ids as f32 / total_percent);
+    println!("Extras 1: {}%", extra_1s as f32 / total_percent);
 
     Ok(())
 }
