@@ -9,6 +9,9 @@ use crate::db::Database;
 use crate::plotter::plot_by_dates;
 use anyhow::Result;
 use env_logger::{Builder, Env};
+use plotters::style::RelativeSize::Height;
+use sqlx::Value;
+use std::collections::{HashMap, HashSet};
 
 fn setup_env() -> Result<()> {
     // Logger
@@ -62,14 +65,27 @@ async fn main() -> Result<()> {
         .flat_map(|(_, sales)| sales.into_iter())
         .collect();
 
-    let stickers = count(&sales, |sale| sale.stickers.is_some());
-    let phase_ids = count(&sales, |sale| sale.phase_id.is_some());
-    let extra_1s = count(&sales, |sale| sale.extras_1.is_some());
-    let total_percent = sales.len() as f32 / 100.0;
+    let stickers: Vec<_> = sales
+        .into_iter()
+        .filter_map(|sale| sale.stickers)
+        .flatten()
+        .collect();
 
-    println!("Stickers: {}%", stickers as f32 / total_percent);
-    println!("Phase IDs: {}%", phase_ids as f32 / total_percent);
-    println!("Extras 1: {}%", extra_1s as f32 / total_percent);
+    let skin_ids = stickers.iter().filter_map(|sticker| sticker.skin_id).fold(
+        HashMap::new(),
+        |mut map, skin_id| {
+            *map.entry(skin_id).or_insert(0) += 1;
+            map
+        },
+    );
+
+    let common_skin_id = skin_ids.iter().max_by(|a, b| a.1.cmp(&b.1)).unwrap().0;
+
+    let data = api
+        .fetch_market_data::<serde_json::Value>(*common_skin_id, 0)
+        .await?;
+
+    dbg!(data);
 
     Ok(())
 }
