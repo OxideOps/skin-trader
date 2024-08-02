@@ -56,4 +56,60 @@ impl Database {
             .map(|r| Ok((r.skin_id, from_value(r.json)?)))
             .collect()
     }
+
+    pub async fn transfer_data(&self) -> Result<()> {
+        let data = self.select_all_sales().await?;
+
+        for (weapon_skin_id, sales) in data {
+            for sale in sales {
+                // Insert the sale
+                let sale_id = sqlx::query!(
+                    r#"
+                    INSERT INTO Sale (weapon_skin_id, created_at, extras_1, float_value, paint_index, paint_seed, phase_id, price)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    RETURNING id
+                    "#,
+                    weapon_skin_id,
+                    *sale.created_at,
+                    sale.extras_1,
+                    sale.float_value,
+                    sale.paint_index,
+                    sale.paint_seed,
+                    sale.phase_id,
+                    sale.price
+                )
+                .fetch_one(&self.pool)
+                .await?
+                .id;
+
+                // Insert the stickers if any
+                if let Some(stickers) = sale.stickers {
+                    for sticker in stickers {
+                        sqlx::query!(
+                            r#"
+                            INSERT INTO Sticker (sale_id, class_id, skin_id, image, name, slot, wear, suggested_price, offset_x, offset_y, skin_status, rotation)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                            "#,
+                            sale_id,
+                            sticker.class_id,
+                            sticker.skin_id,
+                            sticker.image,
+                            sticker.name,
+                            sticker.slot,  // Convert u8 to i16 for SMALLINT
+                            sticker.wear,
+                            sticker.suggested_price,
+                            sticker.offset_x,
+                            sticker.offset_y,
+                            sticker.skin_status,
+                            sticker.rotation
+                        )
+                        .execute(&self.pool)
+                        .await?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
