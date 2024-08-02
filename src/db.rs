@@ -95,7 +95,7 @@ impl Database {
                             sticker.skin_id,
                             sticker.image,
                             sticker.name,
-                            sticker.slot,  // Convert u8 to i16 for SMALLINT
+                            sticker.slot,
                             sticker.wear,
                             sticker.suggested_price,
                             sticker.offset_x,
