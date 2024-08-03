@@ -1,6 +1,7 @@
 CREATE TABLE Skin (
     id INTEGER PRIMARY KEY,
-    name VARCHAR(255) UNIQUE
+    name VARCHAR(255) UNIQUE,
+    class_id VARCHAR(255)
 );
 
 CREATE TABLE Sale (
@@ -21,7 +22,6 @@ CREATE TABLE Sticker (
     id SERIAL PRIMARY KEY,
     sale_id INTEGER REFERENCES Sale(id),
     skin_id INTEGER REFERENCES Skin(id),
-    class_id VARCHAR(255),
     image VARCHAR(255),
     slot SMALLINT CHECK (slot >= 0),
     wear DOUBLE PRECISION,
