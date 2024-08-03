@@ -63,11 +63,11 @@ impl Date {
 pub(crate) struct Sale {
     #[serde(deserialize_with = "deserialize_sqlx_date")]
     pub created_at: Date,
-    pub extras_1: Option<u32>,
+    pub extras_1: Option<i32>,
     pub float_value: Option<f64>,
-    pub paint_index: Option<u32>,
-    pub paint_seed: Option<u32>,
-    pub phase_id: Option<u32>,
+    pub paint_index: Option<i32>,
+    pub paint_seed: Option<i32>,
+    pub phase_id: Option<i32>,
     pub price: f64,
     pub stickers: Option<Vec<Sticker>>,
 }
@@ -78,9 +78,9 @@ pub struct Sticker {
     pub skin_id: Option<i32>,
     pub image: Option<String>,
     pub name: Option<String>,
-    pub slot: Option<u8>,
+    pub slot: Option<i16>,
     pub wear: Option<f64>,
-    pub suggested_price: Option<u32>,
+    pub suggested_price: Option<i32>,
     pub offset_x: Option<f64>,
     pub offset_y: Option<f64>,
     pub skin_status: Option<i32>,

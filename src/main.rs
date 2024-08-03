@@ -40,11 +40,11 @@ async fn filter_interesting_skins(db: &Database) -> Result<Vec<i32>> {
     .await
 }
 
-fn count<T, U: AsRef<[T]>>(iterable: &U, condition: impl Fn(&T) -> bool) -> usize {
+fn count<T, U: AsRef<[T]>, F: Fn(&T) -> bool>(iterable: &U, condition: F) -> usize {
     iterable
         .as_ref()
         .iter()
-        .filter(|&item| condition(item))
+        .filter(|item| condition(item))
         .count()
 }
 
@@ -55,21 +55,23 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
 
-    let sales: Vec<Sale> = db
-        .select_all_sales()
-        .await?
-        .into_iter()
-        .flat_map(|(_, sales)| sales.into_iter())
-        .collect();
+    db.transfer_data().await?;
 
-    let stickers = count(&sales, |sale| sale.stickers.is_some());
-    let phase_ids = count(&sales, |sale| sale.phase_id.is_some());
-    let extra_1s = count(&sales, |sale| sale.extras_1.is_some());
-    let total_percent = sales.len() as f32 / 100.0;
-
-    println!("Stickers: {}%", stickers as f32 / total_percent);
-    println!("Phase IDs: {}%", phase_ids as f32 / total_percent);
-    println!("Extras 1: {}%", extra_1s as f32 / total_percent);
+    // let sales: Vec<Sale> = db
+    //     .select_all_sales()
+    //     .await?
+    //     .into_iter()
+    //     .flat_map(|(_, sales)| sales.into_iter())
+    //     .collect();
+    //
+    // let stickers = count(&sales, |sale| sale.stickers.is_some());
+    // let phase_ids = count(&sales, |sale| sale.phase_id.is_some());
+    // let extra_1s = count(&sales, |sale| sale.extras_1.is_some());
+    // let total_percent = sales.len() as f32 / 100.0;
+    //
+    // println!("Stickers: {}%", stickers as f32 / total_percent);
+    // println!("Phase IDs: {}%", phase_ids as f32 / total_percent);
+    // println!("Extras 1: {}%", extra_1s as f32 / total_percent);
 
     Ok(())
 }

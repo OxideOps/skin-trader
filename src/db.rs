@@ -56,4 +56,83 @@ impl Database {
             .map(|r| Ok((r.skin_id, from_value(r.json)?)))
             .collect()
     }
+
+    pub async fn transfer_data(&self) -> Result<()> {
+        let data = self.select_all_sales().await?;
+
+        for (weapon_skin_id, sales) in data {
+            sqlx::query!(
+                r#"
+                INSERT INTO Skin (id, class_id)
+                VALUES ($1, $2)
+                ON CONFLICT (id) DO NOTHING
+                "#,
+                weapon_skin_id,
+                Option::<String>::None
+            )
+            .execute(&self.pool)
+            .await?;
+
+            for sale in sales {
+                let sale_id = sqlx::query!(
+                    r#"
+                    INSERT INTO Sale (weapon_skin_id, created_at, extras_1, float_value, paint_index, paint_seed, phase_id, price)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    RETURNING id
+                    "#,
+                    weapon_skin_id,
+                    *sale.created_at,
+                    sale.extras_1,
+                    sale.float_value,
+                    sale.paint_index,
+                    sale.paint_seed,
+                    sale.phase_id,
+                    sale.price
+                )
+                .fetch_one(&self.pool)
+                .await?
+                .id;
+
+                if let Some(stickers) = sale.stickers {
+                    for sticker in stickers {
+                        if let Some(skin_id) = sticker.skin_id {
+                            sqlx::query!(
+                                r#"
+                                INSERT INTO Skin (id, name, class_id)
+                                VALUES ($1, $2, $3)
+                                ON CONFLICT (id) DO NOTHING
+                                "#,
+                                skin_id,
+                                sticker.name,
+                                sticker.class_id
+                            )
+                            .execute(&self.pool)
+                            .await?;
+                        }
+
+                        sqlx::query!(
+                        r#"
+                        INSERT INTO Sticker (sale_id, skin_id, image, slot, wear, suggested_price, offset_x, offset_y, skin_status, rotation)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        "#,
+                        sale_id,
+                        sticker.skin_id,
+                        sticker.image,
+                        sticker.slot,
+                        sticker.wear,
+                        sticker.suggested_price,
+                        sticker.offset_x,
+                        sticker.offset_y,
+                        sticker.skin_status,
+                        sticker.rotation
+                    )
+                            .execute(&self.pool)
+                            .await?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
