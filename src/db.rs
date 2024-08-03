@@ -1,10 +1,17 @@
 use crate::api::Sale;
 use anyhow::Result;
 use serde_json::{from_value, json, Value};
+use sqlx::postgres::PgQueryResult;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::env;
 
 const MAX_CONNECTIONS: u32 = 5;
+
+pub(crate) struct Skin {
+    pub(crate) id: i32,
+    pub(crate) name: Option<String>,
+    pub(crate) class_id: Option<String>,
+}
 
 #[derive(Clone)]
 pub(crate) struct Database {
@@ -55,6 +62,21 @@ impl Database {
             .into_iter()
             .map(|r| Ok((r.skin_id, from_value(r.json)?)))
             .collect()
+    }
+
+    pub async fn update_skin(&self, skins: Skin) -> Result<PgQueryResult> {
+        Ok(sqlx::query!(
+            r#"
+            UPDATE Skin
+            SET name = $1, class_id = $2
+            WHERE id = $3
+            "#,
+            skins.name,
+            skins.class_id,
+            skins.id
+        )
+        .execute(&self.pool)
+        .await?)
     }
 
     pub async fn transfer_data(&self) -> Result<()> {

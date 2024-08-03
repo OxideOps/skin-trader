@@ -4,11 +4,12 @@ mod plotter;
 mod progress_bar;
 mod scheduler;
 
-use crate::api::{Api, Sale, Wear};
+use crate::api::{Api, Sale, Sticker, Wear};
 use crate::db::Database;
 use crate::plotter::plot_by_dates;
 use anyhow::Result;
 use env_logger::{Builder, Env};
+use std::collections::HashMap;
 
 fn setup_env() -> Result<()> {
     // Logger
@@ -55,23 +56,41 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
 
-    db.transfer_data().await?;
+    let sales: Vec<Sale> = db
+        .select_all_sales()
+        .await?
+        .into_iter()
+        .flat_map(|(_, sales)| sales.into_iter())
+        .collect();
 
-    // let sales: Vec<Sale> = db
-    //     .select_all_sales()
-    //     .await?
-    //     .into_iter()
-    //     .flat_map(|(_, sales)| sales.into_iter())
-    //     .collect();
-    //
-    // let stickers = count(&sales, |sale| sale.stickers.is_some());
-    // let phase_ids = count(&sales, |sale| sale.phase_id.is_some());
-    // let extra_1s = count(&sales, |sale| sale.extras_1.is_some());
-    // let total_percent = sales.len() as f32 / 100.0;
-    //
-    // println!("Stickers: {}%", stickers as f32 / total_percent);
-    // println!("Phase IDs: {}%", phase_ids as f32 / total_percent);
-    // println!("Extras 1: {}%", extra_1s as f32 / total_percent);
+    let mut stickers: HashMap<i32, (Option<String>, Option<String>)> = HashMap::new();
+    sales
+        .into_iter()
+        .filter_map(|sale| sale.stickers)
+        .flatten()
+        .for_each(|sticker| {
+            if let Some(skin_id) = sticker.skin_id {
+                if let Some((name, class_id)) = stickers.get_mut(&skin_id) {
+                    if sticker.name.is_some() {
+                        *name = sticker.name;
+                    }
+                    if sticker.class_id.is_some() {
+                        *class_id = sticker.class_id;
+                    }
+                } else {
+                    stickers.insert(skin_id, (sticker.name, sticker.class_id));
+                }
+            }
+        });
+
+    for (skin_id, (name, class_id)) in stickers {
+        db.update_skin(db::Skin {
+            id: skin_id,
+            name,
+            class_id,
+        })
+        .await?;
+    }
 
     Ok(())
 }
