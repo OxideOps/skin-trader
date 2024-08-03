@@ -63,12 +63,12 @@ async fn main() -> Result<()> {
     //     .into_iter()
     //     .flat_map(|(_, sales)| sales.into_iter())
     //     .collect();
-    // 
+    //
     // let stickers = count(&sales, |sale| sale.stickers.is_some());
     // let phase_ids = count(&sales, |sale| sale.phase_id.is_some());
     // let extra_1s = count(&sales, |sale| sale.extras_1.is_some());
     // let total_percent = sales.len() as f32 / 100.0;
-    // 
+    //
     // println!("Stickers: {}%", stickers as f32 / total_percent);
     // println!("Phase IDs: {}%", phase_ids as f32 / total_percent);
     // println!("Extras 1: {}%", extra_1s as f32 / total_percent);
