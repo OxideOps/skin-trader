@@ -40,12 +40,12 @@ async fn filter_interesting_skins(db: &Database) -> Result<Vec<i32>> {
     .await
 }
 
-fn count<T, U: AsRef<[T]>, F: Fn(&T) -> bool>(iterable: &U, condition: F) -> usize {
-    iterable
-        .as_ref()
-        .iter()
-        .filter(|item| condition(item))
-        .count()
+fn count<I, T, F>(iter: I, condition: F) -> usize
+where
+    I: IntoIterator<Item = T>,
+    F: Fn(&T) -> bool,
+{
+    iter.into_iter().filter(|item| condition(item)).count()
 }
 
 #[tokio::main]
