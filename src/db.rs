@@ -61,6 +61,19 @@ impl Database {
         let data = self.select_all_sales().await?;
 
         for (weapon_skin_id, sales) in data {
+            // Insert weapon skin into Skin table
+            sqlx::query!(
+                r#"
+                INSERT INTO Skin (id, name)
+                VALUES ($1, $2)
+                ON CONFLICT (id) DO NOTHING
+                "#,
+                weapon_skin_id,
+                Option::<String>::None // We're not setting a name for weapon skins
+            )
+            .execute(&self.pool)
+            .await?;
+
             for sale in sales {
                 // Insert the sale
                 let sale_id = sqlx::query!(
@@ -85,16 +98,31 @@ impl Database {
                 // Insert the stickers if any
                 if let Some(stickers) = sale.stickers {
                     for sticker in stickers {
+                        // Insert sticker skin into Skin table if it has a skin_id
+                        if let Some(skin_id) = sticker.skin_id {
+                            sqlx::query!(
+                                r#"
+                                INSERT INTO Skin (id, name)
+                                VALUES ($1, $2)
+                                ON CONFLICT (id) DO NOTHING
+                                "#,
+                                skin_id,
+                                sticker.name // This will be None if name is None
+                            )
+                            .execute(&self.pool)
+                            .await?;
+                        }
+
+                        // Insert the sticker
                         sqlx::query!(
                             r#"
-                            INSERT INTO Sticker (sale_id, class_id, skin_id, image, name, slot, wear, suggested_price, offset_x, offset_y, skin_status, rotation)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                            INSERT INTO Sticker (sale_id, class_id, skin_id, image, slot, wear, suggested_price, offset_x, offset_y, skin_status, rotation)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                             "#,
                             sale_id,
                             sticker.class_id,
                             sticker.skin_id,
                             sticker.image,
-                            sticker.name,
                             sticker.slot,
                             sticker.wear,
                             sticker.suggested_price,
