@@ -37,7 +37,7 @@ pub struct Sticker {
 }
 
 #[derive(Clone)]
-pub struct Database {
+pub(crate) struct Database {
     pool: PgPool,
 }
 
@@ -85,6 +85,7 @@ impl Database {
         )
         .fetch_one(&self.pool)
         .await?;
+        
         Ok(row.id)
     }
 
@@ -98,6 +99,7 @@ impl Database {
         )
         .fetch_optional(&self.pool)
         .await?;
+        
         Ok(sale)
     }
 
@@ -121,6 +123,7 @@ impl Database {
         )
         .fetch_one(&self.pool)
         .await?;
+        
         Ok(row.id)
     }
 
@@ -134,6 +137,23 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await?;
+        
         Ok(stickers)
+    }
+    
+    pub(crate) async fn get_sales_by_weapon_skin_id(&self, weapon_skin_id: i32) -> Result<Vec<Sale>> {
+        let sales = sqlx::query_as!(
+            Sale,
+            r#"
+            SELECT * FROM Sale
+            WHERE weapon_skin_id = $1
+            ORDER BY created_at DESC
+            "#,
+            weapon_skin_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(sales)
     }
 }
