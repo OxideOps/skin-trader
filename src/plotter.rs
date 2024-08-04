@@ -1,5 +1,4 @@
-use crate::api::Sale;
-use crate::db::Database;
+use crate::{db::Database, db::Sale};
 use anyhow::{bail, Result};
 use plotters::prelude::*;
 use std::ops::Range;
@@ -25,40 +24,6 @@ impl<X: Plottable, Y: Plottable> PlotData<X, Y> {
         }
         Ok(Self { x, y })
     }
-}
-
-pub async fn plot_by_floats(db: &Database, skin_id: i32) -> Result<()> {
-    let sales: Vec<Sale> = db.select_sales(skin_id).await?;
-    let plot_data = PlotData::new(
-        sales.iter().map(|sale| sale.float_value.unwrap()).collect(),
-        sales.iter().map(|sale| sale.price).collect(),
-    )?;
-
-    plot_generic(
-        &plot_data,
-        PlotType::Scatter,
-        &format!("plots/floats/{skin_id}.png"),
-        "Floats vs Price",
-        "Float",
-        "Price",
-    )
-}
-
-pub async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
-    let sales: Vec<Sale> = db.select_sales(skin_id).await?;
-    let plot_data = PlotData::new(
-        sales.iter().map(|sale| sale.created_at).collect(),
-        sales.iter().map(|sale| sale.price).collect(),
-    )?;
-
-    plot_generic(
-        &plot_data,
-        PlotType::Bar,
-        &format!("plots/dates/{skin_id}.png"),
-        "Dates vs Price",
-        "Date",
-        "Price",
-    )
 }
 
 fn plot_generic<X: Plottable, Y: Plottable>(
@@ -130,4 +95,41 @@ fn find_bounds(values: &[f64]) -> Range<f64> {
     let min = values.iter().fold(f64::INFINITY, |a, &b| a.min(b));
     let max = values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
     min..max
+}
+
+pub async fn plot_by_floats(db: &Database, weapon_skin_id: i32) -> Result<()> {
+    let sales: Vec<Sale> = db.get_sales_by_weapon_skin_id(weapon_skin_id).await?;
+    let plot_data = PlotData::new(
+        sales.iter().map(|sale| sale.float_value.unwrap()).collect(),
+        sales.iter().map(|sale| sale.price).collect(),
+    )?;
+
+    plot_generic(
+        &plot_data,
+        PlotType::Scatter,
+        &format!("plots/floats/{weapon_skin_id}.png"),
+        "Floats vs Price",
+        "Float",
+        "Price",
+    )
+}
+
+pub async fn plot_by_dates(db: &Database, weapon_skin_id: i32) -> Result<()> {
+    let sales: Vec<Sale> = db.get_sales_by_weapon_skin_id(weapon_skin_id).await?;
+    let plot_data = PlotData::new(
+        sales
+            .iter()
+            .map(|sale| sale.created_at.to_julian_day())
+            .collect(),
+        sales.iter().map(|sale| sale.price).collect(),
+    )?;
+
+    plot_generic(
+        &plot_data,
+        PlotType::Bar,
+        &format!("plots/dates/{weapon_skin_id}.png"),
+        "Dates vs Price",
+        "Date",
+        "Price",
+    )
 }
