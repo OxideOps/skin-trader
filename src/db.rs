@@ -85,7 +85,7 @@ impl Database {
         )
         .fetch_one(&self.pool)
         .await?;
-        
+
         Ok(row.id)
     }
 
@@ -99,7 +99,7 @@ impl Database {
         )
         .fetch_optional(&self.pool)
         .await?;
-        
+
         Ok(sale)
     }
 
@@ -123,7 +123,7 @@ impl Database {
         )
         .fetch_one(&self.pool)
         .await?;
-        
+
         Ok(row.id)
     }
 
@@ -137,11 +137,14 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await?;
-        
+
         Ok(stickers)
     }
-    
-    pub(crate) async fn get_sales_by_weapon_skin_id(&self, weapon_skin_id: i32) -> Result<Vec<Sale>> {
+
+    pub(crate) async fn get_sales_by_weapon_skin_id(
+        &self,
+        weapon_skin_id: i32,
+    ) -> Result<Vec<Sale>> {
         let sales = sqlx::query_as!(
             Sale,
             r#"
