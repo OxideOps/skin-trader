@@ -98,7 +98,10 @@ fn find_bounds(values: &[f64]) -> Range<f64> {
 }
 
 pub async fn plot_by_floats(db: &Database, weapon_skin_id: i32) -> Result<()> {
-    let sales: Vec<Sale> = db.get_sales_by_weapon_skin_id(weapon_skin_id).await?;
+    let sales: Vec<Sale> = db.get_sales_without_bullshit(weapon_skin_id).await?;
+    if sales.is_empty() {
+        bail!("No sales found");
+    }
     let plot_data = PlotData::new(
         sales.iter().map(|sale| sale.float_value.unwrap()).collect(),
         sales.iter().map(|sale| sale.price).collect(),
@@ -108,14 +111,17 @@ pub async fn plot_by_floats(db: &Database, weapon_skin_id: i32) -> Result<()> {
         &plot_data,
         PlotType::Scatter,
         &format!("plots/floats/{weapon_skin_id}.png"),
-        "Floats vs Price",
+        &format!("Floats vs Price For {weapon_skin_id}"),
         "Float",
         "Price",
     )
 }
 
 pub async fn plot_by_dates(db: &Database, weapon_skin_id: i32) -> Result<()> {
-    let sales: Vec<Sale> = db.get_sales_by_weapon_skin_id(weapon_skin_id).await?;
+    let sales: Vec<Sale> = db.get_sales_without_bullshit(weapon_skin_id).await?;
+    if sales.is_empty() {
+        bail!("No sales found");
+    }
     let plot_data = PlotData::new(
         sales
             .iter()
@@ -126,9 +132,9 @@ pub async fn plot_by_dates(db: &Database, weapon_skin_id: i32) -> Result<()> {
 
     plot_generic(
         &plot_data,
-        PlotType::Bar,
+        PlotType::Scatter,
         &format!("plots/dates/{weapon_skin_id}.png"),
-        "Dates vs Price",
+        &format!("Dates vs Price For {weapon_skin_id}"),
         "Date",
         "Price",
     )

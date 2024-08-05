@@ -10,6 +10,7 @@ pub struct Skin {
     pub class_id: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct Sale {
     pub id: i32,
     pub weapon_skin_id: i32,
@@ -158,5 +159,41 @@ impl Database {
         .await?;
 
         Ok(sales)
+    }
+
+    pub(crate) async fn get_all_sales(&self) -> Result<Vec<Sale>> {
+        Ok(sqlx::query_as!(Sale, "SELECT * FROM Sale",)
+            .fetch_all(&self.pool)
+            .await?)
+    }
+
+    pub(crate) async fn get_skins_by_sale_count(&self, count: i64) -> Result<Vec<i32>> {
+        let records = sqlx::query!(
+            r#"
+            SELECT weapon_skin_id FROM Sale
+            GROUP BY weapon_skin_id
+            HAVING COUNT(*) >= $1
+            "#,
+            count
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(records.into_iter().map(|r| r.weapon_skin_id).collect())
+    }
+
+    pub(crate) async fn get_sales_without_bullshit(&self, skin_id: i32) -> Result<Vec<Sale>> {
+        Ok(sqlx::query_as!(
+            Sale,
+            r#"
+            SELECT sl.* FROM Sale sl
+            LEFT JOIN Sticker st ON sl.id = st.sale_id
+            WHERE sl.weapon_skin_id = $1 AND
+            st.id IS NULL AND sl.extras_1 IS NULL AND sl.phase_id IS NULL AND sl.float_value IS NOT NULL
+            "#,
+            skin_id
+        )
+        .fetch_all(&self.pool)
+        .await?)
     }
 }
