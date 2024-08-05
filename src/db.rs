@@ -45,13 +45,6 @@ pub struct PriceStatistics {
     pub median_price: Option<f64>,
 }
 
-#[derive(Debug)]
-pub struct PriceTrend {
-    pub date: Date,
-    pub avg_price: Option<f64>,
-    pub sale_count: i64,
-}
-
 
 #[derive(Clone)]
 pub(crate) struct Database {
