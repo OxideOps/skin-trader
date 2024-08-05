@@ -45,7 +45,6 @@ pub struct PriceStatistics {
     pub median_price: Option<f64>,
 }
 
-
 #[derive(Clone)]
 pub(crate) struct Database {
     pool: PgPool,
@@ -60,7 +59,7 @@ impl Database {
         log::info!("Connected to database");
         Ok(Self { pool })
     }
-    
+
     pub async fn get_price_statistics(&self, skin_id: i32, days: i32) -> Result<PriceStatistics> {
         let stats = sqlx::query_as!(
             PriceStatistics,
