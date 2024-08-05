@@ -4,6 +4,7 @@ mod plotter;
 
 use crate::api::Api;
 use crate::db::Database;
+use crate::plotter::{plot_by_dates, plot_by_floats};
 use anyhow::Result;
 use env_logger::{Builder, Env};
 
@@ -29,6 +30,11 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
+
+    for skin_id in db.get_skins_by_sale_count(500).await? {
+        plot_by_floats(&db, skin_id).await.ok();
+        println!("{skin_id}");
+    }
 
     Ok(())
 }
