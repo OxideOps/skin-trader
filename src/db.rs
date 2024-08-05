@@ -37,6 +37,14 @@ pub struct Sticker {
     pub rotation: Option<f64>,
 }
 
+#[derive(Debug)]
+pub struct PriceStatistics {
+    pub avg_price: Option<f64>,
+    pub min_price: Option<f64>,
+    pub max_price: Option<f64>,
+    pub median_price: Option<f64>,
+}
+
 #[derive(Clone)]
 pub(crate) struct Database {
     pool: PgPool,
@@ -50,6 +58,27 @@ impl Database {
             .await?;
         log::info!("Connected to database");
         Ok(Self { pool })
+    }
+
+    pub async fn get_price_statistics(&self, skin_id: i32, days: i32) -> Result<PriceStatistics> {
+        let stats = sqlx::query_as!(
+            PriceStatistics,
+            r#"
+            SELECT 
+                AVG(price) as avg_price,
+                MIN(price) as min_price,
+                MAX(price) as max_price,
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
+            FROM Sale
+            WHERE weapon_skin_id = $1 AND created_at >= CURRENT_DATE - $2::INTEGER
+            "#,
+            skin_id,
+            days
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(stats)
     }
 
     pub async fn update_skin(&self, skin: &Skin) -> Result<()> {
