@@ -43,6 +43,11 @@ pub struct PriceStatistics {
     pub min_price: Option<f64>,
     pub max_price: Option<f64>,
     pub median_price: Option<f64>,
+    pub std_dev_price: Option<f64>,
+    pub price_range: Option<f64>,
+    pub price_count: Option<i64>,
+    pub percentile_25: Option<f64>,
+    pub percentile_75: Option<f64>,
 }
 
 #[derive(Clone)]
@@ -68,7 +73,12 @@ impl Database {
                 AVG(price) as avg_price,
                 MIN(price) as min_price,
                 MAX(price) as max_price,
-                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price,
+                STDDEV(price) as std_dev_price,
+                MAX(price) - MIN(price) as price_range,
+                COUNT(price) as price_count,
+                PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY price) as percentile_25,
+                PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY price) as percentile_75
             FROM Sale
             WHERE weapon_skin_id = $1 AND created_at >= CURRENT_DATE - $2::INTEGER
             "#,
@@ -77,7 +87,6 @@ impl Database {
         )
         .fetch_one(&self.pool)
         .await?;
-
         Ok(stats)
     }
 
