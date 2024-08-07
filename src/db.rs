@@ -50,7 +50,6 @@ pub struct PriceStatistics {
     pub price_volatility: Option<f64>,
 }
 
-
 #[derive(Clone)]
 pub(crate) struct Database {
     pool: PgPool,
@@ -91,8 +90,10 @@ impl Database {
         .fetch_all(&self.pool)
         .await?;
 
-
-        Ok(stats.into_iter().map(|stat| (stat.weapon_skin_id, stat)).collect())
+        Ok(stats
+            .into_iter()
+            .map(|stat| (stat.weapon_skin_id, stat))
+            .collect())
     }
 
     pub async fn update_skin(&self, skin: &Skin) -> Result<()> {
