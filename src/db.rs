@@ -1,8 +1,11 @@
 use anyhow::Result;
 use sqlx::{postgres::PgPoolOptions, types::time::Date, PgPool};
+use std::collections::HashMap;
 use std::env;
 
 const MAX_CONNECTIONS: u32 = 5;
+
+pub type Id = i32;
 
 pub struct Skin {
     pub id: i32,
@@ -39,10 +42,12 @@ pub struct Sticker {
 
 #[derive(Debug)]
 pub struct PriceStatistics {
+    pub weapon_skin_id: Id,
     pub avg_price: Option<f64>,
     pub min_price: Option<f64>,
     pub max_price: Option<f64>,
     pub median_price: Option<f64>,
+    pub price_volatility: Option<f64>,
 }
 
 #[derive(Clone)]
@@ -60,25 +65,35 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn get_price_statistics(&self, skin_id: i32, days: i32) -> Result<PriceStatistics> {
+    pub async fn get_price_statistics(
+        &self,
+        skin_ids: &[Id],
+        days: i32,
+    ) -> Result<HashMap<Id, PriceStatistics>> {
         let stats = sqlx::query_as!(
             PriceStatistics,
             r#"
-            SELECT 
+            SELECT
+                weapon_skin_id,
                 AVG(price) as avg_price,
                 MIN(price) as min_price,
                 MAX(price) as max_price,
-                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
+                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price,
+                STDDEV(price) / NULLIF(AVG(price), 0) as price_volatility
             FROM Sale
-            WHERE weapon_skin_id = $1 AND created_at >= CURRENT_DATE - $2::INTEGER
+            WHERE weapon_skin_id = ANY($1) AND created_at >= CURRENT_DATE - $2::INTEGER
+            GROUP BY weapon_skin_id
             "#,
-            skin_id,
+            skin_ids,
             days
         )
-        .fetch_one(&self.pool)
+        .fetch_all(&self.pool)
         .await?;
 
-        Ok(stats)
+        Ok(stats
+            .into_iter()
+            .map(|stat| (stat.weapon_skin_id, stat))
+            .collect())
     }
 
     pub async fn update_skin(&self, skin: &Skin) -> Result<()> {
