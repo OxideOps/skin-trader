@@ -1,8 +1,6 @@
 pub mod websocket;
 
 use anyhow::{bail, Result};
-use futures_util::{SinkExt, StreamExt};
-use plotters::prelude::LogScalable;
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
@@ -52,7 +50,7 @@ impl DerefMut for Date {
 
 impl From<Date> for f64 {
     fn from(date: Date) -> Self {
-        date.to_julian_day().as_f64()
+        date.to_julian_day() as f64
     }
 }
 
