@@ -31,8 +31,8 @@ async fn main() -> Result<()> {
     let db = Database::new().await?;
 
     let ws = api::websocket::WebSocketClient::connect().await?;
-    
+
     ws.start().await?;
-    
+
     Ok(())
 }
