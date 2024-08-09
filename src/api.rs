@@ -1,4 +1,6 @@
 use anyhow::{bail, Result};
+use futures_util::stream::{SplitSink, SplitStream};
+use futures_util::{SinkExt, StreamExt};
 use plotters::prelude::LogScalable;
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
@@ -7,8 +9,16 @@ use sqlx::types::time::Date as SqlxDate;
 use sqlx::types::time::OffsetDateTime;
 use std::env;
 use std::ops::{Deref, DerefMut};
+use tokio::net::TcpStream;
+use tokio_tungstenite::tungstenite::Error;
+use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
+
+type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
+type WriteSocket = SplitSink<WsStream, Message>;
+type ReadSocket = SplitStream<WsStream>;
 
 const BASE_URL: &str = "https://api.bitskins.com";
+const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
 const MAX_LIMIT: usize = 500;
 
 const CS2_APP_ID: u32 = 730;
@@ -186,4 +196,50 @@ impl Api {
 
         self.post(url, &payload).await
     }
+}
+
+async fn socket_send(
+    write: &mut WriteSocket,
+    action: &str,
+    data: Value,
+) -> std::result::Result<(), Error> {
+    let message = json!([action, data]);
+    write.send(Message::Text(message.to_string())).await
+}
+
+pub(crate) async fn start_web_socket() -> Result<()> {
+    let (ws_stream, _) = tokio_tungstenite::connect_async(WEB_SOCKET_URL).await?;
+    let (mut write, mut read) = ws_stream.split();
+    log::info!("WebSocket handshake has been successfully completed");
+
+    socket_send(
+        &mut write,
+        "WS_AUTH_APIKEY",
+        json!(env::var("BITSKIN_API_KEY")?),
+    )
+    .await?;
+
+    while let Some(message) = read.next().await {
+        match message? {
+            Message::Text(text) => {
+                if let Value::Array(array) = text.parse()? {
+                    let action = array[0].as_str().unwrap_or_default();
+                    let data = &array[1];
+
+                    log::info!("Message from server - Action: {}, Data: {}", action, data);
+
+                    if action.starts_with("WS_AUTH") {
+                        // Subscribe after authentication
+                        socket_send(&mut write, "WS_SUB", json!("listed")).await?;
+                        socket_send(&mut write, "WS_SUB", json!("price_changed")).await?;
+                    }
+                } else {
+                    log::warn!("Invalid message from server: {}", text);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
 }
