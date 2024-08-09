@@ -11,7 +11,7 @@ use std::env;
 use std::ops::{Deref, DerefMut};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Error;
-use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream, connect_async};
 
 type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 type WriteSocket = SplitSink<WsStream, Message>;
@@ -198,50 +198,62 @@ impl Api {
     }
 }
 
-async fn send_action<S: Serialize>(write: &mut WriteSocket, action: &str, data: S) -> Result<()> {
-    let message = json!([action, data]);
-    write.send(Message::Text(message.to_string())).await?;
-    Ok(())
+pub struct WebSocketClient {
+    write: WriteSocket,
+    read: ReadSocket,
+    
 }
 
-async fn handle_message(write: &mut WriteSocket, text: &str) -> Result<()> {
-    if let Ok(Value::Array(array)) = serde_json::from_str::<Value>(text) {
-        if array.len() < 2 {
-            log::warn!("Received malformed message: {}", text);
-            return Ok(());
-        }
-
-        let action = array[0].as_str().unwrap_or_default();
-        let data = &array[1];
-
-        log::info!("Message from server - Action: {}, Data: {}", action, data);
-
-        if action.starts_with("WS_AUTH") {
-            // Subscribe after authentication
-            send_action(write, "WS_SUB", "listed").await?;
-            send_action(write, "WS_SUB", "price_changed").await?;
-        }
-    } else {
-        log::warn!("Invalid message format: {}", text);
+impl WebSocketClient {
+    pub async fn connect(url: &str) -> Result<Self> {
+        let (ws_stream, _) = connect_async(url).await?;
+        let (write, read) = ws_stream.split();
+        log::info!("WebSocket handshake has been successfully completed");
+        Ok(Self { write, read })
     }
 
-    Ok(())
-}
-
-pub(crate) async fn start_web_socket() -> Result<()> {
-    let (ws_stream, _) = tokio_tungstenite::connect_async(WEB_SOCKET_URL).await?;
-    let (mut write, mut read) = ws_stream.split();
-    log::info!("WebSocket handshake has been successfully completed");
-
-    // Authenticate with API key
-    send_action(&mut write, "WS_AUTH_APIKEY", env::var("BITSKIN_API_KEY")?).await?;
-
-    // Listen for incoming messages
-    while let Some(message) = read.next().await {
-        if let Message::Text(text) = message? {
-            handle_message(&mut write, &text).await?;
-        }
+    async fn send_action<T: Serialize>(&mut self, action: &str, data: T) -> Result<()> {
+        let message = json!([action, data]);
+        self.write.send(Message::Text(message.to_string())).await?;
+        Ok(())
     }
 
-    Ok(())
+    async fn handle_message(&mut self, text: &str) -> Result<()> {
+        if let Ok(Value::Array(array)) = serde_json::from_str::<Value>(text) {
+            if array.len() < 2 {
+                log::warn!("Received malformed message: {}", text);
+                return Ok(());
+            }
+
+            let action = array[0].as_str().unwrap_or_default();
+            let data = &array[1];
+
+            log::info!("Message from server - Action: {}, Data: {}", action, data);
+
+            if action.starts_with("WS_AUTH") {
+                self.send_action("WS_SUB", "listed").await?;
+                self.send_action("WS_SUB", "price_changed").await?;
+            }
+        } else {
+            log::warn!("Invalid message format: {}", text);
+        }
+
+        Ok(())
+    }
+    
+    async fn subscribe(&self) {
+        
+    }
+
+    pub async fn start(mut self) -> Result<()> {
+        self.send_action("WS_AUTH_APIKEY", env::var("BITSKIN_API_KEY")?).await?;
+        
+        while let Some(message) = self.read.next().await {
+            if let Message::Text(text) = message? {
+                self.handle_message(&text).await?;
+            }
+        }
+
+        Ok(())
+    }
 }
