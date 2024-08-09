@@ -31,10 +31,7 @@ async fn main() -> Result<()> {
     let api = Api::new();
     let db = Database::new().await?;
 
-    for skin_id in db.get_skins_by_sale_count(500).await? {
-        plot_by_floats(&db, skin_id).await.ok();
-        println!("{skin_id}");
-    }
+    db.calculate_and_update_price_statistics(30).await?;
 
     Ok(())
 }
