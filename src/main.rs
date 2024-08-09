@@ -4,7 +4,6 @@ mod plotter;
 
 use crate::api::Api;
 use crate::db::Database;
-use crate::plotter::{plot_by_dates, plot_by_floats};
 use anyhow::Result;
 use env_logger::{Builder, Env};
 
