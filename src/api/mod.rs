@@ -1,4 +1,4 @@
-mod websocket;
+pub mod websocket;
 
 use anyhow::{bail, Result};
 use futures_util::{SinkExt, StreamExt};
@@ -12,7 +12,6 @@ use std::env;
 use std::ops::{Deref, DerefMut};
 
 const BASE_URL: &str = "https://api.bitskins.com";
-const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
 const MAX_LIMIT: usize = 500;
 
 const CS2_APP_ID: u32 = 730;

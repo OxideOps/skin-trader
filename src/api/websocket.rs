@@ -4,6 +4,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::env;
+use std::str::FromStr;
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
@@ -11,6 +12,8 @@ use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 type WriteSocket = SplitSink<WsStream, Message>;
 type ReadSocket = SplitStream<WsStream>;
+
+const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
 
 enum WsAction {
     AuthWithSessionToken,
@@ -22,7 +25,7 @@ enum WsAction {
 }
 
 impl WsAction {
-    fn as_str(&self) -> &'static str {
+    const fn as_str(&self) -> &'static str {
         match self {
             WsAction::AuthWithSessionToken => "WS_AUTH",
             WsAction::AuthWithApiKey => "WS_AUTH_APIKEY",
@@ -40,8 +43,8 @@ pub struct WebSocketClient {
 }
 
 impl WebSocketClient {
-    pub async fn connect(url: &str) -> Result<Self> {
-        let (write, read) = connect_async(url).await?.0.split();
+    pub async fn connect() -> Result<Self> {
+        let (write, read) = connect_async(WEB_SOCKET_URL).await?.0.split();
         Ok(Self { write, read })
     }
 
@@ -63,7 +66,7 @@ impl WebSocketClient {
 
             log::info!("Message from server - Action: {}, Data: {}", action, data);
 
-            if action.starts_with("WS_AUTH") {
+            if action == WsAction::AuthWithApiKey.as_str() {
                 self.setup_channels().await?
             }
         } else {
