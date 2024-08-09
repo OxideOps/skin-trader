@@ -1,20 +1,15 @@
+mod websocket;
+
 use anyhow::{bail, Result};
-use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use plotters::prelude::LogScalable;
 use reqwest::{Client, IntoUrl};
-use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
 use sqlx::types::time::Date as SqlxDate;
 use sqlx::types::time::OffsetDateTime;
 use std::env;
 use std::ops::{Deref, DerefMut};
-use tokio::net::TcpStream;
-use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
-
-type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
-type WriteSocket = SplitSink<WsStream, Message>;
-type ReadSocket = SplitStream<WsStream>;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
@@ -194,92 +189,5 @@ impl Api {
         });
 
         self.post(url, &payload).await
-    }
-}
-
-enum WsAction {
-    AuthWithSessionToken,
-    AuthWithApiKey,
-    DeAuthSession,
-    Subscribe,
-    Unsubscribe,
-    UnsubscribeAll,
-}
-
-impl WsAction {
-    fn as_str(&self) -> &'static str {
-        match self {
-            WsAction::AuthWithSessionToken => "WS_AUTH",
-            WsAction::AuthWithApiKey => "WS_AUTH_APIKEY",
-            WsAction::DeAuthSession => "WS_DEAUTH",
-            WsAction::Subscribe => "WS_SUB",
-            WsAction::Unsubscribe => "WS_UNSUB",
-            WsAction::UnsubscribeAll => "WS_UNSUB_ALL",
-        }
-    }
-}
-
-pub struct WebSocketClient {
-    write: WriteSocket,
-    read: ReadSocket,
-}
-
-impl WebSocketClient {
-    pub async fn connect(url: &str) -> Result<Self> {
-        let (ws_stream, _) = connect_async(url).await?;
-        let (write, read) = ws_stream.split();
-        log::info!("WebSocket handshake has been successfully completed");
-        Ok(Self { write, read })
-    }
-
-    async fn send_action<T: Serialize>(&mut self, action: WsAction, data: T) -> Result<()> {
-        let message = json!([action.as_str(), data]);
-        self.write.send(Message::Text(message.to_string())).await?;
-        Ok(())
-    }
-
-    async fn handle_message(&mut self, text: &str) -> Result<()> {
-        if let Ok(Value::Array(array)) = serde_json::from_str::<Value>(text) {
-            if array.len() < 2 {
-                log::warn!("Received malformed message: {}", text);
-                return Ok(());
-            }
-
-            let action = array[0].as_str().unwrap_or_default();
-            let data = &array[1];
-
-            log::info!("Message from server - Action: {}, Data: {}", action, data);
-
-            if action.starts_with("WS_AUTH") {
-                self.setup_channels().await?
-            }
-        } else {
-            log::warn!("Invalid message format: {}", text);
-        }
-
-        Ok(())
-    }
-
-    async fn setup_channels(&mut self) -> Result<()> {
-        const CHANNELS: [&str; 4] = ["listed", "price_changes", "delisted_or_sold", "extra_info"];
-
-        for channel in CHANNELS {
-            self.send_action(WsAction::Subscribe, channel).await?
-        }
-
-        Ok(())
-    }
-
-    pub async fn start(mut self) -> Result<()> {
-        self.send_action(WsAction::AuthWithApiKey, env::var("BITSKIN_API_KEY")?)
-            .await?;
-
-        while let Some(message) = self.read.next().await {
-            if let Message::Text(text) = message? {
-                self.handle_message(&text).await?;
-            }
-        }
-
-        Ok(())
     }
 }
