@@ -11,7 +11,7 @@ use std::env;
 use std::ops::{Deref, DerefMut};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Error;
-use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream, connect_async};
+use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 
 type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 type WriteSocket = SplitSink<WsStream, Message>;
@@ -198,10 +198,31 @@ impl Api {
     }
 }
 
+enum WsAction {
+    AuthWithSessionToken,
+    AuthWithApiKey,
+    DeAuthSession,
+    Sub,
+    Unsub,
+    UnsubAll,
+}
+
+impl WsAction {
+    fn as_str(&self) -> &'static str {
+        match self {
+            WsAction::AuthWithSessionToken => "WS_AUTH",
+            WsAction::AuthWithApiKey => "WS_AUTH_APIKEY",
+            WsAction::DeAuthSession => "WS_DEAUTH",
+            WsAction::Sub => "WS_SUB",
+            WsAction::Unsub => "WS_UNSUB",
+            WsAction::UnsubAll => "WS_UNSUB_ALL",
+        }
+    }
+}
+
 pub struct WebSocketClient {
     write: WriteSocket,
     read: ReadSocket,
-    
 }
 
 impl WebSocketClient {
@@ -212,8 +233,8 @@ impl WebSocketClient {
         Ok(Self { write, read })
     }
 
-    async fn send_action<T: Serialize>(&mut self, action: &str, data: T) -> Result<()> {
-        let message = json!([action, data]);
+    async fn send_action<T: Serialize>(&mut self, action: WsAction, data: T) -> Result<()> {
+        let message = json!([action.as_str(), data]);
         self.write.send(Message::Text(message.to_string())).await?;
         Ok(())
     }
@@ -231,8 +252,7 @@ impl WebSocketClient {
             log::info!("Message from server - Action: {}, Data: {}", action, data);
 
             if action.starts_with("WS_AUTH") {
-                self.send_action("WS_SUB", "listed").await?;
-                self.send_action("WS_SUB", "price_changed").await?;
+                self.setup_channels().await?
             }
         } else {
             log::warn!("Invalid message format: {}", text);
@@ -240,14 +260,24 @@ impl WebSocketClient {
 
         Ok(())
     }
-    
-    async fn subscribe(&self) {
-        
+
+    async fn setup_channels(&mut self) -> Result<()> {
+        const SUBSCRIBE: &str = "WS_SUB";
+
+        //
+        let channels: [&str; 2] = ["listed", "price_changes", ];
+
+        for channel in channels {
+            self.send_action(WsAction::Sub, channel).await?
+        }
+
+        Ok(())
     }
 
     pub async fn start(mut self) -> Result<()> {
-        self.send_action("WS_AUTH_APIKEY", env::var("BITSKIN_API_KEY")?).await?;
-        
+        self.send_action(WsAction::AuthWithApiKey, env::var("BITSKIN_API_KEY")?)
+            .await?;
+
         while let Some(message) = self.read.next().await {
             if let Message::Text(text) = message? {
                 self.handle_message(&text).await?;
