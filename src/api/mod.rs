@@ -1,8 +1,6 @@
-mod websocket;
+pub mod websocket;
 
 use anyhow::{bail, Result};
-use futures_util::{SinkExt, StreamExt};
-use plotters::prelude::LogScalable;
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
@@ -12,7 +10,6 @@ use std::env;
 use std::ops::{Deref, DerefMut};
 
 const BASE_URL: &str = "https://api.bitskins.com";
-const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
 const MAX_LIMIT: usize = 500;
 
 const CS2_APP_ID: u32 = 730;
@@ -53,7 +50,7 @@ impl DerefMut for Date {
 
 impl From<Date> for f64 {
     fn from(date: Date) -> Self {
-        date.to_julian_day().as_f64()
+        date.to_julian_day() as f64
     }
 }
 
