@@ -40,9 +40,7 @@ pub struct WebSocketClient {
 
 impl WebSocketClient {
     pub async fn connect(url: &str) -> anyhow::Result<Self> {
-        let (ws_stream, _) = connect_async(url).await?;
-        let (write, read) = ws_stream.split();
-        log::info!("WebSocket handshake has been successfully completed");
+        let (write, read) = connect_async(url).await?.0.split();
         Ok(Self { write, read })
     }
 
