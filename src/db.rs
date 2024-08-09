@@ -44,12 +44,19 @@ pub struct PriceStatistics {
     pub weapon_skin_id: i32,
     pub mean_price: Option<f64>,
     pub std_dev_price: Option<f64>,
-    pub sale_count: i32,
+    pub sale_count: Option<i32>,
     pub min_float: Option<f64>,
     pub max_float: Option<f64>,
     pub time_correlation: Option<f64>,
     pub price_slope: Option<f64>,
-    pub last_update: OffsetDateTime,
+    pub last_update: Option<OffsetDateTime>,
+}
+
+struct FilteredSale {
+    weapon_skin_id: i32,
+    price: f64,
+    float_value: Option<f64>,
+    time: f64,
 }
 
 #[derive(Clone)]
