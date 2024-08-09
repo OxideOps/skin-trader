@@ -95,7 +95,7 @@ impl Database {
                 FROM Sale
                 WHERE 
                     created_at >= CURRENT_DATE - $1::INTEGER * INTERVAL '1 day'
-                    AND (float_value IS NULL OR float_value >= $2)
+                    AND (float_value IS NOT NULL AND float_value >= $2)
             )
             SELECT 
                 weapon_skin_id,
@@ -109,6 +109,8 @@ impl Database {
                 $3::TIMESTAMPTZ as last_update
             FROM filtered_sales
             GROUP BY weapon_skin_id
+            HAVING 
+                COUNT(*) > 30
             "#,
             days,
             float_min,
