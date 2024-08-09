@@ -204,10 +204,7 @@ async fn send_action<S: Serialize>(write: &mut WriteSocket, action: &str, data: 
     Ok(())
 }
 
-async fn handle_message(
-    write: &mut WriteSocket,
-    text: &str,
-) -> Result<()> {
+async fn handle_message(write: &mut WriteSocket, text: &str) -> Result<()> {
     if let Ok(Value::Array(array)) = serde_json::from_str::<Value>(text) {
         if array.len() < 2 {
             log::warn!("Received malformed message: {}", text);
