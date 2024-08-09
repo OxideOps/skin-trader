@@ -1,5 +1,9 @@
 use anyhow::Result;
-use sqlx::{postgres::PgPoolOptions, types::time::Date, PgPool};
+use sqlx::{
+    postgres::PgPoolOptions,
+    types::time::{Date, OffsetDateTime},
+    PgPool,
+};
 use std::collections::HashMap;
 use std::env;
 
@@ -40,14 +44,23 @@ pub struct Sticker {
     pub rotation: Option<f64>,
 }
 
-#[derive(Debug)]
 pub struct PriceStatistics {
-    pub weapon_skin_id: Id,
-    pub avg_price: Option<f64>,
-    pub min_price: Option<f64>,
-    pub max_price: Option<f64>,
-    pub median_price: Option<f64>,
-    pub price_volatility: Option<f64>,
+    pub weapon_skin_id: i32,
+    pub mean_price: Option<f64>,
+    pub std_dev_price: Option<f64>,
+    pub sale_count: Option<i32>,
+    pub min_float: Option<f64>,
+    pub max_float: Option<f64>,
+    pub time_correlation: Option<f64>,
+    pub price_slope: Option<f64>,
+    pub last_update: Option<OffsetDateTime>,
+}
+
+struct FilteredSale {
+    weapon_skin_id: i32,
+    price: f64,
+    float_value: Option<f64>,
+    time: f64,
 }
 
 #[derive(Clone)]
@@ -65,27 +78,97 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn get_price_statistics(
+    pub async fn calculate_price_statistics(
         &self,
-        skin_ids: &[Id],
+        skin_ids: &[i32],
         days: i32,
-    ) -> Result<HashMap<Id, PriceStatistics>> {
+    ) -> Result<Vec<PriceStatistics>> {
         let stats = sqlx::query_as!(
             PriceStatistics,
             r#"
-            SELECT
+            WITH filtered_sales AS (
+                SELECT 
+                    weapon_skin_id,
+                    price,
+                    float_value,
+                    EXTRACT(EPOCH FROM created_at) as time
+                FROM Sale
+                WHERE 
+                    weapon_skin_id = ANY($1)
+                    AND created_at >= CURRENT_DATE - $2::INTEGER * INTERVAL '1 day'
+                    AND (float_value IS NULL OR float_value >= 0.15)
+            )
+            SELECT 
                 weapon_skin_id,
-                AVG(price) as avg_price,
-                MIN(price) as min_price,
-                MAX(price) as max_price,
-                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price,
-                STDDEV(price) / NULLIF(AVG(price), 0) as price_volatility
-            FROM Sale
-            WHERE weapon_skin_id = ANY($1) AND created_at >= CURRENT_DATE - $2::INTEGER
+                AVG(price) as mean_price,
+                STDDEV(price) as std_dev_price,
+                COUNT(*)::INTEGER as sale_count,
+                MIN(float_value) as min_float,
+                MAX(float_value) as max_float,
+                CORR(time, price) as time_correlation,
+                REGR_SLOPE(price, time) as price_slope,
+                $3::TIMESTAMPTZ as last_update
+            FROM filtered_sales
             GROUP BY weapon_skin_id
             "#,
             skin_ids,
-            days
+            days,
+            OffsetDateTime::now_utc()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(stats)
+    }
+
+    pub async fn update_price_statistics(&self, stats: &[PriceStatistics]) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        for stat in stats {
+            sqlx::query!(
+                r#"
+                INSERT INTO price_statistics (
+                    weapon_skin_id, mean_price, std_dev_price, sale_count, min_float, max_float,
+                    time_correlation, price_slope, last_update
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                ON CONFLICT (weapon_skin_id) DO UPDATE
+                SET 
+                    mean_price = EXCLUDED.mean_price,
+                    std_dev_price = EXCLUDED.std_dev_price,
+                    sale_count = EXCLUDED.sale_count,
+                    min_float = EXCLUDED.min_float,
+                    max_float = EXCLUDED.max_float,
+                    time_correlation = EXCLUDED.time_correlation,
+                    price_slope = EXCLUDED.price_slope,
+                    last_update = EXCLUDED.last_update
+                "#,
+                stat.weapon_skin_id,
+                stat.mean_price,
+                stat.std_dev_price,
+                stat.sale_count,
+                stat.min_float,
+                stat.max_float,
+                stat.time_correlation,
+                stat.price_slope,
+                stat.last_update
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn get_price_statistics(
+        &self,
+        skin_ids: &[i32],
+    ) -> Result<HashMap<i32, PriceStatistics>> {
+        let stats = sqlx::query_as!(
+            PriceStatistics,
+            "SELECT * FROM price_statistics WHERE weapon_skin_id = ANY($1)",
+            skin_ids
         )
         .fetch_all(&self.pool)
         .await?;
@@ -94,6 +177,16 @@ impl Database {
             .into_iter()
             .map(|stat| (stat.weapon_skin_id, stat))
             .collect())
+    }
+
+    pub async fn calculate_and_update_price_statistics(
+        &self,
+        skin_ids: &[i32],
+        days: i32,
+    ) -> Result<Vec<PriceStatistics>> {
+        let stats = self.calculate_price_statistics(skin_ids, days).await?;
+        self.update_price_statistics(&stats).await?;
+        Ok(stats)
     }
 
     pub async fn update_skin(&self, skin: &Skin) -> Result<()> {
