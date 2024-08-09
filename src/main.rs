@@ -2,8 +2,6 @@ mod api;
 mod db;
 mod plotter;
 
-use crate::api::Api;
-use crate::db::Database;
 use anyhow::Result;
 use env_logger::{Builder, Env};
 
@@ -27,12 +25,8 @@ where
 async fn main() -> Result<()> {
     setup_env()?;
 
-    let api = Api::new();
-    let db = Database::new().await?;
-
-    let ws = api::websocket::WebSocketClient::connect().await?;
-
-    ws.start().await?;
+    let ws_client = api::WebSocketClient::connect().await?;
+    let http_client = api::HttpClient::new();
 
     Ok(())
 }
