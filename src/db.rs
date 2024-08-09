@@ -80,8 +80,8 @@ impl Database {
 
     pub async fn calculate_price_statistics(
         &self,
-        skin_ids: &[i32],
         days: i32,
+        float_min: f64
     ) -> Result<Vec<PriceStatistics>> {
         let stats = sqlx::query_as!(
             PriceStatistics,
@@ -94,9 +94,8 @@ impl Database {
                     EXTRACT(EPOCH FROM created_at) as time
                 FROM Sale
                 WHERE 
-                    weapon_skin_id = ANY($1)
-                    AND created_at >= CURRENT_DATE - $2::INTEGER * INTERVAL '1 day'
-                    AND (float_value IS NULL OR float_value >= 0.15)
+                    created_at >= CURRENT_DATE - $1::INTEGER * INTERVAL '1 day'
+                    AND (float_value IS NULL OR float_value >= $2)
             )
             SELECT 
                 weapon_skin_id,
@@ -111,9 +110,9 @@ impl Database {
             FROM filtered_sales
             GROUP BY weapon_skin_id
             "#,
-            skin_ids,
             days,
-            OffsetDateTime::now_utc()
+            float_min,
+            OffsetDateTime::now_utc(),
         )
         .fetch_all(&self.pool)
         .await?;
@@ -163,8 +162,8 @@ impl Database {
 
     pub async fn get_price_statistics(
         &self,
-        skin_ids: &[i32],
-    ) -> Result<HashMap<i32, PriceStatistics>> {
+        skin_ids: &[Id],
+    ) -> Result<HashMap<Id, PriceStatistics>> {
         let stats = sqlx::query_as!(
             PriceStatistics,
             "SELECT * FROM price_statistics WHERE weapon_skin_id = ANY($1)",
@@ -181,10 +180,9 @@ impl Database {
 
     pub async fn calculate_and_update_price_statistics(
         &self,
-        skin_ids: &[i32],
         days: i32,
     ) -> Result<Vec<PriceStatistics>> {
-        let stats = self.calculate_price_statistics(skin_ids, days).await?;
+        let stats = self.calculate_price_statistics(days, 0.15).await?;
         self.update_price_statistics(&stats).await?;
         Ok(stats)
     }
