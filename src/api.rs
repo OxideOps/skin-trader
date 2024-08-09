@@ -3,7 +3,7 @@ use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use plotters::prelude::LogScalable;
 use reqwest::{Client, IntoUrl};
-use serde::{de::DeserializeOwned, Deserialize, Deserializer};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use serde_json::{json, Value};
 use sqlx::types::time::Date as SqlxDate;
 use sqlx::types::time::OffsetDateTime;
@@ -198,13 +198,37 @@ impl Api {
     }
 }
 
-async fn socket_send(
-    write: &mut WriteSocket,
-    action: &str,
-    data: Value,
-) -> std::result::Result<(), Error> {
+async fn send_action<S: Serialize>(write: &mut WriteSocket, action: &str, data: S) -> Result<()> {
     let message = json!([action, data]);
-    write.send(Message::Text(message.to_string())).await
+    write.send(Message::Text(message.to_string())).await?;
+    Ok(())
+}
+
+async fn handle_message(
+    write: &mut WriteSocket,
+    text: &str,
+) -> Result<()> {
+    if let Ok(Value::Array(array)) = serde_json::from_str::<Value>(text) {
+        if array.len() < 2 {
+            log::warn!("Received malformed message: {}", text);
+            return Ok(());
+        }
+
+        let action = array[0].as_str().unwrap_or_default();
+        let data = &array[1];
+
+        log::info!("Message from server - Action: {}, Data: {}", action, data);
+
+        if action.starts_with("WS_AUTH") {
+            // Subscribe after authentication
+            send_action(write, "WS_SUB", "listed").await?;
+            send_action(write, "WS_SUB", "price_changed").await?;
+        }
+    } else {
+        log::warn!("Invalid message format: {}", text);
+    }
+
+    Ok(())
 }
 
 pub(crate) async fn start_web_socket() -> Result<()> {
@@ -212,32 +236,13 @@ pub(crate) async fn start_web_socket() -> Result<()> {
     let (mut write, mut read) = ws_stream.split();
     log::info!("WebSocket handshake has been successfully completed");
 
-    socket_send(
-        &mut write,
-        "WS_AUTH_APIKEY",
-        json!(env::var("BITSKIN_API_KEY")?),
-    )
-    .await?;
+    // Authenticate with API key
+    send_action(&mut write, "WS_AUTH_APIKEY", env::var("BITSKIN_API_KEY")?).await?;
 
+    // Listen for incoming messages
     while let Some(message) = read.next().await {
-        match message? {
-            Message::Text(text) => {
-                if let Value::Array(array) = text.parse()? {
-                    let action = array[0].as_str().unwrap_or_default();
-                    let data = &array[1];
-
-                    log::info!("Message from server - Action: {}, Data: {}", action, data);
-
-                    if action.starts_with("WS_AUTH") {
-                        // Subscribe after authentication
-                        socket_send(&mut write, "WS_SUB", json!("listed")).await?;
-                        socket_send(&mut write, "WS_SUB", json!("price_changed")).await?;
-                    }
-                } else {
-                    log::warn!("Invalid message from server: {}", text);
-                }
-            }
-            _ => {}
+        if let Message::Text(text) = message? {
+            handle_message(&mut write, &text).await?;
         }
     }
 
