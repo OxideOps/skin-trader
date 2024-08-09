@@ -1,5 +1,9 @@
 use anyhow::Result;
-use sqlx::{postgres::PgPoolOptions, types::time::{Date, OffsetDateTime}, PgPool};
+use sqlx::{
+    postgres::PgPoolOptions,
+    types::time::{Date, OffsetDateTime},
+    PgPool,
+};
 use std::collections::HashMap;
 use std::env;
 
@@ -73,8 +77,12 @@ impl Database {
         log::info!("Connected to database");
         Ok(Self { pool })
     }
-    
-    pub async fn calculate_price_statistics(&self, skin_ids: &[i32], days: i32) -> Result<Vec<PriceStatistics>> {
+
+    pub async fn calculate_price_statistics(
+        &self,
+        skin_ids: &[i32],
+        days: i32,
+    ) -> Result<Vec<PriceStatistics>> {
         let stats = sqlx::query_as!(
             PriceStatistics,
             r#"
@@ -153,7 +161,10 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_price_statistics(&self, skin_ids: &[i32]) -> Result<HashMap<i32, PriceStatistics>> {
+    pub async fn get_price_statistics(
+        &self,
+        skin_ids: &[i32],
+    ) -> Result<HashMap<i32, PriceStatistics>> {
         let stats = sqlx::query_as!(
             PriceStatistics,
             "SELECT * FROM price_statistics WHERE weapon_skin_id = ANY($1)",
@@ -162,10 +173,17 @@ impl Database {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(stats.into_iter().map(|stat| (stat.weapon_skin_id, stat)).collect())
+        Ok(stats
+            .into_iter()
+            .map(|stat| (stat.weapon_skin_id, stat))
+            .collect())
     }
 
-    pub async fn calculate_and_update_price_statistics(&self, skin_ids: &[i32], days: i32) -> Result<Vec<PriceStatistics>> {
+    pub async fn calculate_and_update_price_statistics(
+        &self,
+        skin_ids: &[i32],
+        days: i32,
+    ) -> Result<Vec<PriceStatistics>> {
         let stats = self.calculate_price_statistics(skin_ids, days).await?;
         self.update_price_statistics(&stats).await?;
         Ok(stats)
