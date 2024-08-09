@@ -1,3 +1,4 @@
+use anyhow::Result;
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
@@ -39,18 +40,18 @@ pub struct WebSocketClient {
 }
 
 impl WebSocketClient {
-    pub async fn connect(url: &str) -> anyhow::Result<Self> {
+    pub async fn connect(url: &str) -> Result<Self> {
         let (write, read) = connect_async(url).await?.0.split();
         Ok(Self { write, read })
     }
 
-    async fn send_action<T: Serialize>(&mut self, action: WsAction, data: T) -> anyhow::Result<()> {
+    async fn send_action<T: Serialize>(&mut self, action: WsAction, data: T) -> Result<()> {
         let message = json!([action.as_str(), data]);
         self.write.send(Message::Text(message.to_string())).await?;
         Ok(())
     }
 
-    async fn handle_message(&mut self, text: &str) -> anyhow::Result<()> {
+    async fn handle_message(&mut self, text: &str) -> Result<()> {
         if let Ok(Value::Array(array)) = serde_json::from_str::<Value>(text) {
             if array.len() < 2 {
                 log::warn!("Received malformed message: {}", text);
@@ -72,7 +73,7 @@ impl WebSocketClient {
         Ok(())
     }
 
-    async fn setup_channels(&mut self) -> anyhow::Result<()> {
+    async fn setup_channels(&mut self) -> Result<()> {
         for channel in ["listed", "price_changes", "delisted_or_sold", "extra_info"] {
             self.send_action(WsAction::Subscribe, channel).await?
         }
@@ -80,7 +81,7 @@ impl WebSocketClient {
         Ok(())
     }
 
-    pub async fn start(mut self) -> anyhow::Result<()> {
+    pub async fn start(mut self) -> Result<()> {
         self.send_action(WsAction::AuthWithApiKey, env::var("BITSKIN_API_KEY")?)
             .await?;
 
