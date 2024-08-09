@@ -220,24 +220,21 @@ pub(crate) async fn start_web_socket() -> Result<()> {
     .await?;
 
     while let Some(message) = read.next().await {
-        match message? {
-            Message::Text(text) => {
-                if let Value::Array(array) = text.parse()? {
-                    let action = array[0].as_str().unwrap_or_default();
-                    let data = &array[1];
+        if let Message::Text(text) = message? {
+            if let Value::Array(array) = text.parse()? {
+                let action = array[0].as_str().unwrap_or_default();
+                let data = &array[1];
 
-                    log::info!("Message from server - Action: {}, Data: {}", action, data);
+                log::info!("Message from server - Action: {}, Data: {}", action, data);
 
-                    if action.starts_with("WS_AUTH") {
-                        // Subscribe after authentication
-                        socket_send(&mut write, "WS_SUB", json!("listed")).await?;
-                        socket_send(&mut write, "WS_SUB", json!("price_changed")).await?;
-                    }
-                } else {
-                    log::warn!("Invalid message from server: {}", text);
+                if action.starts_with("WS_AUTH") {
+                    // Subscribe after authentication
+                    socket_send(&mut write, "WS_SUB", json!("listed")).await?;
+                    socket_send(&mut write, "WS_SUB", json!("price_changed")).await?;
                 }
+            } else {
+                log::warn!("Invalid message from server: {}", text);
             }
-            _ => {}
         }
     }
 
