@@ -30,7 +30,6 @@ async fn main() -> Result<()> {
 
     let api = Api::new();
     let db = Database::new().await?;
-    
 
     db.calculate_and_update_price_statistics(30).await?;
 

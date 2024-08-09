@@ -81,7 +81,7 @@ impl Database {
     pub async fn calculate_price_statistics(
         &self,
         days: i32,
-        float_min: f64
+        float_min: f64,
     ) -> Result<Vec<PriceStatistics>> {
         let stats = sqlx::query_as!(
             PriceStatistics,
