@@ -262,12 +262,9 @@ impl WebSocketClient {
     }
 
     async fn setup_channels(&mut self) -> Result<()> {
-        const SUBSCRIBE: &str = "WS_SUB";
+        const CHANNELS: [&str; 4] = ["listed", "price_changes", "delisted_or_sold", "extra_info"];
 
-        //
-        let channels: [&str; 2] = ["listed", "price_changes", ];
-
-        for channel in channels {
+        for channel in CHANNELS {
             self.send_action(WsAction::Sub, channel).await?
         }
 
