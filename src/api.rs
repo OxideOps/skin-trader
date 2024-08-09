@@ -10,7 +10,6 @@ use sqlx::types::time::OffsetDateTime;
 use std::env;
 use std::ops::{Deref, DerefMut};
 use tokio::net::TcpStream;
-use tokio_tungstenite::tungstenite::Error;
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 
 type WsStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
@@ -202,9 +201,9 @@ enum WsAction {
     AuthWithSessionToken,
     AuthWithApiKey,
     DeAuthSession,
-    Sub,
-    Unsub,
-    UnsubAll,
+    Subscribe,
+    Unsubscribe,
+    UnsubscribeAll,
 }
 
 impl WsAction {
@@ -213,9 +212,9 @@ impl WsAction {
             WsAction::AuthWithSessionToken => "WS_AUTH",
             WsAction::AuthWithApiKey => "WS_AUTH_APIKEY",
             WsAction::DeAuthSession => "WS_DEAUTH",
-            WsAction::Sub => "WS_SUB",
-            WsAction::Unsub => "WS_UNSUB",
-            WsAction::UnsubAll => "WS_UNSUB_ALL",
+            WsAction::Subscribe => "WS_SUB",
+            WsAction::Unsubscribe => "WS_UNSUB",
+            WsAction::UnsubscribeAll => "WS_UNSUB_ALL",
         }
     }
 }
@@ -265,7 +264,7 @@ impl WebSocketClient {
         const CHANNELS: [&str; 4] = ["listed", "price_changes", "delisted_or_sold", "extra_info"];
 
         for channel in CHANNELS {
-            self.send_action(WsAction::Sub, channel).await?
+            self.send_action(WsAction::Subscribe, channel).await?
         }
 
         Ok(())
