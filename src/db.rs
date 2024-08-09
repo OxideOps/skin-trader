@@ -95,7 +95,7 @@ impl Database {
                 FROM Sale
                 WHERE 
                     created_at >= CURRENT_DATE - $1::INTEGER * INTERVAL '1 day'
-                    AND (float_value IS NOT NULL AND float_value >= $2)
+                    AND float_value >= $2
             )
             SELECT 
                 weapon_skin_id,
