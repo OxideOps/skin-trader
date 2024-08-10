@@ -21,10 +21,10 @@ RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
 RUN sqlx migrate run
-RUN cargo build --release --bin skin-trader
+RUN cargo build --release --bin bot
 
 # We do not need the Rust toolchain to run the binary!
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS runtime
 WORKDIR /app
-COPY --from=builder /app/target/release/skin-trader /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/skin-trader"]
+COPY --from=builder /app/target/release/bot /usr/local/bin
+ENTRYPOINT ["/usr/local/bin/bot"]

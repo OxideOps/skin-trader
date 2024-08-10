@@ -1811,6 +1811,7 @@ dependencies = [
  "anyhow",
  "api",
  "plotters",
+ "tokio",
 ]
 
 [[package]]
