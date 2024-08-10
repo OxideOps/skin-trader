@@ -4,7 +4,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::env;
-use strum_macros::{AsRefStr, Display, EnumString};
+use strum::{AsRefStr, Display, EnumString};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};

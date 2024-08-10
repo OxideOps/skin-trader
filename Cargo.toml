@@ -20,5 +20,4 @@ serde = "1.0.204"
 plotters = "0.3.6"
 futures-util = "0.3.30"
 tokio-tungstenite = { version = "0.23.1", features = ["native-tls"] }
-strum = "0.26.3"
-strum_macros = "0.26.4"
+strum = { version = "0.26.3", features = ["derive"] }
