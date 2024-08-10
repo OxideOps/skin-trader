@@ -1,6 +1,5 @@
 mod api;
 mod db;
-mod plotter;
 
 use anyhow::Result;
 use api::*;
