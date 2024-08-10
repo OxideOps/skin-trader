@@ -1,5 +1,5 @@
 mod http;
-mod websocket;
+mod ws;
 
 pub use http::HttpClient;
-pub use websocket::WebSocketClient;
+pub use ws::WsClient;
