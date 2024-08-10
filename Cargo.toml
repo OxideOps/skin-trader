@@ -1,4 +1,3 @@
 [workspace]
 members = ["api", "bot", "sandbox"]
 resolver = "2"
-default-members = ["sandbox"]
