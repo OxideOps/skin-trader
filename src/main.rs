@@ -1,5 +1,7 @@
 mod api;
 mod db;
+mod plotter;
+mod util;
 
 use anyhow::Result;
 use api::*;
@@ -11,14 +13,6 @@ fn setup_env() -> Result<()> {
     // Environment variables
     dotenvy::dotenv().ok();
     Ok(())
-}
-
-fn count<I, T, F>(iter: I, condition: F) -> usize
-where
-    I: IntoIterator<Item = T>,
-    F: Fn(&T) -> bool,
-{
-    iter.into_iter().filter(|item| condition(item)).count()
 }
 
 #[tokio::main]
