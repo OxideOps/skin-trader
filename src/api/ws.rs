@@ -60,7 +60,7 @@ impl WsClient {
                     log::warn!("Unknown action: {}", action);
                 }
             }
-            
+
             log::info!("Message from server - Action: {}, Data: {}", action, data);
         } else {
             log::warn!("Invalid message format: {}", text);
