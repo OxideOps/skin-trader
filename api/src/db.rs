@@ -92,8 +92,7 @@ impl Database {
         log::info!("Connected to database");
         Ok(Self { pool })
     }
-    
-    
+
     pub async fn calculate_price_statistics(
         &self,
         days: i32,
