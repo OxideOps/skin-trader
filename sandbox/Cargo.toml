@@ -1,0 +1,9 @@
+[package]
+name = "sandbox"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plotters = "0.3.6"
+anyhow = "1.0.86"
+api = { path = "../api" }
