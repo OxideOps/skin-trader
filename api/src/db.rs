@@ -49,6 +49,7 @@ pub struct Sticker {
     pub rotation: Option<f64>,
 }
 
+#[derive(Debug)]
 pub struct PriceStatistics {
     pub weapon_skin_id: i32,
     pub mean_price: Option<f64>,
@@ -93,11 +94,7 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn calculate_price_statistics(
-        &self,
-        days: i32,
-        float_min: f64,
-    ) -> Result<Vec<PriceStatistics>> {
+    pub async fn calculate_price_statistics(&self, float_min: f64) -> Result<Vec<PriceStatistics>> {
         let stats = sqlx::query_as!(
             PriceStatistics,
             r#"
@@ -108,9 +105,7 @@ impl Database {
                     float_value,
                     EXTRACT(EPOCH FROM created_at) as time
                 FROM Sale
-                WHERE 
-                    created_at >= CURRENT_DATE - $1::INTEGER * INTERVAL '1 day'
-                    AND float_value >= $2
+                WHERE float_value >= $1
             )
             SELECT 
                 weapon_skin_id,
@@ -121,13 +116,10 @@ impl Database {
                 MAX(float_value) as max_float,
                 CORR(time, price) as time_correlation,
                 REGR_SLOPE(price, time) as price_slope,
-                $3::TIMESTAMPTZ as last_update
+                $2::TIMESTAMPTZ as last_update
             FROM filtered_sales
             GROUP BY weapon_skin_id
-            HAVING 
-                COUNT(*) > 30
             "#,
-            days,
             float_min,
             OffsetDateTime::now_utc(),
         )
@@ -177,29 +169,18 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_price_statistics(
-        &self,
-        skin_ids: &[Id],
-    ) -> Result<HashMap<Id, PriceStatistics>> {
-        let stats = sqlx::query_as!(
+    pub async fn get_price_statistics(&self, skin_ids: &[Id]) -> Result<Vec<PriceStatistics>> {
+        Ok(sqlx::query_as!(
             PriceStatistics,
             "SELECT * FROM price_statistics WHERE weapon_skin_id = ANY($1)",
             skin_ids
         )
         .fetch_all(&self.pool)
-        .await?;
-
-        Ok(stats
-            .into_iter()
-            .map(|stat| (stat.weapon_skin_id, stat))
-            .collect())
+        .await?)
     }
 
-    pub async fn calculate_and_update_price_statistics(
-        &self,
-        days: i32,
-    ) -> Result<Vec<PriceStatistics>> {
-        let stats = self.calculate_price_statistics(days, 0.15).await?;
+    pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<PriceStatistics>> {
+        let stats = self.calculate_price_statistics(0.15).await?;
         self.update_price_statistics(&stats).await?;
         Ok(stats)
     }
@@ -344,5 +325,30 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await?)
+    }
+
+    pub async fn get_skin_ids_by_correlation_with_min_sales(
+        &self,
+        min_sales: i64,
+    ) -> Result<Vec<i32>> {
+        let skin_ids = sqlx::query!(
+            r#"
+            SELECT ps.weapon_skin_id
+            FROM price_statistics ps
+            JOIN (
+                SELECT weapon_skin_id
+                FROM Sale
+                GROUP BY weapon_skin_id
+                HAVING COUNT(*) >= $1
+            ) sc ON ps.weapon_skin_id = sc.weapon_skin_id
+            WHERE ps.time_correlation IS NOT NULL
+            ORDER BY ABS(ps.time_correlation) DESC
+            "#,
+            min_sales
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(skin_ids.into_iter().map(|r| r.weapon_skin_id).collect())
     }
 }

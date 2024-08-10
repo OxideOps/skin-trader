@@ -205,6 +205,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "api",
+ "log",
+ "serde_json",
  "tokio",
  "tokio-cron-scheduler",
 ]
@@ -1797,6 +1799,7 @@ dependencies = [
  "anyhow",
  "api",
  "plotters",
+ "serde_json",
  "tokio",
 ]
 

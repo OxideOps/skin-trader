@@ -4,6 +4,10 @@ pub mod db;
 pub mod http;
 pub mod ws;
 
+pub use db::Database;
+pub use http::HttpClient;
+pub use ws::WsClient;
+
 use env_logger::{Builder, Env};
 
 /// Sets up the environment for the application.
