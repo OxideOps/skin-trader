@@ -16,48 +16,15 @@ type ReadSocket = SplitStream<WsStream>;
 
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
 
-enum WsAction {
-    AuthWithSessionToken,
-    AuthWithApiKey,
-    DeAuthSession,
-    Subscribe,
-    Unsubscribe,
-    UnsubscribeAll,
-}
+pub struct WsAction;
 
 impl WsAction {
-    const fn as_str(&self) -> &'static str {
-        match self {
-            WsAction::AuthWithSessionToken => "WS_AUTH",
-            WsAction::AuthWithApiKey => "WS_AUTH_APIKEY",
-            WsAction::DeAuthSession => "WS_DEAUTH",
-            WsAction::Subscribe => "WS_SUB",
-            WsAction::Unsubscribe => "WS_UNSUB",
-            WsAction::UnsubscribeAll => "WS_UNSUB_ALL",
-        }
-    }
-}
-
-impl FromStr for WsAction {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "WS_AUTH" => Ok(Self::AuthWithSessionToken),
-            "WS_AUTH_APIKEY" => Ok(Self::AuthWithApiKey),
-            "WS_DEAUTH" => Ok(Self::DeAuthSession),
-            "WS_SUB" => Ok(Self::Subscribe),
-            "WS_UNSUB" => Ok(Self::Unsubscribe),
-            "WS_UNSUB_ALL" => Ok(Self::UnsubscribeAll),
-            _ => anyhow::bail!("Invalid WsAction string: {}", s),
-        }
-    }
-}
-
-impl fmt::Display for WsAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
+    pub const AUTH_WITH_SESSION_TOKEN: &'static str = "WS_AUTH";
+    pub const AUTH_WITH_API_KEY: &'static str = "WS_AUTH_APIKEY";
+    pub const DEAUTH_SESSION: &'static str = "WS_DEAUTH";
+    pub const SUBSCRIBE: &'static str = "WS_SUB";
+    pub const UNSUBSCRIBE: &'static str = "WS_UNSUB";
+    pub const UNSUBSCRIBE_ALL: &'static str = "WS_UNSUB_ALL";
 }
 
 pub struct WsClient {
@@ -71,8 +38,8 @@ impl WsClient {
         Ok(Self { write, read })
     }
 
-    async fn send_action<T: Serialize>(&mut self, action: WsAction, data: T) -> Result<()> {
-        let message = json!([action.as_str(), data]);
+    async fn send_action<T: Serialize>(&mut self, action: &str, data: T) -> Result<()> {
+        let message = json!([action, data]);
         self.write.send(Message::Text(message.to_string())).await?;
         Ok(())
     }
@@ -87,11 +54,14 @@ impl WsClient {
             let action = array[0].as_str().unwrap_or_default();
             let data = &array[1];
 
-            log::info!("Message from server - Action: {}, Data: {}", action, data);
-
-            if let WsAction::AuthWithApiKey = WsAction::from_str(action)? {
-                self.setup_channels().await?
+            match action {
+                WsAction::AUTH_WITH_API_KEY => self.setup_channels().await?,
+                _ => {
+                    log::warn!("Unknown action: {}", action);
+                }
             }
+            
+            log::info!("Message from server - Action: {}, Data: {}", action, data);
         } else {
             log::warn!("Invalid message format: {}", text);
         }
@@ -101,14 +71,14 @@ impl WsClient {
 
     async fn setup_channels(&mut self) -> Result<()> {
         for channel in ["listed", "price_changes", "delisted_or_sold", "extra_info"] {
-            self.send_action(WsAction::Subscribe, channel).await?
+            self.send_action(WsAction::SUBSCRIBE, channel).await?
         }
 
         Ok(())
     }
 
     async fn authenticate(&mut self) -> Result<()> {
-        self.send_action(WsAction::AuthWithApiKey, env::var("BITSKIN_API_KEY")?)
+        self.send_action(WsAction::AUTH_WITH_API_KEY, env::var("BITSKIN_API_KEY")?)
             .await
     }
 
