@@ -14,9 +14,9 @@ type WriteSocket = SplitSink<WsStream, Message>;
 type ReadSocket = SplitStream<WsStream>;
 
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
+const CHANNELS: [&str; 4] = ["listed", "price_changes", "delisted_or_sold", "extra_info"];
 
 #[derive(AsRefStr, EnumString, Display)]
-#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 enum WsAction {
     #[strum(serialize = "WS_AUTH")]
     AuthWithSessionToken,
@@ -50,7 +50,7 @@ impl WsClient {
     }
 
     async fn handle_message(&mut self, text: &str) -> Result<()> {
-        if let Ok(Value::Array(array)) = serde_json::from_str::<Value>(text) {
+        if let Ok(Value::Array(array)) = serde_json::from_str(text) {
             if array.len() < 2 {
                 log::warn!("Received malformed message: {}", text);
                 return Ok(());
@@ -72,7 +72,7 @@ impl WsClient {
     }
 
     async fn setup_channels(&mut self) -> Result<()> {
-        for channel in ["listed", "price_changes", "delisted_or_sold", "extra_info"] {
+        for channel in CHANNELS {
             self.send_action(WsAction::Subscribe, channel).await?
         }
 
