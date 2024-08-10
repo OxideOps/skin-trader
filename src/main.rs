@@ -29,5 +29,7 @@ async fn main() -> Result<()> {
     let ws_client = WsClient::connect().await?;
     let http_client = HttpClient::new();
 
+    ws_client.start().await?;
+
     Ok(())
 }
