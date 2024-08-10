@@ -4,8 +4,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::env;
-use std::fmt;
-use std::str::FromStr;
+use strum::{AsRefStr, Display, EnumString};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
@@ -16,48 +15,21 @@ type ReadSocket = SplitStream<WsStream>;
 
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
 
+#[derive(AsRefStr, EnumString, Display)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 enum WsAction {
+    #[strum(serialize = "WS_AUTH")]
     AuthWithSessionToken,
+    #[strum(serialize = "WS_AUTH_APIKEY")]
     AuthWithApiKey,
+    #[strum(serialize = "WS_DEAUTH")]
     DeAuthSession,
+    #[strum(serialize = "WS_SUB")]
     Subscribe,
+    #[strum(serialize = "WS_UNSUB")]
     Unsubscribe,
+    #[strum(serialize = "WS_UNSUB_ALL")]
     UnsubscribeAll,
-}
-
-impl WsAction {
-    const fn as_str(&self) -> &'static str {
-        match self {
-            WsAction::AuthWithSessionToken => "WS_AUTH",
-            WsAction::AuthWithApiKey => "WS_AUTH_APIKEY",
-            WsAction::DeAuthSession => "WS_DEAUTH",
-            WsAction::Subscribe => "WS_SUB",
-            WsAction::Unsubscribe => "WS_UNSUB",
-            WsAction::UnsubscribeAll => "WS_UNSUB_ALL",
-        }
-    }
-}
-
-impl FromStr for WsAction {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "WS_AUTH" => Ok(Self::AuthWithSessionToken),
-            "WS_AUTH_APIKEY" => Ok(Self::AuthWithApiKey),
-            "WS_DEAUTH" => Ok(Self::DeAuthSession),
-            "WS_SUB" => Ok(Self::Subscribe),
-            "WS_UNSUB" => Ok(Self::Unsubscribe),
-            "WS_UNSUB_ALL" => Ok(Self::UnsubscribeAll),
-            _ => anyhow::bail!("Invalid WsAction string: {}", s),
-        }
-    }
-}
-
-impl fmt::Display for WsAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
 }
 
 pub struct WsClient {
@@ -72,7 +44,7 @@ impl WsClient {
     }
 
     async fn send_action<T: Serialize>(&mut self, action: WsAction, data: T) -> Result<()> {
-        let message = json!([action.as_str(), data]);
+        let message = json!([action.as_ref(), data]);
         self.write.send(Message::Text(message.to_string())).await?;
         Ok(())
     }
@@ -89,10 +61,8 @@ impl WsClient {
 
             log::info!("Message from server - Action: {}, Data: {}", action, data);
 
-            if let WsAction::AuthWithApiKey = WsAction::from_str(action)? {
+            if let Ok(WsAction::AuthWithApiKey) = action.parse() {
                 self.setup_channels().await?
-            } else {
-                log::warn!("Unknown action received: {}", action);
             }
         } else {
             log::warn!("Invalid message format: {}", text);
