@@ -5,12 +5,9 @@ mod scheduler;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     api::setup_env();
-    let ws = api::WsClient::connect(|channel, data| {
-        log::info!(
-            "Message from server - Channel: {:?}, Data: {}",
-            channel,
-            data
-        );
+    let db = api::Database::new().await?;
+    let ws = api::WsClient::connect(|data| {
+        // log::info!("Received channel: {:?}", data);
         Ok(())
     })
     .await?;

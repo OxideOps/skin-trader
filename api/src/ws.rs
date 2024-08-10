@@ -6,7 +6,6 @@ use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
-use strum::{AsRefStr, Display, EnumString};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
@@ -44,8 +43,65 @@ enum WsAction {
     WsUnsubAll,
 }
 
+#[derive(Deserialize, Debug)]
+struct ListedData {
+    app_id: i32,
+    asset_id: String,
+    bot_steam_id: String,
+    class_id: String,
+    float_id: String,
+    float_value: Option<f64>,
+    id: String,
+    name: String,
+    paint_seed: Option<i32>,
+    price: i32,
+    skin_id: i32,
+    suggested_price: i32,
+    tradehold: i32,
+}
+
+#[derive(Deserialize, Debug)]
+struct PriceChangeData;
+
+#[derive(Deserialize, Debug)]
+struct DelistedOrSoldData {
+    app_id: i32,
+    asset_id: String,
+    class_id: String,
+    id: String,
+    name: String,
+    price: i32,
+    skin_id: i32,
+    suggested_price: i32,
+}
+
+#[derive(Deserialize, Debug)]
+struct ExtraInfoData;
+
+#[derive(Debug)]
+pub enum WsData {
+    Listed(ListedData),
+    PriceChange(PriceChangeData),
+    DelistedOrSold(DelistedOrSoldData),
+    ExtraInfo(ExtraInfoData),
+}
+
+impl WsData {
+    fn new(channel: Channel, data: &Value) -> Result<Self> {
+        Ok(match channel {
+            Channel::Listed => Self::Listed(ListedData::deserialize(data)?),
+            Channel::PriceChanges => Self::PriceChange(PriceChangeData::deserialize(data)?),
+            Channel::DelistedOrSold => Self::DelistedOrSold(DelistedOrSoldData::deserialize(data)?),
+            Channel::ExtraInfo => Self::ExtraInfo(ExtraInfoData::deserialize(data)?),
+        })
+    }
+}
+
 /// A WebSocket client for communicating with the BitSkins API.
-pub struct WsClient<T> {
+pub struct WsClient<T>
+where
+    T: FnMut(WsData) -> Result<()>,
+{
     write: WriteSocket,
     read: ReadSocket,
     handler: T,
@@ -53,7 +109,7 @@ pub struct WsClient<T> {
 
 impl<T> WsClient<T>
 where
-    T: FnMut(Channel, &Value) -> Result<()>,
+    T: Fn(WsData) -> Result<()>,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
     ///
@@ -90,10 +146,12 @@ where
             let action = &array[0];
             let data = &array[1];
 
-            if let Ok(WsAction::WsAuthApikey) = serde_json::from_value(action.clone()) {
+            log::info!("Received message: {}, {}", action, data);
+
+            if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?
-            } else if let Ok(channel) = serde_json::from_value(action.clone()) {
-                (self.handler)(channel, data)?
+            } else if let Ok(channel) = Channel::deserialize(action) {
+                (self.handler)(WsData::new(channel, &data)?)?
             }
         } else {
             log::warn!("Invalid message format: {}", text);
