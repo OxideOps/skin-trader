@@ -3,7 +3,7 @@
 use anyhow::Result;
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
 use strum::{AsRefStr, Display, EnumString};
@@ -16,45 +16,62 @@ type WriteSocket = SplitSink<WsStream, Message>;
 type ReadSocket = SplitStream<WsStream>;
 
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
-const CHANNELS: [&str; 4] = ["listed", "price_changes", "delisted_or_sold", "extra_info"];
+const CHANNELS: [Channel; 4] = [
+    Channel::Listed,
+    Channel::PriceChanges,
+    Channel::DelistedOrSold,
+    Channel::ExtraInfo,
+];
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum Channel {
+    Listed,
+    PriceChanges,
+    DelistedOrSold,
+    ExtraInfo,
+}
 
 /// Represents the possible actions that can be sent over the WebSocket.
-#[derive(AsRefStr, EnumString, Display)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 enum WsAction {
-    #[strum(serialize = "WS_AUTH")]
-    AuthWithSessionToken,
-    #[strum(serialize = "WS_AUTH_APIKEY")]
-    AuthWithApiKey,
-    #[strum(serialize = "WS_DEAUTH")]
-    DeAuthSession,
-    #[strum(serialize = "WS_SUB")]
-    Subscribe,
-    #[strum(serialize = "WS_UNSUB")]
-    Unsubscribe,
-    #[strum(serialize = "WS_UNSUB_ALL")]
-    UnsubscribeAll,
+    WsAuth,
+    WsAuthApikey,
+    WsDeauth,
+    WsSub,
+    WsUnsub,
+    WsUnsubAll,
 }
 
 /// A WebSocket client for communicating with the BitSkins API.
-pub struct WsClient {
+pub struct WsClient<T> {
     write: WriteSocket,
     read: ReadSocket,
+    handler: T,
 }
 
-impl WsClient {
+impl<T> WsClient<T>
+where
+    T: FnMut(Channel, &Value) -> Result<()>,
+{
     /// Establishes a connection to the BitSkins WebSocket server.
     ///
     /// # Returns
     ///
     /// A `Result` containing the `WsClient` if successful, or an error if the connection fails.
-    pub async fn connect() -> Result<Self> {
+    pub async fn connect(handler: T) -> Result<Self> {
         let (write, read) = connect_async(WEB_SOCKET_URL).await?.0.split();
-        Ok(Self { write, read })
+        Ok(Self {
+            write,
+            read,
+            handler,
+        })
     }
 
     /// Sends an action to the WebSocket server.
-    async fn send_action<T: Serialize>(&mut self, action: WsAction, data: T) -> Result<()> {
-        let message = json!([action.as_ref(), data]);
+    async fn send_action<S: Serialize>(&mut self, action: WsAction, data: S) -> Result<()> {
+        let message = json!([action, data]);
         self.write.send(Message::Text(message.to_string())).await?;
         Ok(())
     }
@@ -63,20 +80,20 @@ impl WsClient {
     ///
     /// Parses the incoming message and logs its content. If the message
     /// indicates successful API key authentication, it sets up the default channels.
-    async fn handle_message(&mut self, text: &str) -> Result<()> {
-        if let Ok(Value::Array(array)) = serde_json::from_str(text) {
+    async fn handle_message(&mut self, text: String) -> Result<()> {
+        if let Ok(Value::Array(array)) = serde_json::from_str(&text) {
             if array.len() < 2 {
                 log::warn!("Received malformed message: {}", text);
                 return Ok(());
             }
 
-            let action = array[0].as_str().unwrap_or_default();
+            let action = &array[0];
             let data = &array[1];
 
-            log::info!("Message from server - Action: {}, Data: {}", action, data);
-
-            if let Ok(WsAction::AuthWithApiKey) = action.parse() {
+            if let Ok(WsAction::WsAuthApikey) = serde_json::from_value(action.clone()) {
                 self.setup_channels().await?
+            } else if let Ok(channel) = serde_json::from_value(action.clone()) {
+                (self.handler)(channel, data)?
             }
         } else {
             log::warn!("Invalid message format: {}", text);
@@ -86,15 +103,16 @@ impl WsClient {
     }
 
     async fn setup_channels(&mut self) -> Result<()> {
+        log::info!("Setting up default channels");
         for channel in CHANNELS {
-            self.send_action(WsAction::Subscribe, channel).await?
+            self.send_action(WsAction::WsSub, channel).await?
         }
 
         Ok(())
     }
 
     async fn authenticate(&mut self) -> Result<()> {
-        self.send_action(WsAction::AuthWithApiKey, env::var("BITSKIN_API_KEY")?)
+        self.send_action(WsAction::WsAuthApikey, env::var("BITSKIN_API_KEY")?)
             .await
     }
 
@@ -110,7 +128,7 @@ impl WsClient {
 
         while let Some(message) = self.read.next().await {
             if let Message::Text(text) = message? {
-                self.handle_message(&text).await?;
+                self.handle_message(text).await?;
             }
         }
 
