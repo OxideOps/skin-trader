@@ -91,6 +91,8 @@ impl WsClient {
 
             if let WsAction::AuthWithApiKey = WsAction::from_str(action)? {
                 self.setup_channels().await?
+            } else {
+                log::warn!("Unknown action received: {}", action);
             }
         } else {
             log::warn!("Invalid message format: {}", text);
