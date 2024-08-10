@@ -1,3 +1,5 @@
+//! WebSocket client for real-time communication with the BitSkins API.
+
 use anyhow::Result;
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
@@ -16,6 +18,7 @@ type ReadSocket = SplitStream<WsStream>;
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
 const CHANNELS: [&str; 4] = ["listed", "price_changes", "delisted_or_sold", "extra_info"];
 
+/// Represents the possible actions that can be sent over the WebSocket.
 #[derive(AsRefStr, EnumString, Display)]
 enum WsAction {
     #[strum(serialize = "WS_AUTH")]
@@ -32,23 +35,34 @@ enum WsAction {
     UnsubscribeAll,
 }
 
+/// A WebSocket client for communicating with the BitSkins API.
 pub struct WsClient {
     write: WriteSocket,
     read: ReadSocket,
 }
 
 impl WsClient {
+    /// Establishes a connection to the BitSkins WebSocket server.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the `WsClient` if successful, or an error if the connection fails.
     pub async fn connect() -> Result<Self> {
         let (write, read) = connect_async(WEB_SOCKET_URL).await?.0.split();
         Ok(Self { write, read })
     }
 
+    /// Sends an action to the WebSocket server.
     async fn send_action<T: Serialize>(&mut self, action: WsAction, data: T) -> Result<()> {
         let message = json!([action.as_ref(), data]);
         self.write.send(Message::Text(message.to_string())).await?;
         Ok(())
     }
 
+    /// Handles incoming messages from the WebSocket server.
+    ///
+    /// Parses the incoming message and logs its content. If the message
+    /// indicates successful API key authentication, it sets up the default channels.
     async fn handle_message(&mut self, text: &str) -> Result<()> {
         if let Ok(Value::Array(array)) = serde_json::from_str(text) {
             if array.len() < 2 {
@@ -84,6 +98,13 @@ impl WsClient {
             .await
     }
 
+    /// Starts the WebSocket client, handling incoming messages.
+    ///
+    /// This method will run indefinitely, processing messages as they arrive.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` indicating success or failure of the client operation.
     pub async fn start(mut self) -> Result<()> {
         self.authenticate().await?;
 

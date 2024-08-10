@@ -1,3 +1,8 @@
+//! Database operations module for BitSkins data.
+//!
+//! This module provides structures and methods for interacting with a PostgreSQL database
+//! that stores information about CS:GO skins, sales, and related statistics.
+
 use anyhow::Result;
 use sqlx::{
     postgres::PgPoolOptions,
@@ -63,12 +68,22 @@ struct FilteredSale {
     time: f64,
 }
 
+/// Handles database operations for BitSkins data.
 #[derive(Clone)]
 pub struct Database {
     pool: PgPool,
 }
 
 impl Database {
+    /// Creates a new Database instance and establishes a connection pool.
+    ///
+    /// This method initializes the database connection using the `DATABASE_URL`
+    /// environment variable.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing the new `Database` instance if successful,
+    /// or an error if the connection could not be established.
     pub async fn new() -> Result<Self> {
         let pool = PgPoolOptions::new()
             .max_connections(MAX_CONNECTIONS)
