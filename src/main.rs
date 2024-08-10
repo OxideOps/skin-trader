@@ -3,6 +3,7 @@ mod db;
 mod plotter;
 
 use anyhow::Result;
+use api::*;
 use env_logger::{Builder, Env};
 
 fn setup_env() -> Result<()> {
@@ -25,8 +26,8 @@ where
 async fn main() -> Result<()> {
     setup_env()?;
 
-    let ws_client = api::WebSocketClient::connect().await?;
-    let http_client = api::HttpClient::new();
+    let ws_client = WsClient::connect().await?;
+    let http_client = HttpClient::new();
 
     Ok(())
 }
