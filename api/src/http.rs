@@ -1,3 +1,5 @@
+//! HTTP client for interacting with the BitSkins API.
+
 use anyhow::{bail, Result};
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
@@ -106,6 +108,7 @@ impl Wear {
     }
 }
 
+/// HTTP client for making requests to the BitSkins API.
 #[derive(Clone)]
 pub struct HttpClient {
     client: Client,
