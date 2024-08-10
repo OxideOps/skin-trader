@@ -3,7 +3,6 @@ mod util;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let ws = api::ws::WsClient::connect().await?;
-    ws.start().await?;
+    let _db = api::db::Database::new().await?;
     Ok(())
 }
