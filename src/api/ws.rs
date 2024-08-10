@@ -88,8 +88,8 @@ impl WsClient {
             let data = &array[1];
 
             log::info!("Message from server - Action: {}, Data: {}", action, data);
-
-            if action == WsAction::AuthWithApiKey.as_str() {
+            
+            if let WsAction::AuthWithApiKey = WsAction::from_str(action)? {
                 self.setup_channels().await?
             }
         } else {
