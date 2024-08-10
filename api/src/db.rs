@@ -64,7 +64,7 @@ struct FilteredSale {
 }
 
 #[derive(Clone)]
-pub(crate) struct Database {
+pub struct Database {
     pool: PgPool,
 }
 
@@ -279,10 +279,7 @@ impl Database {
         Ok(stickers)
     }
 
-    pub(crate) async fn get_sales_by_weapon_skin_id(
-        &self,
-        weapon_skin_id: i32,
-    ) -> Result<Vec<Sale>> {
+    pub async fn get_sales_by_weapon_skin_id(&self, weapon_skin_id: i32) -> Result<Vec<Sale>> {
         let sales = sqlx::query_as!(
             Sale,
             r#"
@@ -298,13 +295,13 @@ impl Database {
         Ok(sales)
     }
 
-    pub(crate) async fn get_all_sales(&self) -> Result<Vec<Sale>> {
+    pub async fn get_all_sales(&self) -> Result<Vec<Sale>> {
         Ok(sqlx::query_as!(Sale, "SELECT * FROM Sale",)
             .fetch_all(&self.pool)
             .await?)
     }
 
-    pub(crate) async fn get_skins_by_sale_count(&self, count: i64) -> Result<Vec<i32>> {
+    pub async fn get_skins_by_sale_count(&self, count: i64) -> Result<Vec<i32>> {
         let records = sqlx::query!(
             r#"
             SELECT weapon_skin_id FROM Sale
@@ -319,7 +316,7 @@ impl Database {
         Ok(records.into_iter().map(|r| r.weapon_skin_id).collect())
     }
 
-    pub(crate) async fn get_sales_without_bullshit(&self, skin_id: i32) -> Result<Vec<Sale>> {
+    pub async fn get_sales_without_bullshit(&self, skin_id: i32) -> Result<Vec<Sale>> {
         Ok(sqlx::query_as!(
             Sale,
             r#"

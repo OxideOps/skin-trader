@@ -1,5 +1,5 @@
-use crate::{db::Database, db::Sale};
 use anyhow::{bail, Result};
+use api::db::{Database, Sale};
 use plotters::prelude::*;
 use std::ops::Range;
 
