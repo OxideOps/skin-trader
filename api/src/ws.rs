@@ -114,8 +114,7 @@ impl WsData {
 }
 
 /// A WebSocket client for communicating with the BitSkins API.
-pub struct WsClient<H>
-{
+pub struct WsClient<H> {
     write: WriteSocket,
     read: ReadSocket,
     handler: H,
