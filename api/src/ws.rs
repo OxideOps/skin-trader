@@ -18,7 +18,7 @@ type ReadSocket = SplitStream<WsStream>;
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
 const CHANNELS: [Channel; 4] = [
     Channel::Listed,
-    Channel::PriceChanges,
+    Channel::PriceChanged,
     Channel::DelistedOrSold,
     Channel::ExtraInfo,
 ];
@@ -27,7 +27,7 @@ const CHANNELS: [Channel; 4] = [
 #[serde(rename_all = "snake_case")]
 enum Channel {
     Listed,
-    PriceChanges,
+    PriceChanged,
     DelistedOrSold,
     ExtraInfo,
 }
@@ -62,7 +62,20 @@ pub struct ListedData {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct PriceChangeData;
+pub struct PriceChangedData {
+    pub app_id: i32,
+    pub asset_id: String,
+    pub bot_steam_id: String,
+    pub class_id: String,
+    pub float_value: Option<f64>,
+    pub id: String,
+    pub name: String,
+    pub old_price: i32,
+    pub price: i32,
+    pub skin_id: i32,
+    pub suggested_price: i32,
+    pub tradehold: Option<i32>,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct DelistedOrSoldData {
@@ -82,7 +95,7 @@ pub struct ExtraInfoData;
 #[derive(Debug)]
 pub enum WsData {
     Listed(ListedData),
-    PriceChange(PriceChangeData),
+    PriceChanged(PriceChangedData),
     DelistedOrSold(DelistedOrSoldData),
     ExtraInfo(ExtraInfoData),
 }
@@ -91,7 +104,7 @@ impl WsData {
     fn new(channel: Channel, data: &Value) -> Result<Self> {
         Ok(match channel {
             Channel::Listed => Self::Listed(ListedData::deserialize(data)?),
-            Channel::PriceChanges => Self::PriceChange(PriceChangeData::deserialize(data)?),
+            Channel::PriceChanged => Self::PriceChanged(PriceChangedData::deserialize(data)?),
             Channel::DelistedOrSold => Self::DelistedOrSold(DelistedOrSoldData::deserialize(data)?),
             Channel::ExtraInfo => Self::ExtraInfo(ExtraInfoData::deserialize(data)?),
         })
