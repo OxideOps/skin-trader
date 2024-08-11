@@ -76,7 +76,7 @@ async fn process_listed_item(db: &api::Database, data: &api::ws::ListedData) -> 
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     api::setup_env();
 
     let db = api::Database::new().await?;
