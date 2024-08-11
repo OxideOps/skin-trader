@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
 use std::future::Future;
+use std::sync::Arc;
 use tokio::net::TcpStream;
+use tokio::select;
+use tokio::sync::{mpsc, Mutex};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 
@@ -116,18 +119,18 @@ impl WsData {
 /// A WebSocket client for communicating with the BitSkins API.
 pub struct WsClient<T, U>
 where
-    T: FnMut(WsData) -> U,
-    U: Future<Output = Result<()>>,
+    T: FnMut(WsData) -> U + Send + 'static,
+    U: Future<Output = Result<()>> + Send + 'static,
 {
     write: WriteSocket,
     read: ReadSocket,
-    handler: T,
+    handler: Arc<Mutex<T>>,
 }
 
 impl<T, U> WsClient<T, U>
 where
-    T: FnMut(WsData) -> U,
-    U: Future<Output = Result<()>>,
+    T: FnMut(WsData) -> U + Send + 'static,
+    U: Future<Output = Result<()>> + Send + 'static,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
     ///
@@ -139,7 +142,7 @@ where
         Ok(Self {
             write,
             read,
-            handler,
+            handler: Arc::new(Mutex::new(handler)),
         })
     }
 
@@ -154,7 +157,7 @@ where
     ///
     /// Parses the incoming message and logs its content. If the message
     /// indicates successful API key authentication, it sets up the default channels.
-    async fn handle_message(&mut self, text: String) -> Result<()> {
+    async fn handle_message(&mut self, text: String, sender: mpsc::Sender<WsData>) -> Result<()> {
         if let Ok(Value::Array(array)) = serde_json::from_str(&text) {
             if array.len() < 2 {
                 log::warn!("Received malformed message: {}", text);
@@ -169,7 +172,8 @@ where
             if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?
             } else if let Ok(channel) = Channel::deserialize(action) {
-                (self.handler)(WsData::new(channel, data)?).await?
+                let ws_data = WsData::new(channel, data)?;
+                sender.send(ws_data).await?;
             }
         } else {
             log::warn!("Invalid message format: {}", text);
@@ -188,8 +192,7 @@ where
     }
 
     async fn authenticate(&mut self) -> Result<()> {
-        self.send_action(WsAction::WsAuthApikey, env::var("BITSKIN_API_KEY")?)
-            .await
+        self.send_action(WsAction::WsAuthApikey, env::var("BITSKIN_API_KEY")?).await
     }
 
     /// Starts the WebSocket client, handling incoming messages.
@@ -200,12 +203,44 @@ where
     ///
     /// A `Result` indicating success or failure of the client operation.
     pub async fn start(mut self) -> Result<()> {
-        self.authenticate().await?;
+        if let Err(e) = self.authenticate().await {
+            log::error!("Authentication failed: {:?}", e);
+            return Ok(());
+        }
 
-        while let Some(message) = self.read.next().await {
-            if let Message::Text(text) = message? {
-                self.handle_message(text).await?;
+        let (sender, mut receiver) = mpsc::channel(100); // Adjust buffer size as needed
+
+        let handler = self.handler.clone();
+        let handler_task = tokio::spawn(async move {
+            while let Some(data) = receiver.recv().await {
+                let mut handler = handler.lock().await;
+                if let Err(e) = handler(data).await {
+                    log::error!("Error handling message: {:?}", e);
+                }
             }
+        });
+
+        let ws_task = tokio::spawn(async move {
+            while let Some(message) = self.read.next().await {
+                match message {
+                    Ok(Message::Text(text)) => {
+                        if let Err(e) = self.handle_message(text, sender.clone()).await {
+                            log::error!("Error processing message: {:?}", e);
+                        }
+                    }
+                    Ok(_) => {} // Ignore non-text messages
+                    Err(e) => {
+                        log::error!("WebSocket error: {:?}", e);
+                        break;
+                    }
+                }
+            }
+        });
+
+        // Wait for both tasks to complete
+        select! {
+            _ = handler_task => log::info!("Handler task completed"),
+            _ = ws_task => log::info!("WebSocket task completed"),
         }
 
         Ok(())
