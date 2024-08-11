@@ -25,6 +25,7 @@ const CHANNELS: [Channel; 4] = [
     Channel::DelistedOrSold,
     Channel::ExtraInfo,
 ];
+const BUFFER_SIZE: usize = 100;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -209,7 +210,7 @@ where
             return Ok(());
         }
 
-        let (sender, mut receiver) = mpsc::channel(100); // Adjust buffer size as needed
+        let (sender, mut receiver) = mpsc::channel(BUFFER_SIZE);
 
         let handler = self.handler.clone();
         let handler_task = tokio::spawn(async move {
