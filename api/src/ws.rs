@@ -192,7 +192,8 @@ where
     }
 
     async fn authenticate(&mut self) -> Result<()> {
-        self.send_action(WsAction::WsAuthApikey, env::var("BITSKIN_API_KEY")?).await
+        self.send_action(WsAction::WsAuthApikey, env::var("BITSKIN_API_KEY")?)
+            .await
     }
 
     /// Starts the WebSocket client, handling incoming messages.
