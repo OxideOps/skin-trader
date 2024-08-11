@@ -149,8 +149,8 @@ pub fn plot_histogram(data: &[u32], output_file: &str, precision: usize) -> Resu
     // Add labels
     chart
         .configure_series_labels()
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
+        .background_style(WHITE.mix(0.8))
+        .border_style(BLACK)
         .draw()?;
 
     Ok(())
@@ -163,8 +163,8 @@ fn find_bounds(values: &[f64]) -> Range<f64> {
 }
 
 fn find_bouds_hist(values: &[u32]) -> SegmentedCoord<RangedCoordu32> {
-    let min = values.iter().max().unwrap().clone();
-    let max = values.iter().min().unwrap().clone() + 1;
+    let min = *values.iter().max().unwrap();
+    let max = *values.iter().min().unwrap() + 1;
     (min..max).into_segmented()
 }
 

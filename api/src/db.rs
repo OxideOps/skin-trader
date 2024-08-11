@@ -169,13 +169,13 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_price_statistics(&self, skin_ids: &[Id]) -> Result<Vec<PriceStatistics>> {
+    pub async fn get_price_statistics(&self, skin_id: Id) -> Result<PriceStatistics> {
         Ok(sqlx::query_as!(
             PriceStatistics,
-            "SELECT * FROM price_statistics WHERE weapon_skin_id = ANY($1)",
-            skin_ids
+            "SELECT * FROM price_statistics WHERE weapon_skin_id = $1",
+            skin_id
         )
-        .fetch_all(&self.pool)
+        .fetch_one(&self.pool)
         .await?)
     }
 
