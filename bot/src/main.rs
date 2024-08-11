@@ -81,7 +81,6 @@ async fn main() -> Result<()> {
 
     let db = api::Database::new().await?;
     let ws = api::WsClient::connect(|data| {
-        let db = db.clone();
         async move {
             match data {
                 WsData::Listed(data) => process_listed_item(&db, &data).await?,

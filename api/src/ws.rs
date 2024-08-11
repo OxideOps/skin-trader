@@ -123,7 +123,7 @@ pub struct WsClient<H>
 
 impl<H, F> WsClient<H>
 where
-    H: Fn(WsData) -> F,
+    H: FnOnce(WsData) -> F,
     F: Future<Output = Result<()>>,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
