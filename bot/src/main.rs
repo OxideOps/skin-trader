@@ -80,7 +80,7 @@ async fn main() -> Result<()> {
     api::setup_env();
 
     let db = api::Database::new().await?;
-    let ws = api::WsClient::connect(|data| {
+    let ws = api::WsClient::connect(move |data| {
         let db = db.clone();
         async move {
             match data {
