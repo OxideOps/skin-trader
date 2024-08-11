@@ -15,4 +15,4 @@ time = "0.3.36"
 serde = "1.0.204"
 futures-util = "0.3.30"
 tokio-tungstenite = { version = "0.23.1", features = ["native-tls"] }
-tokio = "1.39.2"
+tokio = { version = "1.39.2", features = ["macros"] }
