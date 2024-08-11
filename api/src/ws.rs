@@ -114,27 +114,23 @@ impl WsData {
 }
 
 /// A WebSocket client for communicating with the BitSkins API.
-pub struct WsClient<T, U>
-where
-    T: FnMut(WsData) -> U,
-    U: Future<Output = Result<()>>,
-{
+pub struct WsClient<H> {
     write: WriteSocket,
     read: ReadSocket,
-    handler: T,
+    handler: H,
 }
 
-impl<T, U> WsClient<T, U>
+impl<H, F> WsClient<H>
 where
-    T: FnMut(WsData) -> U,
-    U: Future<Output = Result<()>>,
+    H: Fn(WsData) -> F,
+    F: Future<Output = Result<()>>,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
     ///
     /// # Returns
     ///
     /// A `Result` containing the `WsClient` if successful, or an error if the connection fails.
-    pub async fn connect(handler: T) -> Result<Self> {
+    pub async fn connect(handler: H) -> Result<Self> {
         let (write, read) = connect_async(WEB_SOCKET_URL).await?.0.split();
         Ok(Self {
             write,
