@@ -6,6 +6,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
+use std::future::Future;
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
@@ -24,7 +25,7 @@ const CHANNELS: [Channel; 4] = [
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
-pub enum Channel {
+enum Channel {
     Listed,
     PriceChanges,
     DelistedOrSold,
@@ -44,39 +45,39 @@ enum WsAction {
 }
 
 #[derive(Deserialize, Debug)]
-struct ListedData {
-    app_id: i32,
-    asset_id: String,
-    bot_steam_id: String,
-    class_id: String,
-    float_id: String,
-    float_value: Option<f64>,
-    id: String,
-    name: String,
-    paint_seed: Option<i32>,
-    price: i32,
-    skin_id: i32,
-    suggested_price: i32,
-    tradehold: i32,
+pub struct ListedData {
+    pub app_id: i32,
+    pub asset_id: String,
+    pub bot_steam_id: String,
+    pub class_id: String,
+    pub float_id: Option<String>,
+    pub float_value: Option<f64>,
+    pub id: String,
+    pub name: String,
+    pub paint_seed: Option<i32>,
+    pub price: i32,
+    pub skin_id: i32,
+    pub suggested_price: i32,
+    pub tradehold: i32,
 }
 
 #[derive(Deserialize, Debug)]
-struct PriceChangeData;
+pub struct PriceChangeData;
 
 #[derive(Deserialize, Debug)]
-struct DelistedOrSoldData {
-    app_id: i32,
-    asset_id: String,
-    class_id: String,
-    id: String,
-    name: String,
-    price: i32,
-    skin_id: i32,
-    suggested_price: i32,
+pub struct DelistedOrSoldData {
+    pub app_id: i32,
+    pub asset_id: String,
+    pub class_id: String,
+    pub id: String,
+    pub name: String,
+    pub price: i32,
+    pub skin_id: i32,
+    pub suggested_price: i32,
 }
 
 #[derive(Deserialize, Debug)]
-struct ExtraInfoData;
+pub struct ExtraInfoData;
 
 #[derive(Debug)]
 pub enum WsData {
@@ -98,18 +99,20 @@ impl WsData {
 }
 
 /// A WebSocket client for communicating with the BitSkins API.
-pub struct WsClient<T>
+pub struct WsClient<T, U>
 where
-    T: FnMut(WsData) -> Result<()>,
+    T: FnMut(WsData) -> U,
+    U: Future<Output = Result<()>>,
 {
     write: WriteSocket,
     read: ReadSocket,
     handler: T,
 }
 
-impl<T> WsClient<T>
+impl<T, U> WsClient<T, U>
 where
-    T: Fn(WsData) -> Result<()>,
+    T: FnMut(WsData) -> U,
+    U: Future<Output = Result<()>>,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
     ///
@@ -151,7 +154,7 @@ where
             if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?
             } else if let Ok(channel) = Channel::deserialize(action) {
-                (self.handler)(WsData::new(channel, &data)?)?
+                (self.handler)(WsData::new(channel, data)?).await?
             }
         } else {
             log::warn!("Invalid message format: {}", text);
