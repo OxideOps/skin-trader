@@ -70,7 +70,6 @@ async fn process_listed_item(db: &api::Database, data: &api::ws::ListedData) -> 
                 data.skin_id,
                 reasons.join(", ")
             );
-            // Here you could implement your buying logic
         }
     }
     Ok(())
