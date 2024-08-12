@@ -6,7 +6,7 @@ pub mod ws;
 
 pub use db::Database;
 pub use http::HttpClient;
-pub use ws::WsClient;
+pub use ws::{WsClient, Channel};
 
 use env_logger::{Builder, Env};
 
