@@ -20,14 +20,16 @@ async fn process_data(
     if data.app_id != 730 {
         return Ok(());
     }
-    
+
     match channel {
         Channel::Listed => {
             if let Ok(stats) = db.get_price_statistics(data.skin_id).await {
                 let mut reasons = Vec::new();
 
                 // 1. Volatility-adjusted pricing
-                if let (Some(mean_price), Some(std_dev_price)) = (stats.mean_price, stats.std_dev_price) {
+                if let (Some(mean_price), Some(std_dev_price)) =
+                    (stats.mean_price, stats.std_dev_price)
+                {
                     let z_score = (data.price as f64 - mean_price) / std_dev_price;
                     if z_score < Z_SCORE_THRESHOLD {
                         reasons.push("unusually low price");
@@ -35,7 +37,8 @@ async fn process_data(
                 }
 
                 // 2. Price trend analysis
-                if let (Some(mean_price), Some(price_slope)) = (stats.mean_price, stats.price_slope) {
+                if let (Some(mean_price), Some(price_slope)) = (stats.mean_price, stats.price_slope)
+                {
                     if price_slope > PRICE_SLOPE_THRESHOLD
                         && (data.price as f64) < BUY_THRESHOLD * mean_price
                     {
@@ -45,7 +48,9 @@ async fn process_data(
 
                 // 3. Volume-based analysis
                 if let (Some(mean_price), Some(sale_count)) = (stats.mean_price, stats.sale_count) {
-                    if sale_count > VOLUME_THRESHOLD && (data.price as f64) < BUY_THRESHOLD * mean_price {
+                    if sale_count > VOLUME_THRESHOLD
+                        && (data.price as f64) < BUY_THRESHOLD * mean_price
+                    {
                         reasons.push("high volume");
                     }
                 }
@@ -87,10 +92,10 @@ async fn process_data(
                     }
                 }
             }
-        },
-        _ => log::warn!("Data from channel: {:?} not covered", channel)
+        }
+        _ => log::warn!("Data from channel: {:?} not covered", channel),
     }
-            
+
     Ok(())
 }
 
