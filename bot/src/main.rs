@@ -23,7 +23,7 @@ async fn process_listed_item(db: &Database, http: &HttpClient, data: ws::ListedD
         if let (Some(mean_price), Some(std_dev_price)) = (stats.mean_price, stats.std_dev_price) {
             let z_score = (data.price as f64 - mean_price) / std_dev_price;
             if z_score < Z_SCORE_THRESHOLD {
-                reasons.push("unusual price");
+                reasons.push("unusually low price");
             }
         }
 
@@ -70,7 +70,7 @@ async fn process_listed_item(db: &Database, http: &HttpClient, data: ws::ListedD
         }
 
         if !reasons.is_empty() {
-            log::info!("Buying {} (reasons: {})", data.skin_id, reasons.join(", "));
+            log::info!("Buying {} (reasons: {})", data.id, reasons.join(", "));
 
             http.buy_item(data.skin_id, data.price).await?;
         }
