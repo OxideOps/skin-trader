@@ -129,13 +129,13 @@ impl HttpClient {
 
     pub async fn buy_item(&self, id: i32, price: i32) -> Result<()> {
         let url = format!("{BASE_URL}/market/buy/single");
-        
+
         let payload = json!({
             "app_id": CS2_APP_ID,
             "id": id,
             "max_price": price
         });
-        
+
         self.post(url, payload).await
     }
 
