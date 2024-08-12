@@ -74,7 +74,7 @@ async fn process_data(db: &Database, http: &HttpClient, data: WsData) -> Result<
             if data.price < 50 && balance > data.price {
                 // $0.50
                 log::info!("Buying {} (reasons: {})", data.id, reasons.join(", "));
-                
+
                 // Uncomment once ready to buy
                 // http.buy_item(data.skin_id, data.price).await?;
             }
@@ -94,8 +94,8 @@ async fn main() -> Result<()> {
         Ok(())
     })
     .await?;
-    
+
     ws.start().await?;
-    
+
     Ok(())
 }
