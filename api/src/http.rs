@@ -127,13 +127,25 @@ impl HttpClient {
         }
     }
 
+    pub async fn sell_item(&self, id: &str, price: i32) -> Result<()> {
+        let url = format!("{BASE_URL}/market/relist/single");
+
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "id": id,
+            "price": price,
+        });
+        
+        Ok(self.post(url, payload).await?)
+    }
+
     pub async fn check_balance(&self) -> Result<i32> {
         let url = format!("{BASE_URL}/account/profile/balance");
 
         Ok(self.post::<i32>(url, json!({})).await?)
     }
 
-    pub async fn buy_item(&self, id: i32, price: i32) -> Result<()> {
+    pub async fn buy_item(&self, id: &str, price: i32) -> Result<()> {
         let url = format!("{BASE_URL}/market/buy/single");
 
         let payload = json!({
@@ -142,7 +154,7 @@ impl HttpClient {
             "max_price": price
         });
 
-        self.post(url, payload).await
+        Ok(self.post(url, payload).await?)
     }
 
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
