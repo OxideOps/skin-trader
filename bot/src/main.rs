@@ -88,7 +88,8 @@ async fn process_data(
                         log::info!("Buying {} (reasons: {})", data.id, reasons.join(", "));
 
                         // Uncomment once ready to buy
-                        // http.buy_item(data.skin_id, data.price).await?;
+                        // http.buy_item(&data.id, data.price).await?;
+                        // http.sell_item(&data.id, stats.mean_price).await?;
                     }
                 }
             }
