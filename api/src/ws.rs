@@ -25,7 +25,7 @@ const CHANNELS: [Channel; 4] = [
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
-pub enum Channel {
+enum Channel {
     Listed,
     PriceChanged,
     DelistedOrSold,
