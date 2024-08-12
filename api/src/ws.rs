@@ -25,7 +25,7 @@ const CHANNELS: [Channel; 4] = [
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
-enum Channel {
+pub enum Channel {
     Listed,
     PriceChanged,
     DelistedOrSold,
@@ -73,7 +73,7 @@ pub struct WsClient<H> {
 
 impl<H, F> WsClient<H>
 where
-    H: Fn(WsData) -> F,
+    H: Fn(Channel, WsData) -> F,
     F: Future<Output = Result<()>>,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
@@ -115,8 +115,8 @@ where
 
             if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?
-            } else if Channel::deserialize(action).is_ok() {
-                (self.handler)(WsData::deserialize(data)?).await?
+            } else if let Ok(channel) = Channel::deserialize(action) {
+                (self.handler)(channel, WsData::deserialize(data)?).await?
             }
         } else {
             log::warn!("Invalid message format: {}", text);
