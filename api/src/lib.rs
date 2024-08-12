@@ -3,6 +3,7 @@
 pub mod db;
 pub mod http;
 pub mod ws;
+mod nn;
 
 pub use db::Database;
 pub use http::HttpClient;
