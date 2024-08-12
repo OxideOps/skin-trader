@@ -127,10 +127,10 @@ impl HttpClient {
         }
     }
 
-    pub async fn check_balance(&self) -> Result<i32> {
+    pub async fn check_balance(&self) -> Result<u32> {
         let url = format!("{BASE_URL}/account/profile/balance");
         
-        Ok(self.post::<i32>(url, json!({})).await?)
+        Ok(self.post::<u32>(url, json!({})).await?)
     }
 
     pub async fn buy_item(&self, id: i32, price: i32) -> Result<()> {

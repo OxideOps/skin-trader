@@ -55,7 +55,7 @@ pub struct ListedData {
     pub id: String,
     pub name: String,
     pub paint_seed: Option<i32>,
-    pub price: i32,
+    pub price: u32,
     pub skin_id: i32,
     pub suggested_price: i32,
     pub tradehold: i32,
