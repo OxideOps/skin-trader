@@ -127,6 +127,24 @@ impl HttpClient {
         }
     }
 
+    pub async fn check_balance(&self) -> Result<i32> {
+        let url = format!("{BASE_URL}/account/profile/balance");
+        
+        Ok(self.post::<i32>(url, json!({})).await?)
+    }
+
+    pub async fn buy_item(&self, id: i32, price: i32) -> Result<()> {
+        let url = format!("{BASE_URL}/market/buy/single");
+
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "id": id,
+            "max_price": price
+        });
+
+        self.post(url, payload).await
+    }
+
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
         let response = builder
             .header("x-apikey", env::var("BITSKIN_API_KEY")?)
@@ -146,8 +164,8 @@ impl HttpClient {
         Ok(response.json().await?)
     }
 
-    pub async fn post<T: DeserializeOwned>(&self, url: impl IntoUrl, payload: &Value) -> Result<T> {
-        self.request(self.client.post(url).json(payload)).await
+    pub async fn post<T: DeserializeOwned>(&self, url: impl IntoUrl, payload: Value) -> Result<T> {
+        self.request(self.client.post(url).json(&payload)).await
     }
 
     pub async fn get<T: DeserializeOwned>(&self, url: impl IntoUrl) -> Result<T> {
@@ -163,7 +181,7 @@ impl HttpClient {
             "limit": MAX_LIMIT,
         });
 
-        self.post(url, &payload).await
+        self.post(url, payload).await
     }
 
     pub(crate) async fn fetch_skins(&self) -> Result<Vec<i32>> {
@@ -192,6 +210,6 @@ impl HttpClient {
             "offset": offset,
         });
 
-        self.post(url, &payload).await
+        self.post(url, payload).await
     }
 }
