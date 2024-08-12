@@ -65,11 +65,6 @@ pub struct WsData {
     pub old_price: Option<i32>,
 }
 
-pub struct ChannelMessage {
-    pub ws_data: WsData,
-    pub channel: Channel,
-}
-
 /// A WebSocket client for communicating with the BitSkins API.
 pub struct WsClient<H> {
     write: WriteSocket,
@@ -79,7 +74,7 @@ pub struct WsClient<H> {
 
 impl<H, F> WsClient<H>
 where
-    H: Fn(ChannelMessage) -> F,
+    H: Fn(WsData) -> F,
     F: Future<Output = Result<()>>,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
@@ -121,12 +116,8 @@ where
 
             if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?
-            } else if let Ok(channel) = Channel::deserialize(action) {
-                let message = ChannelMessage {
-                    ws_data: WsData::deserialize(data)?,
-                    channel
-                };
-                (self.handler)(message).await?
+            } else if Channel::deserialize(action).is_ok() {
+                (self.handler)(WsData::deserialize(data)?).await?
             }
         } else {
             log::warn!("Invalid message format: {}", text);

@@ -1,7 +1,7 @@
 mod scheduler;
 
 use anyhow::Result;
-use api::ws::{WsClient, WsData, Channel, ChannelMessage};
+use api::ws::{WsClient, WsData};
 use api::{Database, HttpClient};
 
 const BUY_THRESHOLD: f64 = 0.8;
@@ -11,9 +11,7 @@ const PRICE_SLOPE_THRESHOLD: f64 = 0.0;
 const TIME_CORRELATION_THRESHOLD: f64 = 0.7;
 const FLOAT_THRESHOLD: f64 = 0.2;
 
-async fn process_listed_item(db: &Database, http: &HttpClient, data: ChannelMessage) -> Result<()> {
-    let data = data.ws_data;
-    
+async fn process_data(db: &Database, http: &HttpClient, data: WsData) -> Result<()> {
     if data.app_id != 730 {
         return Ok(());
     }
@@ -91,11 +89,8 @@ async fn main() -> Result<()> {
 
     let db = Database::new().await?;
     let http = HttpClient::new();
-    let ws = WsClient::connect(|message| async {
-        match message.channel {
-            Channel::Listed => process_listed_item(&db, &http, message).await?,
-            _ => (),
-        }
+    let ws = WsClient::connect(|data| async {
+        process_data(&db, &http, data).await?;
         Ok(())
     })
     .await?;
