@@ -71,7 +71,7 @@ async fn process_listed_item(db: &Database, http: &HttpClient, data: ws::ListedD
 
         if !reasons.is_empty() {
             if data.price < 50 {
-                // 0.50$
+                // $0.50
                 log::info!("Buying {} (reasons: {})", data.id, reasons.join(", "));
 
                 http.buy_item(data.skin_id, data.price).await?;
