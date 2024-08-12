@@ -2,7 +2,7 @@ mod scheduler;
 
 use anyhow::Result;
 use api::ws::{self, WsClient, WsData};
-use api::Database;
+use api::{Database, HttpClient};
 
 const BUY_THRESHOLD: f64 = 0.8;
 const VOLUME_THRESHOLD: i32 = 100;
@@ -11,7 +11,11 @@ const PRICE_SLOPE_THRESHOLD: f64 = 0.0;
 const TIME_CORRELATION_THRESHOLD: f64 = 0.7;
 const FLOAT_THRESHOLD: f64 = 0.2;
 
-async fn process_listed_item(db: &Database, data: ws::ListedData) -> Result<()> {
+async fn process_listed_item(db: &Database, http: &HttpClient, data: ws::ListedData) -> Result<()> {
+    if data.app_id != 730 {
+        return Ok(())
+    }
+    
     if let Ok(stats) = db.get_price_statistics(data.skin_id).await {
         let mut reasons = Vec::new();
 
@@ -67,10 +71,12 @@ async fn process_listed_item(db: &Database, data: ws::ListedData) -> Result<()> 
 
         if !reasons.is_empty() {
             log::info!(
-                "Should buy {} (reasons: {})",
+                "Buying {} (reasons: {})",
                 data.skin_id,
                 reasons.join(", ")
             );
+
+            http.buy_item(data.skin_id, data.price).await?;
         }
     }
     Ok(())
@@ -81,9 +87,10 @@ async fn main() -> Result<()> {
     api::setup_env();
 
     let db = Database::new().await?;
+    let http = HttpClient::new();
     let ws = WsClient::connect(|data| async {
         match data {
-            WsData::Listed(data) => process_listed_item(&db, data).await?,
+            WsData::Listed(data) => process_listed_item(&db, &http, data).await?,
             _ => (),
         }
         Ok(())

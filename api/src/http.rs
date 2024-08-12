@@ -127,6 +127,18 @@ impl HttpClient {
         }
     }
 
+    pub async fn buy_item(&self, id: i32, price: i32) -> Result<()> {
+        let url = format!("{BASE_URL}/market/buy/single");
+        
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "id": id,
+            "max_price": price
+        });
+        
+        Ok(())
+    }
+
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
         let response = builder
             .header("x-apikey", env::var("BITSKIN_API_KEY")?)
