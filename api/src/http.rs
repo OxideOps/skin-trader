@@ -136,7 +136,7 @@ impl HttpClient {
             "max_price": price
         });
         
-        Ok(())
+        self.post(url, payload).await
     }
 
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
@@ -158,8 +158,8 @@ impl HttpClient {
         Ok(response.json().await?)
     }
 
-    pub async fn post<T: DeserializeOwned>(&self, url: impl IntoUrl, payload: &Value) -> Result<T> {
-        self.request(self.client.post(url).json(payload)).await
+    pub async fn post<T: DeserializeOwned>(&self, url: impl IntoUrl, payload: Value) -> Result<T> {
+        self.request(self.client.post(url).json(&payload)).await
     }
 
     pub async fn get<T: DeserializeOwned>(&self, url: impl IntoUrl) -> Result<T> {
@@ -175,7 +175,7 @@ impl HttpClient {
             "limit": MAX_LIMIT,
         });
 
-        self.post(url, &payload).await
+        self.post(url, payload).await
     }
 
     pub(crate) async fn fetch_skins(&self) -> Result<Vec<i32>> {
@@ -204,6 +204,6 @@ impl HttpClient {
             "offset": offset,
         });
 
-        self.post(url, &payload).await
+        self.post(url, payload).await
     }
 }
