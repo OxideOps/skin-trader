@@ -46,7 +46,6 @@ enum WsAction {
 
 #[derive(Deserialize, Debug)]
 pub struct WsData {
-    pub channel: Option<Channel>,
     pub app_id: i32,
     pub asset_id: String,
     pub class_id: String,
