@@ -2,8 +2,8 @@
 //! It includes modules for database operations, HTTP requests, and WebSocket communication.
 pub mod db;
 pub mod http;
-pub mod ws;
 mod nn;
+pub mod ws;
 
 pub use db::Database;
 pub use http::HttpClient;

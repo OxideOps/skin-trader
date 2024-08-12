@@ -10,7 +10,12 @@ struct Nn<B: Backend> {
 }
 
 impl<B: Backend> Nn<B> {
-    pub fn new(input_size: usize, hidden_size: usize, output_size: usize, device: &B::Device) -> Self {
+    pub fn new(
+        input_size: usize,
+        hidden_size: usize,
+        output_size: usize,
+        device: &B::Device,
+    ) -> Self {
         Self {
             layer1: LinearConfig::new(input_size, hidden_size).init(device),
             activation: Relu::new(),
@@ -45,7 +50,7 @@ fn computation<B: Backend>() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_computation() {
         computation::<burn::backend::NdArray>();
