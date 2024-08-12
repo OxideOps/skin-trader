@@ -13,9 +13,9 @@ const FLOAT_THRESHOLD: f64 = 0.2;
 
 async fn process_listed_item(db: &Database, http: &HttpClient, data: ws::ListedData) -> Result<()> {
     if data.app_id != 730 {
-        return Ok(())
+        return Ok(());
     }
-    
+
     if let Ok(stats) = db.get_price_statistics(data.skin_id).await {
         let mut reasons = Vec::new();
 
@@ -70,11 +70,7 @@ async fn process_listed_item(db: &Database, http: &HttpClient, data: ws::ListedD
         }
 
         if !reasons.is_empty() {
-            log::info!(
-                "Buying {} (reasons: {})",
-                data.skin_id,
-                reasons.join(", ")
-            );
+            log::info!("Buying {} (reasons: {})", data.skin_id, reasons.join(", "));
 
             http.buy_item(data.skin_id, data.price).await?;
         }
