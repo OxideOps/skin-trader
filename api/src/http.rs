@@ -129,7 +129,7 @@ impl HttpClient {
 
     pub async fn check_balance(&self) -> Result<i32> {
         let url = format!("{BASE_URL}/account/profile/balance");
-        
+
         Ok(self.post::<i32>(url, json!({})).await?)
     }
 

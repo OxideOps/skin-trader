@@ -25,7 +25,7 @@ const CHANNELS: [Channel; 4] = [
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
-enum Channel {
+pub enum Channel {
     Listed,
     PriceChanged,
     DelistedOrSold,
@@ -45,72 +45,23 @@ enum WsAction {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct ListedData {
+pub struct WsData {
     pub app_id: i32,
     pub asset_id: String,
-    pub bot_steam_id: String,
     pub class_id: String,
-    pub float_id: Option<String>,
-    pub float_value: Option<f64>,
     pub id: String,
     pub name: String,
-    pub paint_seed: Option<i32>,
     pub price: i32,
     pub skin_id: i32,
     pub suggested_price: i32,
-    pub tradehold: i32,
-}
 
-#[derive(Deserialize, Debug)]
-pub struct PriceChangedData {
-    pub app_id: i32,
-    pub asset_id: String,
-    pub bot_steam_id: String,
-    pub class_id: String,
-    pub float_value: Option<f64>,
+    // Optional fields
+    pub bot_steam_id: Option<String>,
     pub float_id: Option<String>,
-    pub id: String,
-    pub name: String,
-    pub old_price: i32,
+    pub float_value: Option<f64>,
     pub paint_seed: Option<i32>,
-    pub price: i32,
-    pub skin_id: i32,
-    pub suggested_price: i32,
     pub tradehold: Option<i32>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct DelistedOrSoldData {
-    pub app_id: i32,
-    pub asset_id: String,
-    pub class_id: String,
-    pub id: String,
-    pub name: String,
-    pub price: i32,
-    pub skin_id: i32,
-    pub suggested_price: i32,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ExtraInfoData;
-
-#[derive(Debug)]
-pub enum WsData {
-    Listed(ListedData),
-    PriceChanged(PriceChangedData),
-    DelistedOrSold(DelistedOrSoldData),
-    ExtraInfo(ExtraInfoData),
-}
-
-impl WsData {
-    fn new(channel: Channel, data: &Value) -> Result<Self> {
-        Ok(match channel {
-            Channel::Listed => Self::Listed(ListedData::deserialize(data)?),
-            Channel::PriceChanged => Self::PriceChanged(PriceChangedData::deserialize(data)?),
-            Channel::DelistedOrSold => Self::DelistedOrSold(DelistedOrSoldData::deserialize(data)?),
-            Channel::ExtraInfo => Self::ExtraInfo(ExtraInfoData::deserialize(data)?),
-        })
-    }
+    pub old_price: Option<i32>,
 }
 
 /// A WebSocket client for communicating with the BitSkins API.
@@ -122,7 +73,7 @@ pub struct WsClient<H> {
 
 impl<H, F> WsClient<H>
 where
-    H: Fn(WsData) -> F,
+    H: Fn(Channel, WsData) -> F,
     F: Future<Output = Result<()>>,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
@@ -165,7 +116,7 @@ where
             if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?
             } else if let Ok(channel) = Channel::deserialize(action) {
-                (self.handler)(WsData::new(channel, data)?).await?
+                (self.handler)(channel, WsData::deserialize(data)?).await?
             }
         } else {
             log::warn!("Invalid message format: {}", text);
