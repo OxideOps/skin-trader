@@ -1,4 +1,4 @@
-use api::{Channel, CS2_APP_ID, Database, HttpClient, PriceStatistics, WsData};
+use api::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 
 pub const MAX_PRICE: i32 = 50;
 pub const BUY_THRESHOLD: f64 = 0.8;
