@@ -126,7 +126,7 @@ impl HttpClient {
             client: Client::new(),
         }
     }
-    
+
     pub async fn delist_item(&self, id: &str) -> Result<()> {
         let url = format!("{BASE_URL}/market/delist/single");
 
