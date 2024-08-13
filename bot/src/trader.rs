@@ -1,4 +1,4 @@
-use api::{Channel, Database, HttpClient, PriceStatistics, WsData};
+use api::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 
 pub const MAX_PRICE: i32 = 50;
 pub const BUY_THRESHOLD: f64 = 0.8;
@@ -27,7 +27,7 @@ pub async fn process_data(
     channel: Channel,
     data: WsData,
 ) -> anyhow::Result<()> {
-    if data.app_id != 730 || data.price > MAX_PRICE {
+    if data.app_id != CS2_APP_ID || data.price > MAX_PRICE {
         return Ok(());
     }
 

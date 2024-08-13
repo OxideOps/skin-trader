@@ -12,7 +12,7 @@ use std::ops::{Deref, DerefMut};
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 
-const CS2_APP_ID: u32 = 730;
+pub const CS2_APP_ID: i32 = 730;
 
 fn deserialize_sqlx_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
