@@ -15,15 +15,20 @@ async fn process_data(
 
     let stats = db.get_price_statistics(data.skin_id).await?;
 
-    if let Some(mean) = stats.mean_price {
-        if (data.price as f64) >= core::BUY_THRESHOLD * mean {
-            return Ok(());
-        }
-        let reasons = core::analyze_item(&stats, &data);
+    match channel {
+        Channel::Listed => {
+            if let Some(mean) = stats.mean_price {
+                if (data.price as f64) >= core::BUY_THRESHOLD * mean {
+                    return Ok(());
+                }
+                let reasons = core::analyze_item(&stats, &data);
 
-        if !reasons.is_empty() {
-            core::handle_purchase(http, &data, mean).await?;
+                if !reasons.is_empty() {
+                    core::handle_purchase(http, &data, mean).await?;
+                }
+            }
         }
+        _ => (),
     }
     Ok(())
 }

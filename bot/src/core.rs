@@ -7,7 +7,6 @@ const PRICE_SLOPE_THRESHOLD: f64 = 0.0;
 const TIME_CORRELATION_THRESHOLD: f64 = 0.7;
 const FLOAT_THRESHOLD: f64 = 0.2;
 
-
 #[derive(Debug, PartialEq)]
 pub enum BuyReason {
     UnusuallyLowPrice,
