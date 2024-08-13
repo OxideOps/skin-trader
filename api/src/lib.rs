@@ -1,12 +1,12 @@
 //! This library provides functionality for interacting with the BitSkins API.
 //! It includes modules for database operations, HTTP requests, and WebSocket communication.
-pub mod db;
-pub mod http;
-pub mod ws;
+mod db;
+mod http;
+mod ws;
 
-pub use db::Database;
+pub use db::{Database, PriceStatistics, Sale};
 pub use http::HttpClient;
-pub use ws::{Channel, WsClient};
+pub use ws::{Channel, WsClient, WsData};
 
 use env_logger::{Builder, Env};
 
