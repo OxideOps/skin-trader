@@ -1,4 +1,4 @@
-mod core;
+mod trader;
 
 use anyhow::Result;
 use api::{Database, HttpClient, WsClient};
@@ -9,7 +9,7 @@ async fn main() -> Result<()> {
     let db = Database::new().await?;
     let http = HttpClient::new();
     let ws = WsClient::connect(|channel, ws_data| async {
-        core::process_data(&db, &http, channel, ws_data).await
+        trader::process_data(&db, &http, channel, ws_data).await
     })
     .await?;
 
