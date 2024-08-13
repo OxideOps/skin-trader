@@ -91,7 +91,7 @@ pub async fn process_data(
     let stats = db.get_price_statistics(data.skin_id).await?;
 
     match channel {
-        Channel::Listed => {
+        Channel::Listed | Channel::PriceChanged => {
             if let Some(mean) = stats.mean_price {
                 if (data.price as f64) >= BUY_THRESHOLD * mean {
                     return Ok(());
