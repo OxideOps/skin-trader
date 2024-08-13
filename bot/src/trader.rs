@@ -16,9 +16,14 @@ async fn handle_purchase(http: &HttpClient, data: &WsData, mean: f64) -> anyhow:
 }
 
 fn is_mean_reliable(stats: &PriceStatistics) -> bool {
-    stats.sale_count.unwrap_or(0) >= MIN_SALE_COUNT
-        && stats.time_correlation.unwrap_or(0.0) <= MIN_TIME_CORRELATION
-        && stats.price_slope.unwrap_or(0.0) >= MAX_NEGATIVE_SLOPE
+    match (stats.sale_count, stats.time_correlation, stats.price_slope) {
+        (Some(sale_count), Some(time_correlation), Some(price_slope)) => {
+            sale_count >= MIN_SALE_COUNT
+                && time_correlation <= MIN_TIME_CORRELATION
+                && price_slope >= MAX_NEGATIVE_SLOPE
+        }
+        _ => false,
+    }
 }
 
 pub async fn process_data(
