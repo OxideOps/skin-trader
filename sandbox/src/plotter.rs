@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use api::db::{Database, Sale};
+use api::{Database, Sale};
 use plotters::coord::ranged1d::SegmentedCoord;
 use plotters::coord::types::RangedCoordu32;
 use plotters::prelude::*;
