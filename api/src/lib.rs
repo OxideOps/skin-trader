@@ -5,7 +5,7 @@ mod http;
 mod ws;
 
 pub use db::{Database, PriceStatistics, Sale};
-pub use http::HttpClient;
+pub use http::{HttpClient, CS2_APP_ID};
 pub use ws::{Channel, WsClient, WsData};
 
 use env_logger::{Builder, Env};
