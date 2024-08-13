@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;
 use std::future::Future;
+use strum::{EnumIter, IntoEnumIterator};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
@@ -16,14 +17,8 @@ type WriteSocket = SplitSink<WsStream, Message>;
 type ReadSocket = SplitStream<WsStream>;
 
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
-const CHANNELS: [Channel; 4] = [
-    Channel::Listed,
-    Channel::PriceChanged,
-    Channel::DelistedOrSold,
-    Channel::ExtraInfo,
-];
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, EnumIter, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum Channel {
     Listed,
@@ -127,7 +122,7 @@ where
 
     async fn setup_channels(&mut self) -> Result<()> {
         log::info!("Setting up default channels");
-        for channel in CHANNELS {
+        for channel in Channel::iter() {
             self.send_action(WsAction::WsSub, channel).await?
         }
 
