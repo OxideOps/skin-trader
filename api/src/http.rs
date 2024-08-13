@@ -127,6 +127,29 @@ impl HttpClient {
         }
     }
 
+    pub async fn delist_item(&self, id: &str) -> Result<()> {
+        let url = format!("{BASE_URL}/market/delist/single");
+
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "id": id,
+        });
+
+        self.post(url, payload).await
+    }
+
+    pub async fn update_price(&self, id: &str, price: i32) -> Result<()> {
+        let url = format!("{BASE_URL}/market/update_price/single");
+
+        let payload = json!({
+            "app_id": CS2_APP_ID,
+            "id": id,
+            "price": price,
+        });
+
+        self.post(url, payload).await
+    }
+
     pub async fn sell_item(&self, id: &str, price: i32) -> Result<()> {
         let url = format!("{BASE_URL}/market/relist/single");
 
