@@ -4,7 +4,7 @@ pub const MAX_PRICE: i32 = 50;
 pub const BUY_THRESHOLD: f64 = 0.8;
 const MIN_SALE_COUNT: i32 = 10;
 const MIN_TIME_CORRELATION: f64 = 0.7;
-const MAX_NEGATIVE_SLOPE: f64 = -0.1;
+const MIN_SLOPE: f64 = 0.0;
 
 async fn handle_purchase(http: &HttpClient, data: &WsData, mean: f64) -> anyhow::Result<()> {
     let balance = http.check_balance().await?;
@@ -20,7 +20,7 @@ fn is_mean_reliable(stats: &PriceStatistics) -> bool {
         (Some(sale_count), Some(time_correlation), Some(price_slope)) => {
             sale_count >= MIN_SALE_COUNT
                 && time_correlation <= MIN_TIME_CORRELATION
-                && price_slope >= MAX_NEGATIVE_SLOPE
+                && price_slope >= MIN_SLOPE
         }
         _ => false,
     }
