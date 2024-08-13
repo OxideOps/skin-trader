@@ -16,7 +16,7 @@ pub enum BuyReason {
     StrongTimeCorrelation,
 }
 
-pub fn analyze_item(stats: &PriceStatistics, data: &WsData) -> Vec<BuyReason> {
+fn analyze_item(stats: &PriceStatistics, data: &WsData) -> Vec<BuyReason> {
     let mut reasons = Vec::new();
 
     if let Some(slope) = stats.price_slope {
@@ -69,7 +69,7 @@ fn check_time_correlation(correlation: f64) -> bool {
     correlation.abs() > TIME_CORRELATION_THRESHOLD
 }
 
-pub async fn handle_purchase(http: &HttpClient, data: &WsData, mean: f64) -> anyhow::Result<()> {
+async fn handle_purchase(http: &HttpClient, data: &WsData, mean: f64) -> anyhow::Result<()> {
     let balance = http.check_balance().await?;
     if data.price < balance {
         http.buy_item(&data.id, data.price).await?;
