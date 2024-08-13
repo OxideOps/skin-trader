@@ -17,8 +17,7 @@ async fn handle_purchase(http: &HttpClient, data: &WsData, mean: f64) -> anyhow:
 fn is_mean_reliable(stats: &PriceStatistics) -> bool {
     match (stats.sale_count, stats.price_slope) {
         (Some(sale_count), Some(price_slope)) => {
-            sale_count >= MIN_SALE_COUNT
-                && price_slope >= MIN_SLOPE
+            sale_count >= MIN_SALE_COUNT && price_slope >= MIN_SLOPE
         }
         _ => false,
     }
