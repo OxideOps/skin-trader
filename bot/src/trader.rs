@@ -9,7 +9,7 @@ async fn handle_purchase(http: &HttpClient, data: &WsData, mean: f64) -> anyhow:
     let balance = http.check_balance().await?;
     if data.price < balance {
         http.buy_item(&data.id, data.price).await?;
-        http.sell_item(&data.id, mean as i32).await?;
+        http.list_item(&data.id, mean as i32).await?;
     }
     Ok(())
 }
