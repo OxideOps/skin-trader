@@ -150,7 +150,7 @@ impl HttpClient {
         self.post(url, payload).await
     }
 
-    pub async fn sell_item(&self, id: &str, price: i32) -> Result<()> {
+    pub async fn list_item(&self, id: &str, price: i32) -> Result<()> {
         let url = format!("{BASE_URL}/market/relist/single");
 
         let payload = json!({
