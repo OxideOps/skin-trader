@@ -102,24 +102,15 @@ where
     /// Parses the incoming message and logs its content. If the message
     /// indicates successful API key authentication, it sets up the default channels.
     async fn handle_message(&mut self, text: String) -> Result<()> {
-        if let Ok(Value::Array(array)) = serde_json::from_str(&text) {
-            if array.len() < 2 {
-                log::warn!("Received malformed message: {}", text);
-                return Ok(());
+        let message = parse_message(&text)?;
+
+        match message {
+            MessageType::WsAuthApikey => self.setup_channels().await?,
+            MessageType::ChannelMessage(channel) => {
+                let data = parse_data(&text)?;
+                (self.handler)(channel, data).await?
             }
-
-            let action = &array[0];
-            let data = &array[1];
-
-            log::info!("Received message: {}, {}", action, data);
-
-            if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
-                self.setup_channels().await?
-            } else if let Ok(channel) = Channel::deserialize(action) {
-                (self.handler)(channel, WsData::deserialize(data)?).await?
-            }
-        } else {
-            log::warn!("Invalid message format: {}", text);
+            MessageType::Invalid => log::warn!("Invalid message format: {}", text),
         }
 
         Ok(())
@@ -156,5 +147,58 @@ where
         }
 
         Ok(())
+    }
+}
+
+enum MessageType {
+    WsAuthApikey,
+    ChannelMessage(Channel),
+    Invalid,
+}
+
+impl MessageType {
+    fn from_value(value: &Value) -> Self {
+        if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(value) {
+            Self::WsAuthApikey
+        } else if let Ok(channel) = Channel::deserialize(value) {
+            Self::ChannelMessage(channel)
+        } else {
+            Self::Invalid
+        }
+    }
+}
+
+fn parse_message(text: &str) -> Result<MessageType> {
+    let array: Value = serde_json::from_str(text)?;
+
+    if let Value::Array(array) = array {
+        if array.len() < 2 {
+            log::warn!("Received malformed message: {}", text);
+            return Ok(MessageType::Invalid);
+        }
+
+        let action = &array[0];
+        let data = &array[1];
+
+        log::info!("Received message: {}, {}", action, data);
+
+        Ok(MessageType::from_value(action))
+    } else {
+        log::warn!("Invalid message format: {}", text);
+        Ok(MessageType::Invalid)
+    }
+}
+
+fn parse_data(text: &str) -> Result<WsData> {
+    let array: Value = serde_json::from_str(text)?;
+
+    if let Value::Array(array) = array {
+        if array.len() < 2 {
+            return Err(anyhow::anyhow!("Malformed message"));
+        }
+
+        Ok(WsData::deserialize(&array[1])?)
+    } else {
+        Err(anyhow::anyhow!("Invalid message format"))
     }
 }
