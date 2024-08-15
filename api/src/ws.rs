@@ -1,6 +1,6 @@
 //! WebSocket client for real-time communication with the BitSkins API.
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -194,11 +194,11 @@ fn parse_data(text: &str) -> Result<WsData> {
 
     if let Value::Array(array) = array {
         if array.len() < 2 {
-            return Err(anyhow::anyhow!("Malformed message"));
+            bail!("Malformed message")
         }
 
         Ok(WsData::deserialize(&array[1])?)
     } else {
-        Err(anyhow::anyhow!("Invalid message format"))
+        bail!("Invalid message format")
     }
 }
