@@ -2,3 +2,4 @@
 .env
 .sqlx
 plots
+.idea
