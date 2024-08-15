@@ -150,11 +150,10 @@ enum MessageType {
 
 impl MessageType {
     fn parse(text: &str) -> Result<Self> {
-        let array: Vec<Value> = serde_json::from_str(text)
-            .context("Failed to parse message")?;
+        let array: Vec<Value> = serde_json::from_str(text).context("Failed to parse message")?;
 
         if array.len() < 2 {
-            anyhow::bail!("Malformed message: insufficient elements");
+            bail!("Malformed message: insufficient elements");
         }
 
         let action = &array[0];
@@ -167,7 +166,7 @@ impl MessageType {
         } else {
             Ok(Self::Channel(
                 Channel::deserialize(action)?,
-                WsData::deserialize(data)?
+                WsData::deserialize(data)?,
             ))
         }
     }
