@@ -208,7 +208,11 @@ impl HttpClient {
         self.request(self.client.get(url)).await
     }
 
-    pub(crate) async fn fetch_sales<T: DeserializeOwned>(&self, app_id: i32, skin_id: i32) -> Result<T> {
+    pub(crate) async fn fetch_sales<T: DeserializeOwned>(
+        &self,
+        app_id: i32,
+        skin_id: i32,
+    ) -> Result<T> {
         let url = format!("{BASE_URL}/market/pricing/list");
 
         let payload = json!({
