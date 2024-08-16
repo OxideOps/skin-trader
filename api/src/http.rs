@@ -239,10 +239,11 @@ impl HttpClient {
 
     pub async fn fetch_market_data<T: DeserializeOwned>(
         &self,
+        app_id: i32,
         skin_id: i32,
         offset: usize,
     ) -> Result<T> {
-        let url = format!("{BASE_URL}/market/search/{CS2_APP_ID}");
+        let url = format!("{BASE_URL}/market/search/{app_id}");
 
         let payload = json!({
             "where": { "skin_id": [skin_id] },
