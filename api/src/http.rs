@@ -3,7 +3,10 @@ use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
 use sqlx::types::time::{Date as SqlxDate, OffsetDateTime};
-use std::{env, ops::{Deref, DerefMut}};
+use std::{
+    env,
+    ops::{Deref, DerefMut},
+};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -139,34 +142,52 @@ impl HttpClient {
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
-        self.request(self.client.post(format!("{BASE_URL}{endpoint}")).json(&payload)).await
+        self.request(
+            self.client
+                .post(format!("{BASE_URL}{endpoint}"))
+                .json(&payload),
+        )
+        .await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
-        self.request(self.client.get(format!("{BASE_URL}{endpoint}"))).await
+        self.request(self.client.get(format!("{BASE_URL}{endpoint}")))
+            .await
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
-        self.post("/market/delist/single", json!({
-            "app_id": app_id,
-            "id": item_id,
-        })).await
+        self.post(
+            "/market/delist/single",
+            json!({
+                "app_id": app_id,
+                "id": item_id,
+            }),
+        )
+        .await
     }
 
     pub async fn update_price(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
-        self.post("/market/update_price/single", json!({
-            "app_id": app_id,
-            "id": item_id,
-            "price": price,
-        })).await
+        self.post(
+            "/market/update_price/single",
+            json!({
+                "app_id": app_id,
+                "id": item_id,
+                "price": price,
+            }),
+        )
+        .await
     }
 
     pub async fn list_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
-        self.post("/market/relist/single", json!({
-            "app_id": app_id,
-            "id": item_id,
-            "price": price,
-        })).await
+        self.post(
+            "/market/relist/single",
+            json!({
+                "app_id": app_id,
+                "id": item_id,
+                "price": price,
+            }),
+        )
+        .await
     }
 
     pub async fn check_balance(&self) -> Result<i32> {
@@ -174,19 +195,31 @@ impl HttpClient {
     }
 
     pub async fn buy_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
-        self.post("/market/buy/single", json!({
-            "app_id": app_id,
-            "id": item_id,
-            "max_price": price
-        })).await
+        self.post(
+            "/market/buy/single",
+            json!({
+                "app_id": app_id,
+                "id": item_id,
+                "max_price": price
+            }),
+        )
+        .await
     }
 
-    pub(crate) async fn fetch_sales<T: DeserializeOwned>(&self, app_id: i32, skin_id: i32) -> Result<T> {
-        self.post("/market/pricing/list", json!({
-            "app_id": app_id,
-            "skin_id": skin_id,
-            "limit": MAX_LIMIT,
-        })).await
+    pub(crate) async fn fetch_sales<T: DeserializeOwned>(
+        &self,
+        app_id: i32,
+        skin_id: i32,
+    ) -> Result<T> {
+        self.post(
+            "/market/pricing/list",
+            json!({
+                "app_id": app_id,
+                "skin_id": skin_id,
+                "limit": MAX_LIMIT,
+            }),
+        )
+        .await
     }
 
     pub(crate) async fn fetch_skins(&self, app_id: i32) -> Result<Vec<i32>> {
@@ -199,11 +232,20 @@ impl HttpClient {
         Ok(skin_ids.into_iter().map(|s| s.id).collect())
     }
 
-    pub async fn fetch_market_data<T: DeserializeOwned>(&self, app_id: i32, skin_id: i32, offset: usize) -> Result<T> {
-        self.post(&format!("/market/search/{app_id}"), json!({
-            "where": { "skin_id": [skin_id] },
-            "limit": MAX_LIMIT,
-            "offset": offset,
-        })).await
+    pub async fn fetch_market_data<T: DeserializeOwned>(
+        &self,
+        app_id: i32,
+        skin_id: i32,
+        offset: usize,
+    ) -> Result<T> {
+        self.post(
+            &format!("/market/search/{app_id}"),
+            json!({
+                "where": { "skin_id": [skin_id] },
+                "limit": MAX_LIMIT,
+                "offset": offset,
+            }),
+        )
+        .await
     }
 }
