@@ -1,13 +1,9 @@
-//! HTTP client for interacting with the BitSkins API.
-
 use anyhow::{bail, Result};
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
-use sqlx::types::time::Date as SqlxDate;
-use sqlx::types::time::OffsetDateTime;
-use std::env;
-use std::ops::{Deref, DerefMut};
+use sqlx::types::time::{Date as SqlxDate, OffsetDateTime};
+use std::{env, ops::{Deref, DerefMut}};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -95,21 +91,16 @@ pub(crate) enum Wear {
 
 impl Wear {
     pub(crate) fn new(wear: f64) -> Self {
-        if wear < 0.07 {
-            Self::FactoryNew
-        } else if wear < 0.15 {
-            Self::MinimalWear
-        } else if wear < 0.38 {
-            Self::FieldTested
-        } else if wear < 0.45 {
-            Self::WellWorn
-        } else {
-            Self::BattleScarred
+        match wear {
+            w if w < 0.07 => Self::FactoryNew,
+            w if w < 0.15 => Self::MinimalWear,
+            w if w < 0.38 => Self::FieldTested,
+            w if w < 0.45 => Self::WellWorn,
+            _ => Self::BattleScarred,
         }
     }
 }
 
-/// HTTP client for making requests to the BitSkins API.
 #[derive(Clone)]
 pub struct HttpClient {
     client: Client,
@@ -126,59 +117,6 @@ impl HttpClient {
         Self {
             client: Client::new(),
         }
-    }
-
-    pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
-        let url = format!("{BASE_URL}/market/delist/single");
-
-        let payload = json!({
-            "app_id": app_id,
-            "id": item_id,
-        });
-
-        self.post(url, payload).await
-    }
-
-    pub async fn update_price(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
-        let url = format!("{BASE_URL}/market/update_price/single");
-
-        let payload = json!({
-            "app_id": app_id,
-            "id": item_id,
-            "price": price,
-        });
-
-        self.post(url, payload).await
-    }
-
-    pub async fn list_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
-        let url = format!("{BASE_URL}/market/relist/single");
-
-        let payload = json!({
-            "app_id": app_id,
-            "id": item_id,
-            "price": price,
-        });
-
-        self.post(url, payload).await
-    }
-
-    pub async fn check_balance(&self) -> Result<i32> {
-        let url = format!("{BASE_URL}/account/profile/balance");
-
-        self.post::<i32>(url, json!({})).await
-    }
-
-    pub async fn buy_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
-        let url = format!("{BASE_URL}/market/buy/single");
-
-        let payload = json!({
-            "app_id": app_id,
-            "id": item_id,
-            "max_price": price
-        });
-
-        self.post(url, payload).await
     }
 
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
@@ -200,57 +138,72 @@ impl HttpClient {
         Ok(response.json().await?)
     }
 
-    pub async fn post<T: DeserializeOwned>(&self, url: impl IntoUrl, payload: Value) -> Result<T> {
-        self.request(self.client.post(url).json(&payload)).await
+    async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
+        self.request(self.client.post(format!("{BASE_URL}{endpoint}")).json(&payload)).await
     }
 
-    pub async fn get<T: DeserializeOwned>(&self, url: impl IntoUrl) -> Result<T> {
-        self.request(self.client.get(url)).await
+    async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
+        self.request(self.client.get(format!("{BASE_URL}{endpoint}"))).await
     }
 
-    pub(crate) async fn fetch_sales<T: DeserializeOwned>(
-        &self,
-        app_id: i32,
-        skin_id: i32,
-    ) -> Result<T> {
-        let url = format!("{BASE_URL}/market/pricing/list");
+    pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
+        self.post("/market/delist/single", json!({
+            "app_id": app_id,
+            "id": item_id,
+        })).await
+    }
 
-        let payload = json!({
+    pub async fn update_price(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
+        self.post("/market/update_price/single", json!({
+            "app_id": app_id,
+            "id": item_id,
+            "price": price,
+        })).await
+    }
+
+    pub async fn list_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
+        self.post("/market/relist/single", json!({
+            "app_id": app_id,
+            "id": item_id,
+            "price": price,
+        })).await
+    }
+
+    pub async fn check_balance(&self) -> Result<i32> {
+        self.post("/account/profile/balance", json!({})).await
+    }
+
+    pub async fn buy_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
+        self.post("/market/buy/single", json!({
+            "app_id": app_id,
+            "id": item_id,
+            "max_price": price
+        })).await
+    }
+
+    pub(crate) async fn fetch_sales<T: DeserializeOwned>(&self, app_id: i32, skin_id: i32) -> Result<T> {
+        self.post("/market/pricing/list", json!({
             "app_id": app_id,
             "skin_id": skin_id,
             "limit": MAX_LIMIT,
-        });
-
-        self.post(url, payload).await
+        })).await
     }
 
     pub(crate) async fn fetch_skins(&self, app_id: i32) -> Result<Vec<i32>> {
         #[derive(Debug, Deserialize)]
-        pub(crate) struct SkinID {
+        struct SkinID {
             id: i32,
         }
 
-        let url = format!("{BASE_URL}/market/skin/{app_id}");
-
-        let skin_ids: Vec<SkinID> = self.get(url).await?;
-
+        let skin_ids: Vec<SkinID> = self.get(&format!("/market/skin/{app_id}")).await?;
         Ok(skin_ids.into_iter().map(|s| s.id).collect())
     }
 
-    pub async fn fetch_market_data<T: DeserializeOwned>(
-        &self,
-        app_id: i32,
-        skin_id: i32,
-        offset: usize,
-    ) -> Result<T> {
-        let url = format!("{BASE_URL}/market/search/{app_id}");
-
-        let payload = json!({
+    pub async fn fetch_market_data<T: DeserializeOwned>(&self, app_id: i32, skin_id: i32, offset: usize) -> Result<T> {
+        self.post(&format!("/market/search/{app_id}"), json!({
             "where": { "skin_id": [skin_id] },
             "limit": MAX_LIMIT,
             "offset": offset,
-        });
-
-        self.post(url, payload).await
+        })).await
     }
 }
