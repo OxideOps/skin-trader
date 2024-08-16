@@ -8,8 +8,8 @@ const MIN_SLOPE: f64 = 0.0;
 async fn handle_purchase(http: &HttpClient, data: &WsData, mean: f64) -> anyhow::Result<()> {
     let balance = http.check_balance().await?;
     if data.price < balance {
-        http.buy_item(&data.id, data.price).await?;
-        http.list_item(&data.id, mean as i32).await?;
+        http.buy_item(data.app_id, &data.id, data.price).await?;
+        http.list_item(data.app_id, &data.id, mean as i32).await?;
     }
     Ok(())
 }
