@@ -1,7 +1,7 @@
 use api::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 
-pub const MAX_PRICE: i32 = 50;
-pub const BUY_THRESHOLD: f64 = 0.8;
+const MAX_PRICE: i32 = 50;
+const BUY_THRESHOLD: f64 = 0.8;
 const MIN_SALE_COUNT: i32 = 10;
 const MIN_SLOPE: f64 = 0.0;
 
