@@ -21,18 +21,9 @@ async fn plot_histograms(db: &api::Database) -> anyhow::Result<()> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     api::setup_env();
-    let _db = api::Database::new().await?;
-    let _http = api::HttpClient::new();
-
-    // plot_histograms(&_db).await?;
-
-    // plotter::plot_by_dates(&_db, 2265).await?;
-
-    // let data: serde_json::Value = _http.fetch_market_data(2265, 0).await?;
-    // dbg!(data);
-
-
-
+    let db = api::Database::new().await?;
+    let http = api::HttpClient::new();
+    
     Ok(())
 }
 
@@ -42,4 +33,6 @@ pub async fn func(db: &api::Database) -> anyhow::Result<()> {
     for skin_id in &skin_ids[0..5] {
         plotter::plot_by_dates(&db, *skin_id).await?;
     }
+    
+    Ok(())
 }
