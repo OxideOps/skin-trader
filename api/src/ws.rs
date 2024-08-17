@@ -111,7 +111,7 @@ where
             let action = &array[0];
             let data = &array[1];
 
-            log::info!("Received message: {}, {}", action, data);
+            log::debug!("Received message: {}, {}", action, data);
 
             if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?

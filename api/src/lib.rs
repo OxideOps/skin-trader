@@ -24,6 +24,6 @@ use env_logger::{Builder, Env};
 /// // The logger is now initialized and environment variables are loaded
 /// ```
 pub fn setup_env() {
-    Builder::from_env(Env::default().default_filter_or("info")).init();
     dotenvy::dotenv().ok();
+    Builder::from_env(Env::default().default_filter_or("info")).init();
 }

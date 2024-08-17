@@ -2,13 +2,15 @@ use api::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 
 const MAX_PRICE: i32 = 50;
 const BUY_THRESHOLD: f64 = 0.8;
-const MIN_SALE_COUNT: i32 = 10;
+const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
 
 async fn handle_purchase(http: &HttpClient, data: &WsData, mean: f64) -> anyhow::Result<()> {
     let balance = http.check_balance().await?;
     if data.price < balance {
+        log::info!("Buying {} for {}", data.id, data.price);
         http.buy_item(data.app_id, &data.id, data.price).await?;
+        log::info!("Listing {} for {}", data.id, mean);
         http.list_item(data.app_id, &data.id, mean as i32).await?;
     }
     Ok(())
