@@ -31,11 +31,15 @@ async fn main() -> anyhow::Result<()> {
     // let data: serde_json::Value = _http.fetch_market_data(2265, 0).await?;
     // dbg!(data);
 
-    let skin_ids = _db.get_skin_ids_by_correlation_with_min_sales(500).await?;
 
-    for skin_id in &skin_ids[0..5] {
-        plotter::plot_by_dates(&_db, *skin_id).await?;
-    }
 
     Ok(())
+}
+
+pub async fn func(db: &api::Database) -> anyhow::Result<()> {
+    let skin_ids = db.get_skin_ids_by_correlation_with_min_sales(500).await?;
+
+    for skin_id in &skin_ids[0..5] {
+        plotter::plot_by_dates(&db, *skin_id).await?;
+    }
 }

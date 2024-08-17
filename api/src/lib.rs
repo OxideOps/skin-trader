@@ -27,3 +27,7 @@ pub fn setup_env() {
     dotenvy::dotenv().ok();
     Builder::from_env(Env::default().default_filter_or("info")).init();
 }
+
+pub fn sync_bitskins_data(db: &Database, client: &HttpClient) -> anyhow::Result<()> {
+    todo!()
+}

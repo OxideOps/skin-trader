@@ -235,13 +235,13 @@ impl HttpClient {
     pub async fn fetch_market_data<T: DeserializeOwned>(
         &self,
         app_id: i32,
-        skin_id: i32,
+        skin_id: &[i32],
         offset: usize,
     ) -> Result<T> {
         self.post(
             &format!("/market/search/{app_id}"),
             json!({
-                "where": { "skin_id": [skin_id] },
+                "where": { "skin_id": skin_id },
                 "limit": MAX_LIMIT,
                 "offset": offset,
             }),
