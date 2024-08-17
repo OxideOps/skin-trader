@@ -344,7 +344,7 @@ impl Database {
         Ok(skin_ids.into_iter().map(|r| r.weapon_skin_id).collect())
     }
     
-    pub async fn sync_bitskins_data(&self, client: &crate::HttpClient) {
-        
+    pub async fn sync_bitskins_data(&self, client: &crate::HttpClient) -> Result<()> {
+        todo!()
     }
 }
