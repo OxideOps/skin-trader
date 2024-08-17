@@ -149,9 +149,11 @@ where
     pub async fn start(mut self) -> Result<()> {
         self.authenticate().await?;
 
-        while let Some(Ok(Message::Text(text))) = self.read.next().await {
-            if let Err(e) = self.handle_message(text).await {
-                log::error!("Error occurred while handling message: {e}")
+        while let Some(message) = self.read.next().await {
+            if let Ok(Message::Text(text)) = message {
+                if let Err(e) = self.handle_message(text).await {
+                    log::error!("Error occurred handling message: {e}")
+                }
             }
         }
 
