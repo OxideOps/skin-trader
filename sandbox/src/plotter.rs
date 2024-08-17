@@ -4,6 +4,7 @@ use plotters::coord::ranged1d::SegmentedCoord;
 use plotters::coord::types::RangedCoordu32;
 use plotters::prelude::*;
 use std::ops::Range;
+use crate::plotter;
 
 pub enum PlotType {
     Scatter,
@@ -209,4 +210,21 @@ pub async fn plot_by_dates(db: &Database, weapon_skin_id: i32) -> Result<()> {
         "Date",
         "Price",
     )
+}
+
+async fn plot_histograms(db: &Database) -> Result<()> {
+    let skin_ids = db.get_skins_by_sale_count(500).await?;
+
+    for skin_id in skin_ids {
+        let prices = db
+            .get_sales_by_weapon_skin_id(skin_id)
+            .await?
+            .into_iter()
+            .map(|sale| sale.price as u32)
+            .collect::<Vec<_>>();
+
+        plot_histogram(&prices, &format!("plots/hist/{skin_id}.png"), 8)?;
+    }
+
+    Ok(())
 }

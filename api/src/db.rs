@@ -9,7 +9,6 @@ use sqlx::{
     types::time::{Date, OffsetDateTime},
     PgPool,
 };
-use std::collections::HashMap;
 use std::env;
 
 const MAX_CONNECTIONS: u32 = 5;
@@ -60,13 +59,6 @@ pub struct PriceStatistics {
     pub time_correlation: Option<f64>,
     pub price_slope: Option<f64>,
     pub last_update: Option<OffsetDateTime>,
-}
-
-struct FilteredSale {
-    weapon_skin_id: i32,
-    price: f64,
-    float_value: Option<f64>,
-    time: f64,
 }
 
 /// Handles database operations for BitSkins data.
@@ -350,5 +342,9 @@ impl Database {
         .await?;
 
         Ok(skin_ids.into_iter().map(|r| r.weapon_skin_id).collect())
+    }
+    
+    pub async fn sync_bitskins_data(&self, client: &crate::HttpClient) {
+        
     }
 }
