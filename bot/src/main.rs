@@ -1,16 +1,14 @@
 mod trader;
 
 use anyhow::Result;
-use api::{Database, HttpClient, WsClient};
+use api::WsClient;
+use trader::Trader;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     api::setup_env();
-    let db = Database::new().await?;
-    let http = HttpClient::new();
-    let ws =
-        WsClient::connect(|channel, ws_data| trader::process_data(&db, &http, channel, ws_data))
-            .await?;
+    let trader = Trader::new().await?;
+    let ws = WsClient::connect(|channel, ws_data| trader.process_data(channel, ws_data)).await?;
 
     ws.start().await?;
 

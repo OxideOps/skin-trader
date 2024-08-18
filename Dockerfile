@@ -9,11 +9,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 # Build the application
 FROM chef AS builder
 ARG DATABASE_URL
-ARG BITSKIN_API_KEY
-
-# Set environment variables for the build stage
 ENV DATABASE_URL=$DATABASE_URL
-ENV BITSKIN_API_KEY=$BITSKIN_API_KEY
 
 COPY --from=planner /app/recipe.json recipe.json
 # Build dependencies - this is the caching Docker layer!
@@ -25,6 +21,8 @@ RUN cargo build --release --bin bot
 
 # We do not need the Rust toolchain to run the binary!
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS runtime
+ARG BITSKIN_API_KEY
+ENV BITSKIN_API_KEY=$BITSKIN_API_KEY
 WORKDIR /app
 COPY --from=builder /app/target/release/bot /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/bot"]

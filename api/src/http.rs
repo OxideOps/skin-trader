@@ -252,4 +252,13 @@ impl HttpClient {
         )
         .await
     }
+
+    // This might be useful if it ever starts working
+    pub async fn _fetch_items_history<T: DeserializeOwned>(&self, offset: usize) -> Result<T> {
+        self.post(
+            "/market/history/list",
+            json!({"type": "buyer", "limit": MAX_LIMIT, "offset": offset}),
+        )
+        .await
+    }
 }
