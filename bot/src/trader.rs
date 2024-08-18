@@ -32,12 +32,7 @@ impl Trader {
     }
 
     fn is_mean_reliable(stats: &PriceStatistics) -> bool {
-        match (stats.sale_count, stats.price_slope) {
-            (Some(sale_count), Some(price_slope)) => {
-                sale_count >= MIN_SALE_COUNT && price_slope >= MIN_SLOPE
-            }
-            _ => false,
-        }
+        stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 
     pub async fn process_data(&self, channel: Channel, data: WsData) -> anyhow::Result<()> {
