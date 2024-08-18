@@ -1,5 +1,3 @@
-use api::CS2_APP_ID;
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     api::setup_env();
