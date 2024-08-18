@@ -10,6 +10,7 @@ use sqlx::{
     PgPool,
 };
 use std::env;
+use crate::CS2_APP_ID;
 
 const MAX_CONNECTIONS: u32 = 5;
 
@@ -343,8 +344,19 @@ impl Database {
 
         Ok(skin_ids.into_iter().map(|r| r.weapon_skin_id).collect())
     }
-
-    pub async fn sync_bitskins_data(&self, client: &crate::HttpClient) -> Result<()> {
-        todo!()
-    }
+    
+    // pub async fn insert_skin(&self, skin: Skin) -> Result<i32>{
+    //     let row = sqlx::query!(
+    //         r#"
+    //         INSERT INTO Sticker ()
+    //         VALUES ($1, $2, $3)
+    //         RETURNING id
+    //         "#,
+    //         skin.
+    //     )
+    //         .fetch_one(&self.pool)
+    //         .await?;
+    // 
+    //     Ok(row.id)
+    // }
 }

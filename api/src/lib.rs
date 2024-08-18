@@ -27,3 +27,16 @@ pub fn setup_env() {
     dotenvy::dotenv().ok();
     Builder::from_env(Env::default().default_filter_or("info")).init();
 }
+
+pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> anyhow::Result<()> {
+    let skin_ids = client.fetch_skins(CS2_APP_ID).await?;
+
+    // for skin_id in skin_ids {
+    //     db.ins
+    //     let sales = client.fetch_sales(CS2_APP_ID, skin_id).await?;
+    // }
+
+
+
+    Ok(())
+}

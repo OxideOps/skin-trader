@@ -14,6 +14,8 @@ const MAX_LIMIT: usize = 500;
 pub const CS2_APP_ID: i32 = 730;
 pub const DOTA2_APP_ID: i32 = 570;
 
+const ALL_APP_IDS: [i32; 2] = [CS2_APP_ID, DOTA2_APP_ID];
+
 fn deserialize_sqlx_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
     D: Deserializer<'de>,
@@ -206,11 +208,11 @@ impl HttpClient {
         .await
     }
 
-    pub(crate) async fn fetch_sales<T: DeserializeOwned>(
+    pub(crate) async fn fetch_sales(
         &self,
         app_id: i32,
         skin_id: i32,
-    ) -> Result<T> {
+    ) -> Result<Vec<Sale>> {
         self.post(
             "/market/pricing/list",
             json!({
@@ -222,18 +224,19 @@ impl HttpClient {
         .await
     }
 
-    pub(crate) async fn fetch_skins(&self, app_id: i32) -> Result<Vec<i32>> {
+    pub async fn fetch_skins(&self, app_id: i32) -> Result<Vec<i32>> {
         #[derive(Debug, Deserialize)]
         struct SkinID {
             id: i32,
         }
-
-        Ok(self
-            .get::<Vec<SkinID>>(&format!("/market/skin/{app_id}"))
-            .await?
-            .into_iter()
-            .map(|s| s.id)
-            .collect())
+        
+        let skins = self
+            .get::<Vec<Value>>(&format!("/market/skin/{app_id}"))
+            .await?;
+        
+        dbg!(skins);
+        
+        todo!()
     }
 
     pub async fn fetch_market_data<T: DeserializeOwned>(
