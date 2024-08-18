@@ -14,8 +14,6 @@ const MAX_LIMIT: usize = 500;
 pub const CS2_APP_ID: i32 = 730;
 pub const DOTA2_APP_ID: i32 = 570;
 
-const APP_IDS: [i32; 2] = [CS2_APP_ID, DOTA2_APP_ID];
-
 fn deserialize_sqlx_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
     D: Deserializer<'de>,
