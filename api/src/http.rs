@@ -62,7 +62,7 @@ pub struct Skin {
     pub id: i32,
     pub name: String,
     pub class_id: String,
-    pub suggested_price: i32,
+    pub suggested_price: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]

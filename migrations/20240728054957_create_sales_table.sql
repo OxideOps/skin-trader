@@ -2,7 +2,7 @@ CREATE TABLE Skin (
     id INTEGER PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
     class_id VARCHAR(255) NOT NULL,
-    suggested_price INTEGER NOT NULL
+    suggested_price INTEGER
 );
 
 CREATE TABLE Sale (
