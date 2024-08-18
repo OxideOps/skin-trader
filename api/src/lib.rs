@@ -2,10 +2,12 @@
 //! It includes modules for database operations, HTTP requests, and WebSocket communication.
 mod db;
 mod http;
+mod update;
 mod ws;
 
-pub use db::{Database, PriceStatistics, Sale};
+pub use db::Database;
 pub use http::{HttpClient, CS2_APP_ID};
+pub use update::sync_bitskins_data;
 pub use ws::{Channel, WsClient, WsData};
 
 use env_logger::{Builder, Env};
@@ -26,29 +28,4 @@ use env_logger::{Builder, Env};
 pub fn setup_env() {
     dotenvy::dotenv().ok();
     Builder::from_env(Env::default().default_filter_or("info")).init();
-}
-
-pub async fn sync_bitskins_skins(db: &Database, client: &HttpClient) -> anyhow::Result<()> {
-    let skins = client.fetch_skins().await?;
-
-    for skin in skins {
-        let skin = db::Skin {
-            id: skin.id,
-            name: skin.name,
-            class_id: skin.class_id,
-            suggested_price: skin.suggested_price
-        };
-
-        let sales = client.fetch_sales(skin.id).await?;
-        
-        db.insert_skin(&skin).await?;
-        for sale in sales {
-            let sale = db::Sale {
-                id: -1,
-                
-            }
-        }
-    }
-
-    Ok(())
 }
