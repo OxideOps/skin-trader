@@ -228,8 +228,12 @@ impl HttpClient {
             id: i32,
         }
 
-        let skin_ids: Vec<SkinID> = self.get(&format!("/market/skin/{app_id}")).await?;
-        Ok(skin_ids.into_iter().map(|s| s.id).collect())
+        Ok(self
+            .get::<Vec<SkinID>>(&format!("/market/skin/{app_id}"))
+            .await?
+            .into_iter()
+            .map(|s| s.id)
+            .collect())
     }
 
     pub async fn fetch_market_data<T: DeserializeOwned>(
