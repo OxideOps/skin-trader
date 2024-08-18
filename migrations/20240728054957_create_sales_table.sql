@@ -1,8 +1,8 @@
 CREATE TABLE Skin
 (
     id              INTEGER PRIMARY KEY,
-    name            VARCHAR(255),
-    class_id        VARCHAR(255),
+    name            VARCHAR(255) UNIQUE NOT NULL,
+    class_id        VARCHAR(255)        NOT NULL,
     suggested_price INTEGER
 );
 

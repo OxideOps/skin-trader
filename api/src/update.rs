@@ -1,6 +1,8 @@
 use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
+use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::cmp::max;
+use std::collections::VecDeque;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
@@ -58,7 +60,7 @@ async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result
         {
             let skin = db::Skin {
                 id,
-                name: name.clone().clone(),
+                name,
                 class_id,
                 suggested_price: sticker.suggested_price,
             };
@@ -71,16 +73,25 @@ async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result
 }
 
 pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
-    let interval = Duration::from_millis(100);
-    let mut next_time = Instant::now() + interval;
+    let mut timestamps = AllocRingBuffer::new(10);
+    timestamps.push(Instant::now());
     let skins = client.fetch_skins().await?;
 
     for skin in skins {
         log::info!("Processing skin {}", skin.id);
-        sleep(max(next_time - Instant::now(), Duration::from_millis(0))).await;
-        next_time += interval;
 
         let skin: db::Skin = skin.into();
+        let now = Instant::now();
+
+        // Has to have been 1 second since the 1st of the last 10 requests
+        if timestamps.is_full() {
+            let sleep_time = *timestamps.peek().unwrap() + Duration::from_secs(1) - now;
+            if sleep_time > Duration::ZERO {
+                log::info!("Delaying for {} milliseconds", sleep_time.as_millis());
+                sleep(sleep_time).await;
+            }
+        }
+        timestamps.push(now);
         let sales = client.fetch_sales(skin.id).await?;
 
         db.insert_skin(skin.clone()).await?;
@@ -90,6 +101,7 @@ pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()
         }
     }
 
+    log::info!("Updating price statistics");
     db.calculate_and_update_price_statistics().await?;
 
     Ok(())
