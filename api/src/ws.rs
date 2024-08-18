@@ -46,20 +46,20 @@ enum WsAction {
 
 #[derive(Deserialize, Debug)]
 pub struct WsData {
-    pub app_id: i32,
     pub asset_id: String,
-    pub class_id: String,
     pub id: String,
-    pub name: String,
-    pub price: i32,
     pub skin_id: i32,
-    pub suggested_price: i32,
 
     // Optional fields
+    pub app_id: Option<i32>,
     pub bot_steam_id: Option<String>,
+    pub class_id: Option<String>,
     pub float_id: Option<String>,
     pub float_value: Option<f64>,
+    pub name: Option<String>,
     pub paint_seed: Option<i32>,
+    pub price: Option<i32>,
+    pub suggested_price: Option<i32>,
     pub tradehold: Option<i32>,
     pub old_price: Option<i32>,
 }
