@@ -4,7 +4,6 @@ use plotters::coord::ranged1d::SegmentedCoord;
 use plotters::coord::types::RangedCoordu32;
 use plotters::prelude::*;
 use std::ops::Range;
-use crate::plotter;
 
 pub enum PlotType {
     Scatter,
