@@ -52,8 +52,20 @@ impl db::Sale {
 async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result<()> {
     let sale_id = db.insert_sale(&db::Sale::new(&sale, skin.id)).await?;
     for sticker in sale.stickers.into_iter().flatten() {
-        db.insert_sticker(&db::Sticker::new(sticker, &sale_id))
-            .await?;
+        let db_sticker = db::Sticker::new(sticker.clone(), &sale_id);
+        if let (Some(id), Some(class_id), Some(name)) =
+            (sticker.skin_id, sticker.class_id, sticker.name)
+        {
+            let skin = db::Skin {
+                id,
+                name: name.clone().clone(),
+                class_id,
+                suggested_price: sticker.suggested_price,
+            };
+
+            db.insert_skin(skin).await?;
+            db.insert_sticker(&db_sticker).await?;
+        }
     }
     Ok(())
 }
@@ -64,13 +76,14 @@ pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()
     let skins = client.fetch_skins().await?;
 
     for skin in skins {
+        log::info!("Processing skin {}", skin.id);
         sleep(max(next_time - Instant::now(), Duration::from_millis(0))).await;
         next_time += interval;
 
         let skin: db::Skin = skin.into();
         let sales = client.fetch_sales(skin.id).await?;
 
-        db.insert_skin(&skin).await?;
+        db.insert_skin(skin.clone()).await?;
 
         for sale in sales {
             handle_sale(db, &skin, sale).await?;

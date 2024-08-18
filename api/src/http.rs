@@ -78,7 +78,7 @@ pub(crate) struct Sale {
     pub stickers: Option<Vec<Sticker>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Sticker {
     pub class_id: Option<String>,
     pub skin_id: Option<i32>,
@@ -229,9 +229,7 @@ impl HttpClient {
     }
 
     pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
-        Ok(self
-            .get(&format!("/market/skin/{CS2_APP_ID}"))
-            .await?)
+        Ok(self.get(&format!("/market/skin/{CS2_APP_ID}")).await?)
     }
 
     pub async fn fetch_market_data<T: DeserializeOwned>(
