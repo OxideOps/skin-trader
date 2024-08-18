@@ -9,23 +9,24 @@ use sqlx::{
     types::time::{Date, OffsetDateTime},
     PgPool,
 };
-use std::collections::HashMap;
 use std::env;
 
 const MAX_CONNECTIONS: u32 = 5;
 
 pub type Id = i32;
 
+#[derive(Clone)]
 pub struct Skin {
     pub id: i32,
-    pub name: Option<String>,
-    pub class_id: Option<String>,
+    pub name: String,
+    pub class_id: String,
+    pub suggested_price: Option<i32>,
 }
 
 #[derive(Debug)]
 pub struct Sale {
     pub id: i32,
-    pub weapon_skin_id: i32,
+    pub skin_id: i32,
     pub created_at: Date,
     pub extras_1: Option<i32>,
     pub float_value: Option<f64>,
@@ -51,7 +52,7 @@ pub struct Sticker {
 
 #[derive(Debug)]
 pub struct PriceStatistics {
-    pub weapon_skin_id: i32,
+    pub skin_id: i32,
     pub mean_price: Option<f64>,
     pub std_dev_price: Option<f64>,
     pub sale_count: Option<i32>,
@@ -60,13 +61,6 @@ pub struct PriceStatistics {
     pub time_correlation: Option<f64>,
     pub price_slope: Option<f64>,
     pub last_update: Option<OffsetDateTime>,
-}
-
-struct FilteredSale {
-    weapon_skin_id: i32,
-    price: f64,
-    float_value: Option<f64>,
-    time: f64,
 }
 
 /// Handles database operations for BitSkins data.
@@ -100,7 +94,7 @@ impl Database {
             r#"
             WITH filtered_sales AS (
                 SELECT 
-                    weapon_skin_id,
+                    skin_id,
                     price,
                     float_value,
                     EXTRACT(EPOCH FROM created_at) as time
@@ -108,7 +102,7 @@ impl Database {
                 WHERE float_value >= $1
             )
             SELECT 
-                weapon_skin_id,
+                skin_id,
                 AVG(price) as mean_price,
                 STDDEV(price) as std_dev_price,
                 COUNT(*)::INTEGER as sale_count,
@@ -118,7 +112,7 @@ impl Database {
                 REGR_SLOPE(price, time) as price_slope,
                 $2::TIMESTAMPTZ as last_update
             FROM filtered_sales
-            GROUP BY weapon_skin_id
+            GROUP BY skin_id
             "#,
             float_min,
             OffsetDateTime::now_utc(),
@@ -136,11 +130,11 @@ impl Database {
             sqlx::query!(
                 r#"
                 INSERT INTO price_statistics (
-                    weapon_skin_id, mean_price, std_dev_price, sale_count, min_float, max_float,
+                    skin_id, mean_price, std_dev_price, sale_count, min_float, max_float,
                     time_correlation, price_slope, last_update
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                ON CONFLICT (weapon_skin_id) DO UPDATE
+                ON CONFLICT (skin_id) DO UPDATE
                 SET 
                     mean_price = EXCLUDED.mean_price,
                     std_dev_price = EXCLUDED.std_dev_price,
@@ -151,7 +145,7 @@ impl Database {
                     price_slope = EXCLUDED.price_slope,
                     last_update = EXCLUDED.last_update
                 "#,
-                stat.weapon_skin_id,
+                stat.skin_id,
                 stat.mean_price,
                 stat.std_dev_price,
                 stat.sale_count,
@@ -172,7 +166,7 @@ impl Database {
     pub async fn get_price_statistics(&self, skin_id: Id) -> Result<PriceStatistics> {
         Ok(sqlx::query_as!(
             PriceStatistics,
-            "SELECT * FROM price_statistics WHERE weapon_skin_id = $1",
+            "SELECT * FROM price_statistics WHERE skin_id = $1",
             skin_id
         )
         .fetch_one(&self.pool)
@@ -204,11 +198,11 @@ impl Database {
     pub async fn insert_sale(&self, sale: &Sale) -> Result<i32> {
         let row = sqlx::query!(
             r#"
-            INSERT INTO Sale (weapon_skin_id, created_at, extras_1, float_value, paint_index, paint_seed, phase_id, price)
+            INSERT INTO Sale (skin_id, created_at, extras_1, float_value, paint_index, paint_seed, phase_id, price)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id
             "#,
-            sale.weapon_skin_id,
+            sale.skin_id,
             sale.created_at,
             sale.extras_1,
             sale.float_value,
@@ -275,15 +269,15 @@ impl Database {
         Ok(stickers)
     }
 
-    pub async fn get_sales_by_weapon_skin_id(&self, weapon_skin_id: i32) -> Result<Vec<Sale>> {
+    pub async fn get_sales_by_skin_id(&self, skin_id: i32) -> Result<Vec<Sale>> {
         let sales = sqlx::query_as!(
             Sale,
             r#"
             SELECT * FROM Sale
-            WHERE weapon_skin_id = $1
+            WHERE skin_id = $1
             ORDER BY created_at DESC
             "#,
-            weapon_skin_id
+            skin_id
         )
         .fetch_all(&self.pool)
         .await?;
@@ -300,8 +294,8 @@ impl Database {
     pub async fn get_skins_by_sale_count(&self, count: i64) -> Result<Vec<i32>> {
         let records = sqlx::query!(
             r#"
-            SELECT weapon_skin_id FROM Sale
-            GROUP BY weapon_skin_id
+            SELECT skin_id FROM Sale
+            GROUP BY skin_id
             HAVING COUNT(*) >= $1
             "#,
             count
@@ -309,7 +303,7 @@ impl Database {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(records.into_iter().map(|r| r.weapon_skin_id).collect())
+        Ok(records.into_iter().map(|r| r.skin_id).collect())
     }
 
     pub async fn get_sales_without_bullshit(&self, skin_id: i32) -> Result<Vec<Sale>> {
@@ -318,7 +312,7 @@ impl Database {
             r#"
             SELECT sl.* FROM Sale sl
             LEFT JOIN Sticker st ON sl.id = st.sale_id
-            WHERE sl.weapon_skin_id = $1 AND
+            WHERE sl.skin_id = $1 AND
             st.id IS NULL AND sl.extras_1 IS NULL AND sl.phase_id IS NULL AND sl.float_value IS NOT NULL
             "#,
             skin_id
@@ -333,14 +327,14 @@ impl Database {
     ) -> Result<Vec<i32>> {
         let skin_ids = sqlx::query!(
             r#"
-            SELECT ps.weapon_skin_id
+            SELECT ps.skin_id
             FROM price_statistics ps
             JOIN (
-                SELECT weapon_skin_id
+                SELECT skin_id
                 FROM Sale
-                GROUP BY weapon_skin_id
+                GROUP BY skin_id
                 HAVING COUNT(*) >= $1
-            ) sc ON ps.weapon_skin_id = sc.weapon_skin_id
+            ) sc ON ps.skin_id = sc.skin_id
             WHERE ps.time_correlation IS NOT NULL
             ORDER BY ABS(ps.time_correlation) DESC
             "#,
@@ -349,6 +343,24 @@ impl Database {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(skin_ids.into_iter().map(|r| r.weapon_skin_id).collect())
+        Ok(skin_ids.into_iter().map(|r| r.skin_id).collect())
+    }
+
+    pub async fn insert_skin(&self, skin: Skin) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO Skin (id, name, class_id, suggested_price)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO NOTHING
+            "#,
+            skin.id,
+            skin.name,
+            skin.class_id,
+            skin.suggested_price,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 }

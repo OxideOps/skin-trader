@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use reqwest::{Client, IntoUrl};
+use reqwest::Client;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
 use sqlx::types::time::{Date as SqlxDate, OffsetDateTime};
@@ -55,6 +55,14 @@ impl Date {
     }
 }
 
+#[derive(Deserialize)]
+pub struct Skin {
+    pub id: i32,
+    pub name: String,
+    pub class_id: String,
+    pub suggested_price: Option<i32>,
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct Sale {
     #[serde(deserialize_with = "deserialize_sqlx_date")]
@@ -68,7 +76,7 @@ pub(crate) struct Sale {
     pub stickers: Option<Vec<Sticker>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Sticker {
     pub class_id: Option<String>,
     pub skin_id: Option<i32>,
@@ -206,15 +214,11 @@ impl HttpClient {
         .await
     }
 
-    pub(crate) async fn fetch_sales<T: DeserializeOwned>(
-        &self,
-        app_id: i32,
-        skin_id: i32,
-    ) -> Result<T> {
+    pub(crate) async fn fetch_sales(&self, skin_id: i32) -> Result<Vec<Sale>> {
         self.post(
             "/market/pricing/list",
             json!({
-                "app_id": app_id,
+                "app_id": CS2_APP_ID,
                 "skin_id": skin_id,
                 "limit": MAX_LIMIT,
             }),
@@ -222,14 +226,8 @@ impl HttpClient {
         .await
     }
 
-    pub(crate) async fn fetch_skins(&self, app_id: i32) -> Result<Vec<i32>> {
-        #[derive(Debug, Deserialize)]
-        struct SkinID {
-            id: i32,
-        }
-
-        let skin_ids: Vec<SkinID> = self.get(&format!("/market/skin/{app_id}")).await?;
-        Ok(skin_ids.into_iter().map(|s| s.id).collect())
+    pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
+        Ok(self.get(&format!("/market/skin/{CS2_APP_ID}")).await?)
     }
 
     pub async fn fetch_market_data<T: DeserializeOwned>(

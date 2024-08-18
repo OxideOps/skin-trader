@@ -168,8 +168,8 @@ fn find_bouds_hist(values: &[u32]) -> SegmentedCoord<RangedCoordu32> {
     (min..max).into_segmented()
 }
 
-pub async fn plot_by_floats(db: &Database, weapon_skin_id: i32) -> Result<()> {
-    let sales: Vec<Sale> = db.get_sales_without_bullshit(weapon_skin_id).await?;
+pub async fn plot_by_floats(db: &Database, skin_id: i32) -> Result<()> {
+    let sales: Vec<Sale> = db.get_sales_without_bullshit(skin_id).await?;
     if sales.is_empty() {
         bail!("No sales found");
     }
@@ -181,15 +181,15 @@ pub async fn plot_by_floats(db: &Database, weapon_skin_id: i32) -> Result<()> {
     plot_generic(
         &plot_data,
         PlotType::Scatter,
-        &format!("plots/floats/{weapon_skin_id}.png"),
-        &format!("Floats vs Price For {weapon_skin_id}"),
+        &format!("plots/floats/{skin_id}.png"),
+        &format!("Floats vs Price For {skin_id}"),
         "Float",
         "Price",
     )
 }
 
-pub async fn plot_by_dates(db: &Database, weapon_skin_id: i32) -> Result<()> {
-    let sales: Vec<Sale> = db.get_sales_without_bullshit(weapon_skin_id).await?;
+pub async fn plot_by_dates(db: &Database, skin_id: i32) -> Result<()> {
+    let sales: Vec<Sale> = db.get_sales_without_bullshit(skin_id).await?;
     if sales.is_empty() {
         bail!("No sales found");
     }
@@ -204,9 +204,26 @@ pub async fn plot_by_dates(db: &Database, weapon_skin_id: i32) -> Result<()> {
     plot_generic(
         &plot_data,
         PlotType::Scatter,
-        &format!("plots/dates/{weapon_skin_id}.png"),
-        &format!("Dates vs Price For {weapon_skin_id}"),
+        &format!("plots/dates/{skin_id}.png"),
+        &format!("Dates vs Price For {skin_id}"),
         "Date",
         "Price",
     )
+}
+
+async fn plot_histograms(db: &Database) -> Result<()> {
+    let skin_ids = db.get_skins_by_sale_count(500).await?;
+
+    for skin_id in skin_ids {
+        let prices = db
+            .get_sales_by_skin_id(skin_id)
+            .await?
+            .into_iter()
+            .map(|sale| sale.price as u32)
+            .collect::<Vec<_>>();
+
+        plot_histogram(&prices, &format!("plots/hist/{skin_id}.png"), 8)?;
+    }
+
+    Ok(())
 }
