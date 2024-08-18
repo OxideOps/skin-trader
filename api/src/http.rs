@@ -1,6 +1,5 @@
-use crate::db::Skin;
 use anyhow::{bail, Result};
-use reqwest::{Client, IntoUrl};
+use reqwest::Client;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
 use sqlx::types::time::{Date as SqlxDate, OffsetDateTime};
@@ -56,6 +55,14 @@ impl Date {
     pub fn new(date: SqlxDate) -> Self {
         Self(date)
     }
+}
+
+#[derive(Deserialize)]
+pub struct Skin {
+    pub id: i32,
+    pub name: String,
+    pub class_id: String,
+    pub suggested_price: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -221,18 +228,16 @@ impl HttpClient {
         .await
     }
 
-    pub async fn fetch_skins(&self) -> Result<Vec<Value>> {
-        let mut all_skins = Vec::<Value>::new();
+    pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
+        let mut all_skins = Vec::<Skin>::new();
 
         for app_id in APP_IDS {
             let skins = self
-                .get::<Vec<Value>>(&format!("/market/skin/{app_id}"))
+                .get::<Vec<Skin>>(&format!("/market/skin/{app_id}"))
                 .await?;
 
             all_skins.extend(skins);
         }
-        
-        dbg!(&all_skins[0]);
 
         Ok(all_skins)
     }

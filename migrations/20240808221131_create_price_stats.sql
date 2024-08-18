@@ -1,5 +1,5 @@
 CREATE TABLE price_statistics (
-    weapon_skin_id INTEGER PRIMARY KEY REFERENCES Skin(id),
+    skin_id INTEGER PRIMARY KEY REFERENCES Skin(id),
     mean_price DOUBLE PRECISION,
     std_dev_price DOUBLE PRECISION,
     sale_count INTEGER NOT NULL,

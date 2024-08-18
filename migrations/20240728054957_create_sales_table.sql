@@ -1,12 +1,13 @@
 CREATE TABLE Skin (
     id INTEGER PRIMARY KEY,
-    name VARCHAR(255) UNIQUE,
-    class_id VARCHAR(255)
+    name VARCHAR(255) UNIQUE NOT NULL,
+    class_id VARCHAR(255) NOT NULL,
+    suggested_price INTEGER NOT NULL
 );
 
 CREATE TABLE Sale (
     id SERIAL PRIMARY KEY,
-    weapon_skin_id INTEGER NOT NULL REFERENCES Skin(id),
+    skin_id INTEGER NOT NULL REFERENCES Skin(id),
     created_at DATE NOT NULL,
     extras_1 INTEGER CHECK (extras_1 >= 0),
     float_value DOUBLE PRECISION,
@@ -16,7 +17,7 @@ CREATE TABLE Sale (
     price DOUBLE PRECISION NOT NULL
 );
 
-CREATE INDEX idx_sale_weapon_skin_id ON Sale(weapon_skin_id);
+CREATE INDEX idx_sale_skin_id ON Sale(skin_id);
 
 CREATE TABLE Sticker (
     id SERIAL PRIMARY KEY,

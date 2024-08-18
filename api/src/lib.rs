@@ -29,12 +29,11 @@ pub fn setup_env() {
 }
 
 pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> anyhow::Result<()> {
-    let skin_ids = client.fetch_skins().await?;
+    let skins = client.fetch_skins().await?;
 
-    // for skin_id in skin_ids {
-    //     db.ins
-    //     let sales = client.fetch_sales(CS2_APP_ID, skin_id).await?;
-    // }
+    for skin in skins {
+        let sales = client.fetch_sales(CS2_APP_ID, skin.id).await?;
+    }
 
     Ok(())
 }
