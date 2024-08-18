@@ -1,8 +1,6 @@
 use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
-use std::cmp::max;
-use std::collections::VecDeque;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
 
