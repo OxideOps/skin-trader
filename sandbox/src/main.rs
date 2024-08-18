@@ -6,9 +6,7 @@ async fn main() -> anyhow::Result<()> {
     let db = api::Database::new().await?;
     let client = api::HttpClient::new();
 
-    //db.sync_bitskins_data(&client).await?;
-    
-    client.fetch_skins(CS2_APP_ID).await?;
+    api::sync_bitskins_data(&db, &client).await?;
 
     Ok(())
 }

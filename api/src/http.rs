@@ -7,6 +7,7 @@ use std::{
     env,
     ops::{Deref, DerefMut},
 };
+use crate::db::Skin;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -14,7 +15,7 @@ const MAX_LIMIT: usize = 500;
 pub const CS2_APP_ID: i32 = 730;
 pub const DOTA2_APP_ID: i32 = 570;
 
-const ALL_APP_IDS: [i32; 2] = [CS2_APP_ID, DOTA2_APP_ID];
+const APP_IDS: [i32; 2] = [CS2_APP_ID, DOTA2_APP_ID];
 
 fn deserialize_sqlx_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
@@ -224,19 +225,18 @@ impl HttpClient {
         .await
     }
 
-    pub async fn fetch_skins(&self, app_id: i32) -> Result<Vec<i32>> {
-        #[derive(Debug, Deserialize)]
-        struct SkinID {
-            id: i32,
+    pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
+        let mut all_skins = Vec::<Skin>::new();
+        
+        for app_id in APP_IDS {
+            let skins = self
+                .get::<Vec<Skin>>(&format!("/market/skin/{app_id}"))
+                .await?;
+            
+            all_skins.extend(skins);
         }
         
-        let skins = self
-            .get::<Vec<Value>>(&format!("/market/skin/{app_id}"))
-            .await?;
-        
-        dbg!(skins);
-        
-        todo!()
+        Ok(all_skins)
     }
 
     pub async fn fetch_market_data<T: DeserializeOwned>(

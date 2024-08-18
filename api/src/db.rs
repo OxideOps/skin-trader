@@ -10,12 +10,13 @@ use sqlx::{
     PgPool,
 };
 use std::env;
-use crate::CS2_APP_ID;
+use serde::Deserialize;
 
 const MAX_CONNECTIONS: u32 = 5;
 
 pub type Id = i32;
 
+#[derive(Deserialize)]
 pub struct Skin {
     pub id: i32,
     pub name: Option<String>,
