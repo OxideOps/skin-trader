@@ -4,7 +4,6 @@
 //! that stores information about CS:GO skins, sales, and related statistics.
 
 use anyhow::Result;
-use serde::Deserialize;
 use sqlx::{
     postgres::PgPoolOptions,
     types::time::{Date, OffsetDateTime},
@@ -16,7 +15,6 @@ const MAX_CONNECTIONS: u32 = 5;
 
 pub type Id = i32;
 
-#[derive(Deserialize)]
 pub struct Skin {
     pub id: i32,
     pub name: Option<String>,
