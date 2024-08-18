@@ -124,7 +124,6 @@ dependencies = [
  "futures-util",
  "log",
  "reqwest",
- "ringbuffer",
  "serde",
  "serde_json",
  "sqlx",
@@ -1719,12 +1718,6 @@ checksum = "5c65e4c865bc3d2e3294493dff0acf7e6c259d066e34e22059fa9c39645c3636"
 dependencies = [
  "crossbeam-utils",
 ]
-
-[[package]]
-name = "ringbuffer"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3df6368f71f205ff9c33c076d170dd56ebf68e8161c733c0caa07a7a5509ed53"
 
 [[package]]
 name = "rsa"
