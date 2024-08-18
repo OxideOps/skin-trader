@@ -221,16 +221,18 @@ impl HttpClient {
         .await
     }
 
-    pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
-        let mut all_skins = Vec::<Skin>::new();
+    pub async fn fetch_skins(&self) -> Result<Vec<Value>> {
+        let mut all_skins = Vec::<Value>::new();
 
         for app_id in APP_IDS {
             let skins = self
-                .get::<Vec<Skin>>(&format!("/market/skin/{app_id}"))
+                .get::<Vec<Value>>(&format!("/market/skin/{app_id}"))
                 .await?;
 
             all_skins.extend(skins);
         }
+        
+        dbg!(&all_skins[0]);
 
         Ok(all_skins)
     }
