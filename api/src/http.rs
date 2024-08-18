@@ -216,11 +216,11 @@ impl HttpClient {
         .await
     }
 
-    pub(crate) async fn fetch_sales(&self, app_id: i32, skin_id: i32) -> Result<Vec<Sale>> {
+    pub(crate) async fn fetch_sales(&self, skin_id: i32) -> Result<Vec<Sale>> {
         self.post(
             "/market/pricing/list",
             json!({
-                "app_id": app_id,
+                "app_id": CS2_APP_ID,
                 "skin_id": skin_id,
                 "limit": MAX_LIMIT,
             }),
@@ -229,17 +229,9 @@ impl HttpClient {
     }
 
     pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
-        let mut all_skins = Vec::<Skin>::new();
-
-        for app_id in APP_IDS {
-            let skins = self
-                .get::<Vec<Skin>>(&format!("/market/skin/{app_id}"))
-                .await?;
-
-            all_skins.extend(skins);
-        }
-
-        Ok(all_skins)
+        Ok(self
+            .get(&format!("/market/skin/{CS2_APP_ID}"))
+            .await?)
     }
 
     pub async fn fetch_market_data<T: DeserializeOwned>(

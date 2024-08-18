@@ -28,12 +28,27 @@ pub fn setup_env() {
     Builder::from_env(Env::default().default_filter_or("info")).init();
 }
 
-pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> anyhow::Result<()> {
+pub async fn sync_bitskins_skins(db: &Database, client: &HttpClient) -> anyhow::Result<()> {
     let skins = client.fetch_skins().await?;
 
-    // for skin in skins {
-    //     let sales = client.fetch_sales(CS2_APP_ID, skin.id).await?;
-    // }
+    for skin in skins {
+        let skin = db::Skin {
+            id: skin.id,
+            name: skin.name,
+            class_id: skin.class_id,
+            suggested_price: skin.suggested_price
+        };
+
+        let sales = client.fetch_sales(skin.id).await?;
+        
+        db.insert_skin(&skin).await?;
+        for sale in sales {
+            let sale = db::Sale {
+                id: -1,
+                
+            }
+        }
+    }
 
     Ok(())
 }

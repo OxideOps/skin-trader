@@ -17,8 +17,9 @@ pub type Id = i32;
 
 pub struct Skin {
     pub id: i32,
-    pub name: Option<String>,
-    pub class_id: Option<String>,
+    pub name: String,
+    pub class_id: String,
+    pub suggested_price: Option<i32>
 }
 
 #[derive(Debug)]
@@ -344,18 +345,21 @@ impl Database {
         Ok(skin_ids.into_iter().map(|r| r.skin_id).collect())
     }
 
-    // pub async fn insert_skin(&self, skin: Skin) -> Result<i32>{
-    //     let row = sqlx::query!(
-    //         r#"
-    //         INSERT INTO Sticker ()
-    //         VALUES ($1, $2, $3)
-    //         RETURNING id
-    //         "#,
-    //         skin.
-    //     )
-    //         .fetch_one(&self.pool)
-    //         .await?;
-    //
-    //     Ok(row.id)
-    // }
+    pub async fn insert_skin(&self, skin: &Skin) -> Result<i32>{
+        let row = sqlx::query!(
+            r#"
+            INSERT INTO Skin (id, name, class_id, suggested_price)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+            "#,
+            skin.id,
+            skin.name,
+            skin.class_id,
+            skin.suggested_price,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+    
+        Ok(row.id)
+    }
 }
