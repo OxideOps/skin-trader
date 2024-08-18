@@ -36,7 +36,5 @@ pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> anyhow::R
     //     let sales = client.fetch_sales(CS2_APP_ID, skin_id).await?;
     // }
 
-
-
     Ok(())
 }

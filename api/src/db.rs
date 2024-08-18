@@ -4,13 +4,13 @@
 //! that stores information about CS:GO skins, sales, and related statistics.
 
 use anyhow::Result;
+use serde::Deserialize;
 use sqlx::{
     postgres::PgPoolOptions,
     types::time::{Date, OffsetDateTime},
     PgPool,
 };
 use std::env;
-use serde::Deserialize;
 
 const MAX_CONNECTIONS: u32 = 5;
 
@@ -345,7 +345,7 @@ impl Database {
 
         Ok(skin_ids.into_iter().map(|r| r.weapon_skin_id).collect())
     }
-    
+
     // pub async fn insert_skin(&self, skin: Skin) -> Result<i32>{
     //     let row = sqlx::query!(
     //         r#"
@@ -357,7 +357,7 @@ impl Database {
     //     )
     //         .fetch_one(&self.pool)
     //         .await?;
-    // 
+    //
     //     Ok(row.id)
     // }
 }

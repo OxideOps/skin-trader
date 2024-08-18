@@ -1,3 +1,4 @@
+use crate::db::Skin;
 use anyhow::{bail, Result};
 use reqwest::{Client, IntoUrl};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
@@ -7,7 +8,6 @@ use std::{
     env,
     ops::{Deref, DerefMut},
 };
-use crate::db::Skin;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -209,11 +209,7 @@ impl HttpClient {
         .await
     }
 
-    pub(crate) async fn fetch_sales(
-        &self,
-        app_id: i32,
-        skin_id: i32,
-    ) -> Result<Vec<Sale>> {
+    pub(crate) async fn fetch_sales(&self, app_id: i32, skin_id: i32) -> Result<Vec<Sale>> {
         self.post(
             "/market/pricing/list",
             json!({
@@ -227,15 +223,15 @@ impl HttpClient {
 
     pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
         let mut all_skins = Vec::<Skin>::new();
-        
+
         for app_id in APP_IDS {
             let skins = self
                 .get::<Vec<Skin>>(&format!("/market/skin/{app_id}"))
                 .await?;
-            
+
             all_skins.extend(skins);
         }
-        
+
         Ok(all_skins)
     }
 
