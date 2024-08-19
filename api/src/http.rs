@@ -227,7 +227,7 @@ impl HttpClient {
     }
 
     pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
-        Ok(self.get(&format!("/market/skin/{CS2_APP_ID}")).await?)
+        self.get(&format!("/market/skin/{CS2_APP_ID}")).await
     }
 
     pub async fn fetch_market_data<T: DeserializeOwned>(

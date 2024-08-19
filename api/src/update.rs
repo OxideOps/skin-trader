@@ -1,8 +1,7 @@
 use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
-use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::time::Duration;
-use tokio::time::{sleep, Instant};
+use tokio::time::sleep;
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -70,27 +69,25 @@ async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result
     Ok(())
 }
 
+async fn get_sales(client: &HttpClient, skin_id: i32) -> Result<Vec<http::Sale>> {
+    match client.fetch_sales(skin_id).await {
+        Ok(sales) => Ok(sales),
+        Err(_) => {
+            log::info!("Delaying fetching sales for skin {} for 1 second", skin_id);
+            sleep(Duration::from_secs(1)).await;
+            client.fetch_sales(skin_id).await
+        }
+    }
+}
+
 pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
-    let mut timestamps = AllocRingBuffer::new(10);
-    timestamps.push(Instant::now());
     let skins = client.fetch_skins().await?;
 
     for skin in skins {
         log::info!("Processing skin {}", skin.id);
 
         let skin: db::Skin = skin.into();
-        let now = Instant::now();
-
-        // Has to have been 1 second since the 1st of the last 10 requests
-        if timestamps.is_full() {
-            let sleep_time = *timestamps.peek().unwrap() + Duration::from_secs(1) - now;
-            if sleep_time > Duration::ZERO {
-                log::info!("Delaying for {} milliseconds", sleep_time.as_millis());
-                sleep(sleep_time).await;
-            }
-        }
-        timestamps.push(now);
-        let sales = client.fetch_sales(skin.id).await?;
+        let sales = get_sales(client, skin.id).await?;
 
         db.insert_skin(skin.clone()).await?;
 
