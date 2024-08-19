@@ -12,7 +12,6 @@ const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 
 pub const CS2_APP_ID: i32 = 730;
-pub const DOTA2_APP_ID: i32 = 570;
 
 fn deserialize_sqlx_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
