@@ -99,21 +99,13 @@ impl RateLimiter {
     }
 }
 
-async fn get_sales_with_retry(
+async fn get_sales(
     client: &HttpClient,
     skin_id: i32,
     rate_limiter: &RateLimiter,
 ) -> Result<Vec<http::Sale>> {
     rate_limiter.acquire().await;
-    match client.fetch_sales(skin_id).await {
-        Ok(sales) => Ok(sales),
-        Err(_) => {
-            log::info!("Retrying fetch sales for skin {} after 1 second", skin_id);
-            sleep(Duration::from_secs(1)).await;
-            rate_limiter.acquire().await;
-            client.fetch_sales(skin_id).await
-        }
-    }
+    client.fetch_sales(skin_id).await
 }
 
 async fn process_skin(
@@ -123,7 +115,7 @@ async fn process_skin(
     rate_limiter: Arc<RateLimiter>,
 ) -> Result<()> {
     let db_skin: db::Skin = skin.into();
-    let sales = get_sales_with_retry(client, db_skin.id, &rate_limiter).await?;
+    let sales = get_sales(client, db_skin.id, &rate_limiter).await?;
 
     db.insert_skin(db_skin.clone()).await?;
 
@@ -137,7 +129,7 @@ async fn process_skin(
 pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
 
-    let rate_limiter = Arc::new(RateLimiter::new(2));
+    let rate_limiter = Arc::new(RateLimiter::new(3));
     let client = Arc::new(client.clone());
 
     let tasks: Vec<_> = skins
