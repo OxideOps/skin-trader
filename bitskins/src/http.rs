@@ -2,57 +2,12 @@ use anyhow::{bail, Result};
 use reqwest::Client;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer};
 use serde_json::{json, Value};
-use sqlx::types::time::{Date as SqlxDate, OffsetDateTime};
-use std::{
-    env,
-    ops::{Deref, DerefMut},
-};
+use std::env;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 
 pub const CS2_APP_ID: i32 = 730;
-
-fn deserialize_sqlx_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    let datetime = OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339)
-        .map_err(serde::de::Error::custom)?;
-    let date = datetime.date();
-    SqlxDate::from_calendar_date(date.year(), date.month(), date.day())
-        .map_err(serde::de::Error::custom)
-        .map(Date::new)
-}
-
-#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
-pub(crate) struct Date(SqlxDate);
-
-impl Deref for Date {
-    type Target = SqlxDate;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Date {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl From<Date> for f64 {
-    fn from(date: Date) -> Self {
-        date.to_julian_day() as f64
-    }
-}
-
-impl Date {
-    pub fn new(date: SqlxDate) -> Self {
-        Self(date)
-    }
-}
 
 #[derive(Deserialize)]
 pub struct Skin {
@@ -64,8 +19,7 @@ pub struct Skin {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Sale {
-    #[serde(deserialize_with = "deserialize_sqlx_date")]
-    pub created_at: Date,
+    pub created_at: String,
     pub extras_1: Option<i32>,
     pub float_value: Option<f64>,
     pub paint_index: Option<i32>,

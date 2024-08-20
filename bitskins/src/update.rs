@@ -1,6 +1,8 @@
 use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
 use std::time::Duration;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 use tokio::time::sleep;
 
 impl From<http::Skin> for db::Skin {
@@ -37,7 +39,7 @@ impl db::Sale {
         Self {
             id: 0,
             skin_id,
-            created_at: *sale.created_at,
+            created_at: OffsetDateTime::parse(&sale.created_at, &Rfc3339).unwrap(),
             extras_1: sale.extras_1,
             float_value: sale.float_value,
             paint_index: sale.paint_index,
