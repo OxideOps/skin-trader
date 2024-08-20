@@ -1,8 +1,10 @@
 use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
 use futures::future;
+use std::sync::Arc;
 use std::time::Duration;
-use tokio::time::{Instant, sleep};
+use tokio::sync::{Mutex, Semaphore};
+use tokio::time::{sleep, Instant};
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -70,21 +72,54 @@ async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result
     Ok(())
 }
 
-async fn get_sales_with_retry(client: &HttpClient, skin_id: i32) -> Result<Vec<http::Sale>> {
+struct RateLimiter {
+    semaphore: Arc<Semaphore>,
+    last_request_time: Mutex<Instant>,
+}
+
+impl RateLimiter {
+    fn new(rate_limit: u32) -> Self {
+        Self {
+            semaphore: Arc::new(Semaphore::new(rate_limit as usize)),
+            last_request_time: Mutex::new(Instant::now()),
+        }
+    }
+
+    async fn acquire(&self) {
+        let _permit = self.semaphore.acquire().await.unwrap();
+        let mut last_request_time = self.last_request_time.lock().await;
+        let now = Instant::now();
+        let time_since_last_request = now.duration_since(*last_request_time);
+        if time_since_last_request < Duration::from_millis(200) {
+            sleep(Duration::from_millis(200) - time_since_last_request).await;
+        }
+        *last_request_time = Instant::now();
+    }
+}
+
+async fn get_sales_with_retry(client: &HttpClient, skin_id: i32, rate_limiter: &RateLimiter) -> Result<Vec<http::Sale>> {
+    rate_limiter.acquire().await;
+    log::info!("Getting sales for {skin_id}");
     match client.fetch_sales(skin_id).await {
         Ok(sales) => Ok(sales),
         Err(_) => {
             log::info!("Retrying fetch sales for skin {} after 1 second", skin_id);
             sleep(Duration::from_secs(1)).await;
+            rate_limiter.acquire().await;
             client.fetch_sales(skin_id).await
         }
     }
 }
 
-async fn process_skin(db: &Database, client: &HttpClient, skin: http::Skin) -> Result<()> {
-    log::info!("Processing skin {}", skin.id);
+async fn process_skin(
+    db: &Database,
+    client: &Arc<HttpClient>,
+    skin: http::Skin,
+    rate_limiter: Arc<RateLimiter>,
+) -> Result<()> {
+    // log::info!("Processing skin {}", skin.id);
     let db_skin: db::Skin = skin.into();
-    let sales = get_sales_with_retry(client, db_skin.id).await?;
+    let sales = get_sales_with_retry(client, db_skin.id, &rate_limiter).await?;
 
     db.insert_skin(db_skin.clone()).await?;
 
@@ -98,20 +133,18 @@ async fn process_skin(db: &Database, client: &HttpClient, skin: http::Skin) -> R
 pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
 
-    let mut tasks = Vec::new();
-    let mut last_request_time = Instant::now();
+    let rate_limiter = Arc::new(RateLimiter::new(http::GLOBAL_RATE));
+    let client = Arc::new(client.clone());
 
-    for (i, skin) in skins.into_iter().enumerate() {
-        if i > 0 && i % http::GLOBAL_RATE as usize == 0 {
-            let elapsed = last_request_time.elapsed();
-            if elapsed < Duration::from_secs(1) {
-                sleep(Duration::from_secs(1) - elapsed).await;
-            }
-            last_request_time = Instant::now();
-        }
-
-        tasks.push(process_skin(db, client, skin));
-    }
+    let tasks: Vec<_> = skins
+        .into_iter()
+        .map(|skin| {
+            let db = db.clone();
+            let client = Arc::clone(&client);
+            let rate_limiter = Arc::clone(&rate_limiter);
+            tokio::spawn(async move { process_skin(&db, &client, skin, rate_limiter).await })
+        })
+        .collect();
 
     future::try_join_all(tasks).await?;
 
