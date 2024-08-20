@@ -217,6 +217,7 @@ impl HttpClient {
     }
 
     pub(crate) async fn fetch_sales(&self, skin_id: i32) -> Result<Vec<Sale>> {
+        log::info!("Getting sales for {skin_id}");
         self.post(
             "/market/pricing/list",
             json!({
@@ -229,6 +230,7 @@ impl HttpClient {
     }
 
     pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
+        log::info!("Getting all skins");
         self.get(&format!("/market/skin/{CS2_APP_ID}")).await
     }
 

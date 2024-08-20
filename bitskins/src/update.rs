@@ -75,6 +75,7 @@ async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result
 struct RateLimiter {
     semaphore: Arc<Semaphore>,
     last_request_time: Mutex<Instant>,
+    interval: Duration,
 }
 
 impl RateLimiter {
@@ -82,6 +83,7 @@ impl RateLimiter {
         Self {
             semaphore: Arc::new(Semaphore::new(rate_limit as usize)),
             last_request_time: Mutex::new(Instant::now()),
+            interval: Duration::from_secs(1) / rate_limit,
         }
     }
 
@@ -90,16 +92,19 @@ impl RateLimiter {
         let mut last_request_time = self.last_request_time.lock().await;
         let now = Instant::now();
         let time_since_last_request = now.duration_since(*last_request_time);
-        if time_since_last_request < Duration::from_millis(200) {
-            sleep(Duration::from_millis(200) - time_since_last_request).await;
+        if time_since_last_request < self.interval {
+            sleep(self.interval - time_since_last_request).await;
         }
         *last_request_time = Instant::now();
     }
 }
 
-async fn get_sales_with_retry(client: &HttpClient, skin_id: i32, rate_limiter: &RateLimiter) -> Result<Vec<http::Sale>> {
+async fn get_sales_with_retry(
+    client: &HttpClient,
+    skin_id: i32,
+    rate_limiter: &RateLimiter,
+) -> Result<Vec<http::Sale>> {
     rate_limiter.acquire().await;
-    log::info!("Getting sales for {skin_id}");
     match client.fetch_sales(skin_id).await {
         Ok(sales) => Ok(sales),
         Err(_) => {
@@ -117,7 +122,7 @@ async fn process_skin(
     skin: http::Skin,
     rate_limiter: Arc<RateLimiter>,
 ) -> Result<()> {
-    // log::info!("Processing skin {}", skin.id);
+    log::info!("Processing skin {}", skin.id);
     let db_skin: db::Skin = skin.into();
     let sales = get_sales_with_retry(client, db_skin.id, &rate_limiter).await?;
 
@@ -130,10 +135,10 @@ async fn process_skin(
     Ok(())
 }
 
-pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
+pub async fn sync_bitskins_data(db: &Database, client: &HttpClient, rate_limit: u32) -> Result<()> {
     let skins = client.fetch_skins().await?;
 
-    let rate_limiter = Arc::new(RateLimiter::new(http::GLOBAL_RATE));
+    let rate_limiter = Arc::new(RateLimiter::new(rate_limit));
     let client = Arc::new(client.clone());
 
     let tasks: Vec<_> = skins
