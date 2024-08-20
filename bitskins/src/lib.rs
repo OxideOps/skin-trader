@@ -2,10 +2,10 @@
 //! It includes modules for database operations, HTTP requests, and WebSocket communication.
 mod date;
 mod db;
+mod error;
 mod http;
 mod update;
 mod ws;
-mod error;
 
 pub use db::{Database, PriceStatistics};
 pub use http::{HttpClient, CS2_APP_ID};
