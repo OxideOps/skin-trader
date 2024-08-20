@@ -5,6 +5,7 @@ mod db;
 mod http;
 mod update;
 mod ws;
+mod error;
 
 pub use db::{Database, PriceStatistics};
 pub use http::{HttpClient, CS2_APP_ID};
