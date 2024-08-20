@@ -44,7 +44,7 @@ impl db::Sale {
         Self {
             id: 0,
             skin_id,
-            created_at: OffsetDateTime::parse(&sale.created_at, &Rfc3339).unwrap(),
+            created_at: sale.created_at.0,
             extras_1: sale.extras_1,
             float_value: sale.float_value,
             paint_index: sale.paint_index,

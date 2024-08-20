@@ -1,6 +1,7 @@
+use crate::date::DateTime;
 use anyhow::{bail, Result};
 use reqwest::Client;
-use serde::{de::DeserializeOwned, Deserialize, Deserializer};
+use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
 
@@ -22,7 +23,7 @@ pub struct Skin {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Sale {
-    pub created_at: String,
+    pub created_at: DateTime,
     pub extras_1: Option<i32>,
     pub float_value: Option<f64>,
     pub paint_index: Option<i32>,
