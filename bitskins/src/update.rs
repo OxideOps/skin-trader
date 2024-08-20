@@ -2,7 +2,7 @@ use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
 use futures::future;
 use std::time::Duration;
-use tokio::time::sleep;
+use tokio::time::{Instant, sleep};
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -98,16 +98,25 @@ async fn process_skin(db: &Database, client: &HttpClient, skin: http::Skin) -> R
 pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
 
-    future::try_join_all(
-        skins
-            .into_iter()
-            .map(|skin| process_skin(db, client, skin))
-            .collect::<Vec<_>>(),
-    )
-    .await?;
+    let mut tasks = Vec::new();
+    let mut last_request_time = Instant::now();
+
+    for (i, skin) in skins.into_iter().enumerate() {
+        if i > 0 && i % http::GLOBAL_RATE as usize == 0 {
+            let elapsed = last_request_time.elapsed();
+            if elapsed < Duration::from_secs(1) {
+                sleep(Duration::from_secs(1) - elapsed).await;
+            }
+            last_request_time = Instant::now();
+        }
+
+        tasks.push(process_skin(db, client, skin));
+    }
+
+    future::try_join_all(tasks).await?;
 
     log::info!("Updating price statistics");
     db.calculate_and_update_price_statistics().await?;
-    
+
     Ok(())
 }

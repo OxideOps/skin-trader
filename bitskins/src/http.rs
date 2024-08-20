@@ -11,6 +11,9 @@ use std::{
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 
+pub const GLOBAL_RATE: u32 = 5;
+pub const MARKET_RATE: u32 = 1;
+
 pub const CS2_APP_ID: i32 = 730;
 
 fn deserialize_sqlx_date<'de, D>(deserializer: D) -> Result<Date, D::Error>

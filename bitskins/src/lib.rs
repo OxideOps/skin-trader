@@ -6,7 +6,7 @@ mod update;
 mod ws;
 
 pub use db::{Database, PriceStatistics};
-pub use http::{HttpClient, CS2_APP_ID};
+pub use http::{HttpClient, CS2_APP_ID, GLOBAL_RATE};
 pub use update::sync_bitskins_data;
 pub use ws::{Channel, WsClient, WsData};
 
@@ -20,7 +20,7 @@ use env_logger::{Builder, Env};
 /// # Examples
 ///
 /// ```
-/// use api::setup_env;
+/// use bitskins::setup_env;
 ///
 /// setup_env();
 /// // The logger is now initialized and environment variables are loaded
