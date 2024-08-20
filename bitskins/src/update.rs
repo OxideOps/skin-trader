@@ -1,5 +1,6 @@
 use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
+use futures::future;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -69,35 +70,44 @@ async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result
     Ok(())
 }
 
-async fn get_sales(client: &HttpClient, skin_id: i32) -> Result<Vec<http::Sale>> {
+async fn get_sales_with_retry(client: &HttpClient, skin_id: i32) -> Result<Vec<http::Sale>> {
     match client.fetch_sales(skin_id).await {
         Ok(sales) => Ok(sales),
         Err(_) => {
-            log::info!("Delaying fetching sales for skin {} for 1 second", skin_id);
+            log::info!("Retrying fetch sales for skin {} after 1 second", skin_id);
             sleep(Duration::from_secs(1)).await;
             client.fetch_sales(skin_id).await
         }
     }
 }
 
+async fn process_skin(db: &Database, client: &HttpClient, skin: http::Skin) -> Result<()> {
+    log::info!("Processing skin {}", skin.id);
+    let db_skin: db::Skin = skin.into();
+    let sales = get_sales_with_retry(client, db_skin.id).await?;
+
+    db.insert_skin(db_skin.clone()).await?;
+
+    for sale in sales {
+        handle_sale(db, &db_skin, sale).await?;
+    }
+
+    Ok(())
+}
+
 pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
 
-    for skin in skins {
-        log::info!("Processing skin {}", skin.id);
-
-        let skin: db::Skin = skin.into();
-        let sales = get_sales(client, skin.id).await?;
-
-        db.insert_skin(skin.clone()).await?;
-
-        for sale in sales {
-            handle_sale(db, &skin, sale).await?;
-        }
-    }
+    future::try_join_all(
+        skins
+            .into_iter()
+            .map(|skin| process_skin(db, client, skin))
+            .collect::<Vec<_>>(),
+    )
+    .await?;
 
     log::info!("Updating price statistics");
     db.calculate_and_update_price_statistics().await?;
-
+    
     Ok(())
 }
