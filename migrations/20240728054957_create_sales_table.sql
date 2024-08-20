@@ -9,8 +9,8 @@ CREATE TABLE Skin
 CREATE TABLE Sale
 (
     id          SERIAL PRIMARY KEY,
-    skin_id     INTEGER          NOT NULL REFERENCES Skin (id),
-    created_at  DATE             NOT NULL,
+    skin_id     INTEGER                     NOT NULL REFERENCES Skin (id),
+    created_at  TIMESTAMP WITH TIME ZONE    NOT NULL,
     extras_1    INTEGER CHECK (extras_1 >= 0),
     float_value DOUBLE PRECISION,
     paint_index INTEGER CHECK (paint_index >= 0),
