@@ -148,8 +148,8 @@ pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()
         .into_iter()
         .map(|skin| {
             let db = db.clone();
-            let client = Arc::clone(&client);
-            let rate_limiter = Arc::clone(&rate_limiter);
+            let client = client.clone();
+            let rate_limiter = rate_limiter.clone();
             tokio::spawn(async move { process_skin(&db, &client, skin, rate_limiter).await })
         })
         .collect();
