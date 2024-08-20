@@ -73,17 +73,19 @@ async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result
 }
 
 struct RateLimiter {
-    semaphore: Arc<Semaphore>,
+    semaphore: Semaphore,
     last_request_time: Mutex<Instant>,
     interval: Duration,
+    num_connected: Mutex<u32>,
 }
 
 impl RateLimiter {
     fn new(rate_limit: u32) -> Self {
         Self {
-            semaphore: Arc::new(Semaphore::new(rate_limit as usize)),
+            semaphore: Semaphore::new(rate_limit as usize),
             last_request_time: Mutex::new(Instant::now()),
             interval: Duration::from_secs(1) / rate_limit,
+            num_connected: Mutex::new(1),
         }
     }
 
@@ -92,8 +94,9 @@ impl RateLimiter {
         let mut last_request_time = self.last_request_time.lock().await;
         let now = Instant::now();
         let time_since_last_request = now.duration_since(*last_request_time);
-        if time_since_last_request < self.interval {
-            sleep(self.interval - time_since_last_request).await;
+        let interval = *self.num_connected.lock().await * self.interval;
+        if time_since_last_request < interval {
+            sleep(interval - time_since_last_request).await;
         }
         *last_request_time = Instant::now();
     }
@@ -109,7 +112,7 @@ async fn get_sales_with_retry(
         Ok(sales) => Ok(sales),
         Err(_) => {
             log::info!("Retrying fetch sales for skin {} after 1 second", skin_id);
-            sleep(Duration::from_secs(1)).await;
+            *rate_limiter.num_connected.lock().await +=  1;
             rate_limiter.acquire().await;
             client.fetch_sales(skin_id).await
         }
