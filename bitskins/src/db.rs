@@ -4,11 +4,7 @@
 //! that stores information about CS:GO skins, sales, and related statistics.
 
 use anyhow::Result;
-use sqlx::{
-    postgres::PgPoolOptions,
-    types::time::{Date, OffsetDateTime},
-    PgPool,
-};
+use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, PgPool};
 use std::env;
 
 const MAX_CONNECTIONS: u32 = 5;
@@ -27,7 +23,7 @@ pub struct Skin {
 pub struct Sale {
     pub id: i32,
     pub skin_id: i32,
-    pub created_at: Date,
+    pub created_at: OffsetDateTime,
     pub extras_1: Option<i32>,
     pub float_value: Option<f64>,
     pub paint_index: Option<i32>,
