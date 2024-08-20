@@ -1,10 +1,13 @@
 use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
 use futures::future;
+use std::cmp::max;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, Semaphore};
 use tokio::time::{sleep, Instant};
+
+const SUCCESS_THRESHOLD: u32 = 100;
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -77,6 +80,7 @@ struct RateLimiter {
     last_request_time: Mutex<Instant>,
     interval: Duration,
     num_connected: Mutex<u32>,
+    successes: Mutex<u32>,
 }
 
 impl RateLimiter {
@@ -86,6 +90,7 @@ impl RateLimiter {
             last_request_time: Mutex::new(Instant::now()),
             interval: Duration::from_secs(1) / rate_limit,
             num_connected: Mutex::new(1),
+            successes: Mutex::new(0),
         }
     }
 
@@ -94,11 +99,25 @@ impl RateLimiter {
         let mut last_request_time = self.last_request_time.lock().await;
         let now = Instant::now();
         let time_since_last_request = now.duration_since(*last_request_time);
-        let interval = *self.num_connected.lock().await * self.interval;
-        if time_since_last_request < interval {
-            sleep(interval - time_since_last_request).await;
+        let mut num_connected = self.num_connected.lock().await;
+        if *num_connected > 1 && *self.successes.lock().await >= SUCCESS_THRESHOLD {
+            log::info!(
+                "Attempting to lower connection count after {} successes",
+                SUCCESS_THRESHOLD
+            );
+            *num_connected -= 1;
+        }
+        *self.successes.lock().await += 1;
+        if time_since_last_request < *num_connected * self.interval {
+            sleep(*num_connected * self.interval - time_since_last_request).await;
         }
         *last_request_time = Instant::now();
+    }
+
+    async fn notify_error(&self) {
+        log::warn!("Rate limit exceeded, increasing connection count");
+        *self.successes.lock().await = 0;
+        *self.num_connected.lock().await += 1;
     }
 }
 
@@ -112,7 +131,7 @@ async fn get_sales_with_retry(
         Ok(sales) => Ok(sales),
         Err(_) => {
             log::info!("Retrying fetch sales for skin {} after 1 second", skin_id);
-            *rate_limiter.num_connected.lock().await +=  1;
+            rate_limiter.notify_error().await;
             rate_limiter.acquire().await;
             client.fetch_sales(skin_id).await
         }
@@ -125,7 +144,6 @@ async fn process_skin(
     skin: http::Skin,
     rate_limiter: Arc<RateLimiter>,
 ) -> Result<()> {
-    log::info!("Processing skin {}", skin.id);
     let db_skin: db::Skin = skin.into();
     let sales = get_sales_with_retry(client, db_skin.id, &rate_limiter).await?;
 
