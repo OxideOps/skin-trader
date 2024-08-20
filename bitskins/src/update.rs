@@ -1,14 +1,10 @@
-use crate::{db, http, Database, HttpClient, GLOBAL_RATE};
+use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
 use futures::future;
 use std::sync::Arc;
 use std::time::Duration;
-use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
 use tokio::sync::{Mutex, Semaphore};
 use tokio::time::{sleep, Instant};
-
-const SUCCESS_THRESHOLD: u32 = 100;
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
