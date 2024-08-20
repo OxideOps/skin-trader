@@ -1,5 +1,6 @@
 //! This library provides functionality for interacting with the BitSkins API.
 //! It includes modules for database operations, HTTP requests, and WebSocket communication.
+mod date;
 mod db;
 mod http;
 mod update;
