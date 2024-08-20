@@ -4,11 +4,7 @@
 //! that stores information about CS:GO skins, sales, and related statistics.
 
 use anyhow::Result;
-use sqlx::{
-    postgres::PgPoolOptions,
-    types::time::OffsetDateTime,
-    PgPool,
-};
+use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, PgPool};
 use std::env;
 
 const MAX_CONNECTIONS: u32 = 5;
