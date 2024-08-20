@@ -135,10 +135,10 @@ async fn process_skin(
     Ok(())
 }
 
-pub async fn sync_bitskins_data(db: &Database, client: &HttpClient, rate_limit: u32) -> Result<()> {
+pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
 
-    let rate_limiter = Arc::new(RateLimiter::new(rate_limit));
+    let rate_limiter = Arc::new(RateLimiter::new(http::GLOBAL_RATE));
     let client = Arc::new(client.clone());
 
     let tasks: Vec<_> = skins
