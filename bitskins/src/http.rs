@@ -4,6 +4,7 @@ use reqwest::Client;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
+use std::ffi::CStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, Semaphore};
@@ -48,6 +49,12 @@ pub struct Sticker {
     pub offset_y: Option<f64>,
     pub skin_status: Option<i32>,
     pub rotation: Option<f64>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct MarketData {
+    pub id: String,
+    pub price: Option<f64>,
 }
 
 #[derive(Eq, PartialEq, Hash, Debug)]
@@ -144,7 +151,7 @@ impl HttpClient {
                 .post(format!("{BASE_URL}{endpoint}"))
                 .json(&payload),
         )
-            .await
+        .await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
@@ -160,7 +167,7 @@ impl HttpClient {
                 "id": item_id,
             }),
         )
-            .await
+        .await
     }
 
     pub async fn update_price(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
@@ -172,7 +179,7 @@ impl HttpClient {
                 "price": price,
             }),
         )
-            .await
+        .await
     }
 
     pub async fn list_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
@@ -184,7 +191,7 @@ impl HttpClient {
                 "price": price,
             }),
         )
-            .await
+        .await
     }
 
     pub async fn check_balance(&self) -> Result<i32> {
@@ -200,7 +207,7 @@ impl HttpClient {
                 "max_price": price
             }),
         )
-            .await
+        .await
     }
 
     pub(crate) async fn fetch_sales(&self, skin_id: i32) -> Result<Vec<Sale>> {
@@ -212,7 +219,7 @@ impl HttpClient {
                 "limit": MAX_LIMIT,
             }),
         )
-            .await
+        .await
     }
 
     pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
@@ -220,21 +227,16 @@ impl HttpClient {
         self.get(&format!("/market/skin/{CS2_APP_ID}")).await
     }
 
-    pub async fn fetch_market_data<T: DeserializeOwned>(
-        &self,
-        app_id: i32,
-        skin_id: i32,
-        offset: usize,
-    ) -> Result<T> {
+    pub async fn fetch_market_data(&self, skin_id: i32, offset: usize) -> Result<Vec<MarketData>> {
         self.post(
-            &format!("/market/search/{app_id}"),
+            &format!("/market/search/{CS2_APP_ID}"),
             json!({
                 "where": { "skin_id": [skin_id] },
                 "limit": MAX_LIMIT,
                 "offset": offset,
             }),
         )
-            .await
+        .await
     }
 
     // This might be useful if it ever starts working
@@ -243,6 +245,6 @@ impl HttpClient {
             "/market/history/list",
             json!({"type": "buyer", "limit": MAX_LIMIT, "offset": offset}),
         )
-            .await
+        .await
     }
 }
