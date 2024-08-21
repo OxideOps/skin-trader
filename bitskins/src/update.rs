@@ -81,7 +81,7 @@ async fn process_skin(db: Database, client: HttpClient, skin: http::Skin) -> Res
     for sale in sales {
         handle_sale(&db, &db_skin, sale).await?;
     }
-
+    log::info!("Processed sales for skin: {}", db_skin.id);
     Ok(())
 }
 

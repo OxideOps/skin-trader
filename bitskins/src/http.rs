@@ -144,7 +144,7 @@ impl HttpClient {
                 .post(format!("{BASE_URL}{endpoint}"))
                 .json(&payload),
         )
-        .await
+            .await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
@@ -160,7 +160,7 @@ impl HttpClient {
                 "id": item_id,
             }),
         )
-        .await
+            .await
     }
 
     pub async fn update_price(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
@@ -172,7 +172,7 @@ impl HttpClient {
                 "price": price,
             }),
         )
-        .await
+            .await
     }
 
     pub async fn list_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
@@ -184,7 +184,7 @@ impl HttpClient {
                 "price": price,
             }),
         )
-        .await
+            .await
     }
 
     pub async fn check_balance(&self) -> Result<i32> {
@@ -200,11 +200,10 @@ impl HttpClient {
                 "max_price": price
             }),
         )
-        .await
+            .await
     }
 
     pub(crate) async fn fetch_sales(&self, skin_id: i32) -> Result<Vec<Sale>> {
-        log::info!("Getting sales for {skin_id}");
         self.post(
             "/market/pricing/list",
             json!({
@@ -213,7 +212,7 @@ impl HttpClient {
                 "limit": MAX_LIMIT,
             }),
         )
-        .await
+            .await
     }
 
     pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
@@ -235,7 +234,7 @@ impl HttpClient {
                 "offset": offset,
             }),
         )
-        .await
+            .await
     }
 
     // This might be useful if it ever starts working
@@ -244,6 +243,6 @@ impl HttpClient {
             "/market/history/list",
             json!({"type": "buyer", "limit": MAX_LIMIT, "offset": offset}),
         )
-        .await
+            .await
     }
 }
