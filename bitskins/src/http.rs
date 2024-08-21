@@ -45,6 +45,12 @@ pub struct Sticker {
     pub rotation: Option<f64>,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct MarketData {
+    pub id: String,
+    pub price: Option<f64>,
+}
+
 #[derive(Eq, PartialEq, Hash, Debug)]
 pub(crate) enum Wear {
     FactoryNew,
@@ -184,21 +190,16 @@ impl HttpClient {
         self.get(&format!("/market/skin/{CS2_APP_ID}")).await
     }
 
-    pub async fn fetch_market_data<T: DeserializeOwned>(
-        &self,
-        app_id: i32,
-        skin_id: i32,
-        offset: usize,
-    ) -> Result<T> {
+    pub async fn fetch_market_data(&self, skin_id: i32, offset: usize) -> Result<Vec<MarketData>> {
         self.post(
-            &format!("/market/search/{app_id}"),
+            &format!("/market/search/{CS2_APP_ID}"),
             json!({
                 "where": { "skin_id": [skin_id] },
                 "limit": MAX_LIMIT,
                 "offset": offset,
             }),
         )
-        .await
+            .await
     }
 
     // This might be useful if it ever starts working
