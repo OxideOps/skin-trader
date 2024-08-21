@@ -46,6 +46,14 @@ impl Trader {
             Channel::Listed | Channel::PriceChanged => {
                 if let (Some(mean), Some(price)) = (stats.mean_price, data.price) {
                     if Self::is_mean_reliable(&stats) && (price as f64) < BUY_THRESHOLD * mean {
+                        let list = self.http.fetch_market_data(data.skin_id, 0).await?;
+                        let id_lowest = data.id;
+                        for market_data in &list {
+                            if(market_data.price < price as f64) {
+                                let id_lowest = market_data.id.clone(); 
+                            }
+                        }
+                        //todo
                         self.handle_purchase(&data, mean).await?;
                     }
                 }
