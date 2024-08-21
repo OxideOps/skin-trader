@@ -18,15 +18,13 @@ impl Trader {
         })
     }
 
-    async fn handle_purchase(&self, data: &WsData, mean: f64) -> anyhow::Result<()> {
+    async fn handle_purchase(&self, id: String, price: i32, mean: f64) -> anyhow::Result<()> {
         let balance = self.http.check_balance().await?;
-        if data.price < Some(balance) {
-            if let (Some(app_id), Some(price)) = (data.app_id, data.price) {
-                log::info!("Buying {} for {}", data.id, price);
-                self.http.buy_item(app_id, &data.id, price).await?;
-                log::info!("Listing {} for {}", data.id, mean);
-                self.http.list_item(app_id, &data.id, mean as i32).await?;
-            }
+        if price < balance {
+            log::info!("Buying {} for {}", id, price);
+            self.http.buy_item(CS2_APP_ID, &id, price).await?;
+            log::info!("Listing {} for {}", id, mean);
+            self.http.list_item(CS2_APP_ID, &id, mean as i32).await?;
         }
         Ok(())
     }
@@ -47,14 +45,15 @@ impl Trader {
                 if let (Some(mean), Some(price)) = (stats.mean_price, data.price) {
                     if Self::is_mean_reliable(&stats) && (price as f64) < BUY_THRESHOLD * mean {
                         let list = self.http.fetch_market_data(data.skin_id, 0).await?;
-                        let id_lowest = data.id;
+                        let mut id_lowest = data.id;
+                        let mut price_lowest = price;
                         for market_data in &list {
-                            if(market_data.price < price as f64) {
-                                let id_lowest = market_data.id.clone(); 
+                            if market_data.price < price as f64 {
+                                id_lowest = market_data.id.clone(); 
+                                price_lowest = market_data.price as i32;
                             }
                         }
-                        //todo
-                        self.handle_purchase(&data, mean).await?;
+                        self.handle_purchase(id_lowest, price_lowest, mean).await?;
                     }
                 }
             }
