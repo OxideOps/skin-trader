@@ -18,7 +18,7 @@ impl Trader {
         })
     }
 
-    async fn handle_purchase(&self, id: String, price: i32, mean: f64) -> anyhow::Result<()> {
+    async fn handle_purchase(&self, id: &str, price: i32, mean: f64) -> anyhow::Result<()> {
         let balance = self.http.check_balance().await?;
         if price < balance {
             log::info!("Buying {} for {}", id, price);
@@ -45,11 +45,12 @@ impl Trader {
                 if let (Some(mean), Some(price)) = (stats.mean_price, data.price) {
                     if Self::is_mean_reliable(&stats) && (price as f64) < BUY_THRESHOLD * mean {
                         let list = self.http.fetch_market_data(data.skin_id, 0).await?;
-                        let mut id_lowest = data.id;
+                        let mut id_lowest :&str = data.id.as_str();
                         let mut price_lowest = price;
+                        dbg!(&list);
                         for market_data in &list {
                             if market_data.price < price as f64 {
-                                id_lowest = market_data.id.clone(); 
+                                id_lowest = &market_data.id; 
                                 price_lowest = market_data.price as i32;
                             }
                         }
