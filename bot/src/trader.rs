@@ -45,7 +45,7 @@ impl Trader {
                 if let (Some(mean), Some(price)) = (stats.mean_price, data.price) {
                     if Self::is_mean_reliable(&stats) && (price as f64) < BUY_THRESHOLD * mean {
                         let list = self.http.fetch_market_data(data.skin_id, 0).await?;
-                        let mut id_lowest :&str = data.id.as_str();
+                        let mut id_lowest = data.id.as_str();
                         let mut price_lowest = price;
                         dbg!(&list);
                         for market_data in &list {
