@@ -51,6 +51,11 @@ pub struct MarketData {
     pub price: Option<f64>,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct MarketDataList {
+    pub list: Vec<MarketData>,
+}
+
 #[derive(Eq, PartialEq, Hash, Debug)]
 pub(crate) enum Wear {
     FactoryNew,
@@ -190,8 +195,8 @@ impl HttpClient {
         self.get(&format!("/market/skin/{CS2_APP_ID}")).await
     }
 
-    pub async fn fetch_market_data(&self, skin_id: i32, offset: usize) -> Result<Vec<MarketData>> {
-        self.post(
+    pub async fn fetch_market_data<T: DeserializeOwned>(&self, skin_id: i32, offset: usize) -> Result<T> {
+         self.post(
             &format!("/market/search/{CS2_APP_ID}"),
             json!({
                 "where": { "skin_id": [skin_id] },
