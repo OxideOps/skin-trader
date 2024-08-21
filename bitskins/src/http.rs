@@ -4,9 +4,14 @@ use reqwest::Client;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::{Mutex, Semaphore};
+use tokio::time::{sleep, Instant};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
+const RATE_LIMIT: u32 = 3;
 
 pub const CS2_APP_ID: i32 = 730;
 
@@ -66,9 +71,37 @@ impl Wear {
     }
 }
 
+struct RateLimiter {
+    semaphore: Semaphore,
+    last_request_time: Mutex<Instant>,
+    interval: Duration,
+}
+
+impl RateLimiter {
+    fn new(rate_limit: u32) -> Self {
+        Self {
+            semaphore: Semaphore::new(rate_limit as usize),
+            last_request_time: Mutex::new(Instant::now()),
+            interval: Duration::from_secs(1) / rate_limit,
+        }
+    }
+
+    async fn acquire(&self) {
+        let _permit = self.semaphore.acquire().await.unwrap();
+        let mut last_request_time = self.last_request_time.lock().await;
+        let now = Instant::now();
+        let time_since_last_request = now.duration_since(*last_request_time);
+        if time_since_last_request < self.interval {
+            sleep(self.interval - time_since_last_request).await;
+        }
+        *last_request_time = Instant::now();
+    }
+}
+
 #[derive(Clone)]
 pub struct HttpClient {
     client: Client,
+    rate_limiter: Arc<RateLimiter>,
 }
 
 impl Default for HttpClient {
@@ -81,10 +114,12 @@ impl HttpClient {
     pub fn new() -> Self {
         Self {
             client: Client::new(),
+            rate_limiter: Arc::new(RateLimiter::new(RATE_LIMIT)),
         }
     }
 
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
+        self.rate_limiter.acquire().await;
         let response = builder
             .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .send()

@@ -1,10 +1,6 @@
 use crate::{db, http, Database, HttpClient};
 use anyhow::Result;
 use futures::future;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::{Mutex, Semaphore};
-use tokio::time::{sleep, Instant};
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -72,50 +68,13 @@ async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result
     Ok(())
 }
 
-struct RateLimiter {
-    semaphore: Semaphore,
-    last_request_time: Mutex<Instant>,
-    interval: Duration,
-}
-
-impl RateLimiter {
-    fn new(rate_limit: u32) -> Self {
-        Self {
-            semaphore: Semaphore::new(rate_limit as usize),
-            last_request_time: Mutex::new(Instant::now()),
-            interval: Duration::from_secs(1) / rate_limit,
-        }
-    }
-
-    async fn acquire(&self) {
-        let _permit = self.semaphore.acquire().await.unwrap();
-        let mut last_request_time = self.last_request_time.lock().await;
-        let now = Instant::now();
-        let time_since_last_request = now.duration_since(*last_request_time);
-        if time_since_last_request < self.interval {
-            sleep(self.interval - time_since_last_request).await;
-        }
-        *last_request_time = Instant::now();
-    }
-}
-
-async fn get_sales(
-    client: &HttpClient,
-    skin_id: i32,
-    rate_limiter: Arc<RateLimiter>,
-) -> Result<Vec<http::Sale>> {
-    rate_limiter.acquire().await;
+async fn get_sales(client: &HttpClient, skin_id: i32) -> Result<Vec<http::Sale>> {
     client.fetch_sales(skin_id).await
 }
 
-async fn process_skin(
-    db: Database,
-    client: HttpClient,
-    skin: http::Skin,
-    rate_limiter: Arc<RateLimiter>,
-) -> Result<()> {
+async fn process_skin(db: Database, client: HttpClient, skin: http::Skin) -> Result<()> {
     let db_skin: db::Skin = skin.into();
-    let sales = get_sales(&client, db_skin.id, rate_limiter).await?;
+    let sales = get_sales(&client, db_skin.id).await?;
 
     db.insert_skin(db_skin.clone()).await?;
 
@@ -128,19 +87,9 @@ async fn process_skin(
 
 pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
-
-    let rate_limiter = Arc::new(RateLimiter::new(3));
-
     let tasks: Vec<_> = skins
         .into_iter()
-        .map(|skin| {
-            tokio::spawn(process_skin(
-                db.clone(),
-                client.clone(),
-                skin,
-                rate_limiter.clone(),
-            ))
-        })
+        .map(|skin| tokio::spawn(process_skin(db.clone(), client.clone(), skin)))
         .collect();
 
     future::try_join_all(tasks).await?;
