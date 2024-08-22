@@ -2,8 +2,7 @@
 //!
 //! This module provides structures and methods for interacting with a PostgreSQL database
 //! that stores information about CS:GO skins, sales, and related statistics.
-
-use anyhow::Result;
+use crate::Result;
 use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, PgPool};
 use std::env;
 
@@ -245,8 +244,8 @@ impl Database {
             sticker.skin_status,
             sticker.rotation
         )
-        .fetch_one(&self.pool)
-        .await?;
+            .fetch_one(&self.pool)
+            .await?;
 
         Ok(row.id)
     }

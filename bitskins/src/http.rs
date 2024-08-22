@@ -1,6 +1,5 @@
 use crate::date::DateTime;
-use anyhow::{bail, Result};
-use reqwest::Client;
+use crate::{Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
@@ -68,7 +67,7 @@ impl Wear {
 
 #[derive(Clone)]
 pub struct HttpClient {
-    client: Client,
+    client: reqwest::Client,
 }
 
 impl Default for HttpClient {
@@ -80,7 +79,7 @@ impl Default for HttpClient {
 impl HttpClient {
     pub fn new() -> Self {
         Self {
-            client: Client::new(),
+            client: reqwest::Client::new(),
         }
     }
 
@@ -92,15 +91,13 @@ impl HttpClient {
 
         let status = response.status();
         if !status.is_success() {
-            let error_body = response.text().await?;
-            bail!(
-                "API request failed: Status {}, Body: {}",
-                status,
-                error_body
-            );
+            return Err(Error::StatusCode(status));
         }
 
-        Ok(response.json().await?)
+        match response.json().await {
+            Ok(data) => Ok(data),
+            Err(_) => Err(Error::Deserialization),
+        }
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {

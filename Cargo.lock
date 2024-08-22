@@ -175,7 +175,6 @@ dependencies = [
 name = "bitskins"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "dotenvy",
  "env_logger",
  "futures-util",
@@ -184,6 +183,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "thiserror",
  "time",
  "tokio",
  "tokio-tungstenite",
