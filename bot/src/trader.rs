@@ -1,4 +1,4 @@
-use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID, Result};
+use bitskins::{Channel, Database, HttpClient, PriceStatistics, Result, WsData, CS2_APP_ID};
 
 const MAX_PRICE: i32 = 50;
 const BUY_THRESHOLD: f64 = 0.8;

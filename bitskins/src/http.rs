@@ -3,7 +3,6 @@ use crate::{Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
-use futures_util::TryFutureExt;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
