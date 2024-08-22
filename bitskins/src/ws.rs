@@ -33,6 +33,7 @@ pub enum Channel {
 }
 
 /// Represents the possible actions that can be sent over the WebSocket.
+#[allow(clippy::enum_variant_names)]
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 enum WsAction {
@@ -74,7 +75,7 @@ pub struct WsClient<H> {
 impl<H, F> WsClient<H>
 where
     H: Fn(Channel, WsData) -> F,
-    F: Future<Output = Result<()>>,
+    F: Future<Output = ()>,
 {
     /// Establishes a connection to the BitSkins WebSocket server.
     ///
@@ -116,7 +117,7 @@ where
             if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?
             } else if let Ok(channel) = Channel::deserialize(action) {
-                (self.handler)(channel, WsData::deserialize(data)?).await?
+                (self.handler)(channel, WsData::deserialize(data)?).await
             }
         } else {
             log::warn!("Invalid message format: {}", text);
