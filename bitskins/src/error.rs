@@ -4,9 +4,6 @@ use thiserror::Error;
 /// Represents any possible Bitskin error
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
     #[error("HTTP client error: {0}")]
     HttpClient(#[from] reqwest::Error),
 
@@ -21,9 +18,6 @@ pub enum Error {
 
     #[error("Failed to deserialize response")]
     Deserialization,
-
-    #[error("Database connection error: {0}")]
-    DatabaseConnection(String),
 
     #[error("Bad status code {0}")]
     StatusCode(reqwest::StatusCode),
