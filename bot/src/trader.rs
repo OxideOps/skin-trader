@@ -1,5 +1,5 @@
-use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 use anyhow::Result;
+use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 
 const MAX_PRICE: i32 = 50;
 const BUY_THRESHOLD: f64 = 0.8;
@@ -41,12 +41,12 @@ impl Trader {
             log::info!("app_id is not {CS2_APP_ID}, skipping..");
             return;
         }
-        
+
         if data.price > Some(MAX_PRICE) {
             log::info!("item price exceeds max price: {MAX_PRICE}, skipping..");
             return;
         }
-        
+
         let stats = match self.db.get_price_statistics(data.skin_id).await {
             Ok(stats) => stats,
             Err(e) => {
