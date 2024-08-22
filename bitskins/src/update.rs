@@ -1,8 +1,6 @@
 use crate::Result;
 use crate::{db, http, Database, HttpClient};
 use futures::future;
-use std::time::Duration;
-use tokio::time::sleep;
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -99,7 +97,7 @@ pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()
         .map(|skin| tokio::spawn(process_skin(db.clone(), client.clone(), skin)))
         .collect();
 
-    future::try_join_all(tasks).await?;
+    future::try_join_all(tasks).await.unwrap();
 
     log::info!("Updating price statistics");
     db.calculate_and_update_price_statistics().await?;
