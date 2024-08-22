@@ -1,4 +1,4 @@
-use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
+use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID, Result};
 
 const MAX_PRICE: i32 = 50;
 const BUY_THRESHOLD: f64 = 0.8;
@@ -11,14 +11,14 @@ pub(crate) struct Trader {
 }
 
 impl Trader {
-    pub async fn new() -> anyhow::Result<Self> {
+    pub async fn new() -> Result<Self> {
         Ok(Self {
             db: Database::new().await?,
             http: HttpClient::new(),
         })
     }
 
-    async fn handle_purchase(&self, data: &WsData, mean: f64) -> anyhow::Result<()> {
+    async fn handle_purchase(&self, data: &WsData, mean: f64) -> Result<()> {
         let balance = self.http.check_balance().await?;
         if data.price < Some(balance) {
             if let (Some(app_id), Some(price)) = (data.app_id, data.price) {
@@ -35,7 +35,7 @@ impl Trader {
         stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 
-    pub async fn process_data(&self, channel: Channel, data: WsData) -> anyhow::Result<()> {
+    pub async fn process_data(&self, channel: Channel, data: WsData) -> Result<()> {
         if data.app_id != Some(CS2_APP_ID) || data.price > Some(MAX_PRICE) {
             return Ok(());
         }

@@ -3,6 +3,7 @@ use crate::{Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
+use futures_util::TryFutureExt;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
@@ -94,10 +95,7 @@ impl HttpClient {
             return Err(Error::StatusCode(status));
         }
 
-        match response.json().await {
-            Ok(data) => Ok(data),
-            Err(_) => Err(Error::Deserialization),
-        }
+        response.json().await.map_err(|_| Error::Deserialization)
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
