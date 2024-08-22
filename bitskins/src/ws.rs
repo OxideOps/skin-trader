@@ -1,6 +1,6 @@
 //! WebSocket client for real-time communication with the BitSkins API.
 
-use anyhow::Result;
+use crate::Result;
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
