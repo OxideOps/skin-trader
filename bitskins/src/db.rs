@@ -112,8 +112,8 @@ impl Database {
             float_min,
             OffsetDateTime::now_utc(),
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(stats)
     }
@@ -150,8 +150,8 @@ impl Database {
                 stat.price_slope,
                 stat.last_update
             )
-                .execute(&mut *tx)
-                .await?;
+            .execute(&mut *tx)
+            .await?;
         }
 
         tx.commit().await?;
@@ -164,8 +164,8 @@ impl Database {
             "SELECT * FROM price_statistics WHERE skin_id = $1",
             skin_id
         )
-            .fetch_one(&self.pool)
-            .await?)
+        .fetch_one(&self.pool)
+        .await?)
     }
 
     pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<PriceStatistics>> {
@@ -185,8 +185,8 @@ impl Database {
             skin.class_id,
             skin.id
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -220,8 +220,8 @@ impl Database {
             "#,
             id
         )
-            .fetch_optional(&self.pool)
-            .await?;
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(sale)
     }
@@ -258,8 +258,8 @@ impl Database {
             "#,
             sale_id
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(stickers)
     }
@@ -274,8 +274,8 @@ impl Database {
             "#,
             skin_id
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(sales)
     }
@@ -295,8 +295,8 @@ impl Database {
             "#,
             count
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(records.into_iter().map(|r| r.skin_id).collect())
     }
@@ -335,8 +335,8 @@ impl Database {
             "#,
             min_sales
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(skin_ids.into_iter().map(|r| r.skin_id).collect())
     }
@@ -353,8 +353,8 @@ impl Database {
             skin.class_id,
             skin.suggested_price,
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }

@@ -1,6 +1,9 @@
-use thiserror::Error;
 use std::env;
+use thiserror::Error;
 
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Represents any possible Bitskin error
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("IO error: {0}")]
@@ -21,15 +24,12 @@ pub enum Error {
     #[error("Failed to deserialize response")]
     Deserialization,
 
-    #[error("Invalid input: {0}")]
-    InvalidInput(String),
-
     #[error("Database connection error: {0}")]
     DatabaseConnection(String),
 
-    #[error("Transaction error: {0}")]
-    Transaction(String),
+    #[error("Bad status code {0}")]
+    StatusCode(reqwest::StatusCode),
 
-    #[error("Unexpected error: {0}")]
-    Other(String),
+    #[error("WebSocket error: {0}")]
+    WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
 }
