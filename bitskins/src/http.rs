@@ -78,7 +78,7 @@ impl RateLimiter {
 
 #[derive(Clone)]
 pub struct HttpClient {
-    client: Client,
+    client: reqwest::Client,
     rate_limiter: Arc<RateLimiter>,
 }
 
@@ -91,7 +91,7 @@ impl Default for HttpClient {
 impl HttpClient {
     pub fn new() -> Self {
         Self {
-            client: Client::new(),
+            client: reqwest::Client::new(),
             rate_limiter: Arc::new(RateLimiter::new(RATE_LIMIT)),
         }
     }
