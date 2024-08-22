@@ -3,6 +3,9 @@ use std::env;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+
     #[error("HTTP client error: {0}")]
     HttpClient(#[from] reqwest::Error),
 
@@ -20,9 +23,6 @@ pub enum Error {
 
     #[error("Invalid input: {0}")]
     InvalidInput(String),
-
-    #[error("Resource not found: {0}")]
-    NotFound(String),
 
     #[error("Database connection error: {0}")]
     DatabaseConnection(String),

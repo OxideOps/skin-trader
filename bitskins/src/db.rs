@@ -2,11 +2,9 @@
 //!
 //! This module provides structures and methods for interacting with a PostgreSQL database
 //! that stores information about CS:GO skins, sales, and related statistics.
-
-use crate::error::Result;
+use crate::Result;
 use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, PgPool};
 use std::env;
-
 
 const MAX_CONNECTIONS: u32 = 5;
 
