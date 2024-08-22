@@ -44,27 +44,6 @@ pub struct Sticker {
     pub rotation: Option<f64>,
 }
 
-#[derive(Eq, PartialEq, Hash, Debug)]
-pub(crate) enum Wear {
-    FactoryNew,
-    MinimalWear,
-    FieldTested,
-    WellWorn,
-    BattleScarred,
-}
-
-impl Wear {
-    pub(crate) fn new(wear: f64) -> Self {
-        match wear {
-            w if w < 0.07 => Self::FactoryNew,
-            w if w < 0.15 => Self::MinimalWear,
-            w if w < 0.38 => Self::FieldTested,
-            w if w < 0.45 => Self::WellWorn,
-            _ => Self::BattleScarred,
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
