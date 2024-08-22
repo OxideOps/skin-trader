@@ -35,23 +35,36 @@ impl Trader {
         stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 
-    pub async fn process_data(&self, channel: Channel, data: WsData) -> Result<()> {
-        if data.app_id != Some(CS2_APP_ID) || data.price > Some(MAX_PRICE) {
-            return Ok(());
+    pub async fn process_data(&self, channel: Channel, data: WsData) {
+        if data.app_id != Some(CS2_APP_ID) {
+            log::info!("app_id is not {CS2_APP_ID}");
+            return;
         }
-
-        let stats = self.db.get_price_statistics(data.skin_id).await?;
+        
+        if data.price > Some(MAX_PRICE) {
+            log::info!("item price exceeds max price: {MAX_PRICE}");
+            return;
+        }
+        
+        let stats = match self.db.get_price_statistics(data.skin_id).await {
+            Ok(stats) => stats,
+            Err(e) => {
+                log::error!("Couldn't get price statistics: {e}");
+                return;
+            }
+        };
 
         match channel {
             Channel::Listed | Channel::PriceChanged => {
                 if let (Some(mean), Some(price)) = (stats.mean_price, data.price) {
                     if Self::is_mean_reliable(&stats) && (price as f64) < BUY_THRESHOLD * mean {
-                        self.handle_purchase(&data, mean).await?;
+                        if let Err(e) = self.handle_purchase(&data, mean).await {
+                            log::error!("handle_purchase returned error: {e}")
+                        }
                     }
                 }
             }
             _ => (),
         }
-        Ok(())
     }
 }
