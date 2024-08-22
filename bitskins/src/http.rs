@@ -1,6 +1,5 @@
 use crate::date::DateTime;
-use anyhow::{bail, Result};
-use reqwest::Client;
+use crate::{Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
@@ -48,27 +47,6 @@ pub struct Sticker {
     pub offset_y: Option<f64>,
     pub skin_status: Option<i32>,
     pub rotation: Option<f64>,
-}
-
-#[derive(Eq, PartialEq, Hash, Debug)]
-pub(crate) enum Wear {
-    FactoryNew,
-    MinimalWear,
-    FieldTested,
-    WellWorn,
-    BattleScarred,
-}
-
-impl Wear {
-    pub(crate) fn new(wear: f64) -> Self {
-        match wear {
-            w if w < 0.07 => Self::FactoryNew,
-            w if w < 0.15 => Self::MinimalWear,
-            w if w < 0.38 => Self::FieldTested,
-            w if w < 0.45 => Self::WellWorn,
-            _ => Self::BattleScarred,
-        }
-    }
 }
 
 struct RateLimiter {
@@ -127,15 +105,10 @@ impl HttpClient {
 
         let status = response.status();
         if !status.is_success() {
-            let error_body = response.text().await?;
-            bail!(
-                "API request failed: Status {}, Body: {}",
-                status,
-                error_body
-            );
+            return Err(Error::StatusCode(status));
         }
 
-        Ok(response.json().await?)
+        response.json().await.map_err(|_| Error::Deserialization)
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
