@@ -3,9 +3,10 @@
 //! This module provides structures and methods for interacting with a PostgreSQL database
 //! that stores information about CS:GO skins, sales, and related statistics.
 
-use anyhow::Result;
+use crate::error::Result;
 use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, PgPool};
 use std::env;
+
 
 const MAX_CONNECTIONS: u32 = 5;
 
@@ -113,8 +114,8 @@ impl Database {
             float_min,
             OffsetDateTime::now_utc(),
         )
-        .fetch_all(&self.pool)
-        .await?;
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(stats)
     }
@@ -151,8 +152,8 @@ impl Database {
                 stat.price_slope,
                 stat.last_update
             )
-            .execute(&mut *tx)
-            .await?;
+                .execute(&mut *tx)
+                .await?;
         }
 
         tx.commit().await?;
@@ -165,8 +166,8 @@ impl Database {
             "SELECT * FROM price_statistics WHERE skin_id = $1",
             skin_id
         )
-        .fetch_one(&self.pool)
-        .await?)
+            .fetch_one(&self.pool)
+            .await?)
     }
 
     pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<PriceStatistics>> {
@@ -186,8 +187,8 @@ impl Database {
             skin.class_id,
             skin.id
         )
-        .execute(&self.pool)
-        .await?;
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
@@ -207,8 +208,8 @@ impl Database {
             sale.phase_id,
             sale.price
         )
-        .fetch_one(&self.pool)
-        .await?;
+            .fetch_one(&self.pool)
+            .await?;
 
         Ok(row.id)
     }
@@ -221,8 +222,8 @@ impl Database {
             "#,
             id
         )
-        .fetch_optional(&self.pool)
-        .await?;
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(sale)
     }
@@ -245,8 +246,8 @@ impl Database {
             sticker.skin_status,
             sticker.rotation
         )
-        .fetch_one(&self.pool)
-        .await?;
+            .fetch_one(&self.pool)
+            .await?;
 
         Ok(row.id)
     }
@@ -259,8 +260,8 @@ impl Database {
             "#,
             sale_id
         )
-        .fetch_all(&self.pool)
-        .await?;
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(stickers)
     }
@@ -275,8 +276,8 @@ impl Database {
             "#,
             skin_id
         )
-        .fetch_all(&self.pool)
-        .await?;
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(sales)
     }
@@ -296,8 +297,8 @@ impl Database {
             "#,
             count
         )
-        .fetch_all(&self.pool)
-        .await?;
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(records.into_iter().map(|r| r.skin_id).collect())
     }
@@ -313,8 +314,8 @@ impl Database {
             "#,
             skin_id
         )
-        .fetch_all(&self.pool)
-        .await?)
+            .fetch_all(&self.pool)
+            .await?)
     }
 
     pub async fn get_skin_ids_by_correlation_with_min_sales(
@@ -336,8 +337,8 @@ impl Database {
             "#,
             min_sales
         )
-        .fetch_all(&self.pool)
-        .await?;
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(skin_ids.into_iter().map(|r| r.skin_id).collect())
     }
@@ -354,8 +355,8 @@ impl Database {
             skin.class_id,
             skin.suggested_price,
         )
-        .execute(&self.pool)
-        .await?;
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
