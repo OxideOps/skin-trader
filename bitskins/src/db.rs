@@ -206,8 +206,8 @@ impl Database {
             sale.phase_id,
             sale.price
         )
-            .fetch_one(&self.pool)
-            .await?;
+        .fetch_one(&self.pool)
+        .await?;
 
         Ok(row.id)
     }
@@ -312,8 +312,8 @@ impl Database {
             "#,
             skin_id
         )
-            .fetch_all(&self.pool)
-            .await?)
+        .fetch_all(&self.pool)
+        .await?)
     }
 
     pub async fn get_skin_ids_by_correlation_with_min_sales(
