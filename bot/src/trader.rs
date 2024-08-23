@@ -60,12 +60,10 @@ impl Trader {
     async fn attempt_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
         let (mean, ws_price) = match (stats.mean_price, item.price) {
             (Some(mean), Some(price)) => (mean, price),
-            _ => {
-                bail!(
-                    "Missing mean price or item price for skin_id: {}",
-                    item.skin_id
-                )
-            }
+            _ => bail!(
+                "Missing mean price or item price for skin_id: {}",
+                item.skin_id
+            ),
         };
 
         if !Self::is_mean_reliable(&stats) {
