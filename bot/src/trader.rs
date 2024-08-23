@@ -1,3 +1,4 @@
+use anyhow::Result;
 use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 
 const MAX_PRICE: i32 = 50;
@@ -11,7 +12,7 @@ pub(crate) struct Trader {
 }
 
 impl Trader {
-    pub async fn new() -> anyhow::Result<Self> {
+    pub async fn new() -> Result<Self> {
         Ok(Self {
             db: Database::new().await?,
             http: HttpClient::new(),
@@ -33,12 +34,24 @@ impl Trader {
         stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 
-    pub async fn process_data(&self, channel: Channel, data: WsData) -> anyhow::Result<()> {
-        if data.app_id != Some(CS2_APP_ID) || data.price > Some(MAX_PRICE) {
-            return Ok(());
+    pub async fn process_data(&self, channel: Channel, data: WsData) {
+        if data.app_id != Some(CS2_APP_ID) {
+            log::info!("app_id is not {CS2_APP_ID}, skipping..");
+            return;
         }
 
-        let stats = self.db.get_price_statistics(data.skin_id).await?;
+        if data.price > Some(MAX_PRICE) {
+            log::info!("item price exceeds max price: {MAX_PRICE}, skipping..");
+            return;
+        }
+
+        let stats = match self.db.get_price_statistics(data.skin_id).await {
+            Ok(stats) => stats,
+            Err(e) => {
+                log::error!("Couldn't get price statistics. Error: {e}, skipping..");
+                return;
+            }
+        };
 
         match channel {
             Channel::Listed | Channel::PriceChanged => {
@@ -54,12 +67,14 @@ impl Trader {
                                 price_lowest = market_data.price as i32;
                             }
                         }
-                        self.handle_purchase(id_lowest, price_lowest, mean).await?;
+                      
+                        if let Err(e) = self.handle_purchase(&data, mean).await {
+                            log::error!("handle_purchase returned error: {e}")
+                        }
                     }
                 }
             }
             _ => (),
         }
-        Ok(())
     }
 }

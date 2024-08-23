@@ -2,14 +2,19 @@
 //! It includes modules for database operations, HTTP requests, and WebSocket communication.
 mod date;
 mod db;
+mod error;
 mod http;
 mod update;
 mod ws;
 
 pub use db::{Database, PriceStatistics};
 pub use http::{HttpClient, MarketDataList, CS2_APP_ID};
+pub use error::Error;
+pub use http::{HttpClient, CS2_APP_ID};
 pub use update::sync_bitskins_data;
 pub use ws::{Channel, WsClient, WsData};
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 use env_logger::{Builder, Env};
 
@@ -21,7 +26,7 @@ use env_logger::{Builder, Env};
 /// # Examples
 ///
 /// ```
-/// use api::setup_env;
+/// use bitskins::setup_env;
 ///
 /// setup_env();
 /// // The logger is now initialized and environment variables are loaded

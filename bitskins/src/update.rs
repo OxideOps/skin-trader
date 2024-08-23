@@ -1,8 +1,6 @@
+use crate::Result;
 use crate::{db, http, Database, HttpClient};
-use anyhow::Result;
 use std::time::Duration;
-use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
 use tokio::time::sleep;
 
 impl From<http::Skin> for db::Skin {

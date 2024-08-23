@@ -1,6 +1,5 @@
 use crate::date::DateTime;
-use anyhow::{bail, Result};
-use reqwest::Client;
+use crate::{Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
@@ -56,30 +55,9 @@ pub struct MarketDataList {
     pub list: Vec<MarketData>,
 }
 
-#[derive(Eq, PartialEq, Hash, Debug)]
-pub(crate) enum Wear {
-    FactoryNew,
-    MinimalWear,
-    FieldTested,
-    WellWorn,
-    BattleScarred,
-}
-
-impl Wear {
-    pub(crate) fn new(wear: f64) -> Self {
-        match wear {
-            w if w < 0.07 => Self::FactoryNew,
-            w if w < 0.15 => Self::MinimalWear,
-            w if w < 0.38 => Self::FieldTested,
-            w if w < 0.45 => Self::WellWorn,
-            _ => Self::BattleScarred,
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct HttpClient {
-    client: Client,
+    client: reqwest::Client,
 }
 
 impl Default for HttpClient {
@@ -91,7 +69,7 @@ impl Default for HttpClient {
 impl HttpClient {
     pub fn new() -> Self {
         Self {
-            client: Client::new(),
+            client: reqwest::Client::new(),
         }
     }
 
@@ -103,15 +81,10 @@ impl HttpClient {
 
         let status = response.status();
         if !status.is_success() {
-            let error_body = response.text().await?;
-            bail!(
-                "API request failed: Status {}, Body: {}",
-                status,
-                error_body
-            );
+            return Err(Error::StatusCode(status));
         }
 
-        Ok(response.json().await?)
+        response.json().await.map_err(|_| Error::Deserialization)
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
