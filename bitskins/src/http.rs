@@ -6,6 +6,7 @@ use std::env;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
+const MAX_OFFSET: usize = 2000;
 
 pub const CS2_APP_ID: i32 = 730;
 
@@ -51,8 +52,14 @@ pub struct MarketData {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct MarketDataList {
+pub struct MarketDataResponse {
     pub list: Vec<MarketData>,
+    pub counter: MarketDataCounter,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct MarketDataCounter {
+    filtered: usize,
 }
 
 #[derive(Clone)]
@@ -168,9 +175,13 @@ impl HttpClient {
         self.get(&format!("/market/skin/{CS2_APP_ID}")).await
     }
 
-    pub async fn fetch_market_data(&self, skin_id: i32, offset: usize) -> Result<Vec<MarketData>> {
-        let m: MarketDataList = self
-            .post(
+    pub async fn fetch_market_data_response(
+        &self,
+        skin_id: i32,
+        offset: usize,
+    ) -> Result<MarketDataResponse> {
+        let response = self
+            .post::<MarketDataResponse>(
                 &format!("/market/search/{CS2_APP_ID}"),
                 json!({
                     "where": { "skin_id": [skin_id] },
@@ -179,7 +190,30 @@ impl HttpClient {
                 }),
             )
             .await?;
-        Ok(m.list)
+
+        Ok(response)
+    }
+
+    pub async fn fetch_all_market_data(&self, skin_id: i32) -> Result<Vec<MarketData>> {
+        const MAX_OFFSET: usize = 2000;
+        const MAX_LIMIT: usize = 500;
+        let mut offset = 0;
+
+        // Initial request to get the total count
+        let initial_response = self.fetch_market_data_response(skin_id, offset).await?;
+
+        let total = initial_response.counter.filtered;
+        let mut all_market_data = initial_response.list;
+        offset += MAX_LIMIT;
+
+        while offset < total && offset <= MAX_OFFSET {
+            let response = self.fetch_market_data_response(skin_id, offset).await?;
+
+            all_market_data.extend(response.list);
+            offset += MAX_LIMIT;
+        }
+
+        Ok(all_market_data)
     }
 
     // This might be useful if it ever starts working

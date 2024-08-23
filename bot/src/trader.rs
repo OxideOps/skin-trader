@@ -95,7 +95,7 @@ impl Trader {
     }
 
     async fn find_best_market_deal(&self, skin_id: i32) -> Result<Option<MarketDeal>> {
-        let market_list = self.http.fetch_market_data(skin_id, 0).await?;
+        let market_list = self.http.fetch_all_market_data(skin_id).await?;
 
         Ok(market_list
             .into_iter()
