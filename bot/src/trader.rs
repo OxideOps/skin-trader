@@ -78,7 +78,7 @@ impl Trader {
         };
 
         if self.is_deal_worth_buying(&best_deal, mean) {
-            self.execute_purchase(&best_deal, mean as i32).await?;
+            self.execute_purchase(best_deal, mean as i32).await?;
         } else {
             info!("No good deals found for skin_id: {}", item.skin_id);
         }
@@ -103,7 +103,7 @@ impl Trader {
             .min_by_key(|deal| deal.price))
     }
 
-    async fn execute_purchase(&self, deal: &MarketDeal, mean_price: i32) -> Result<()> {
+    async fn execute_purchase(&self, deal: MarketDeal, mean_price: i32) -> Result<()> {
         let balance = self.http.check_balance().await?;
 
         if deal.price < balance {
