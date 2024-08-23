@@ -115,9 +115,11 @@ impl Trader {
 
     async fn execute_purchase(&self, deal: &MarketDeal, mean_price: i32) -> Result<()> {
         let balance = self.http.check_balance().await?;
+
         if deal.price < balance {
             info!("Buying {} for {}", deal.id, deal.price);
             self.http.buy_item(&deal.id, deal.price).await?;
+
             info!("Listing {} for {}", deal.id, mean_price);
             self.http.list_item(&deal.id, mean_price).await?;
         }
