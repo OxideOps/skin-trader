@@ -124,11 +124,11 @@ impl HttpClient {
         .await
     }
 
-    pub async fn list_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
+    pub async fn list_item(&self, item_id: &str, price: i32) -> Result<()> {
         self.post(
             "/market/relist/single",
             json!({
-                "app_id": app_id,
+                "app_id": CS2_APP_ID,
                 "id": item_id,
                 "price": price,
             }),
@@ -140,11 +140,11 @@ impl HttpClient {
         self.post("/account/profile/balance", json!({})).await
     }
 
-    pub async fn buy_item(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
+    pub async fn buy_item(&self, item_id: &str, price: i32) -> Result<()> {
         self.post(
             "/market/buy/single",
             json!({
-                "app_id": app_id,
+                "app_id": CS2_APP_ID,
                 "id": item_id,
                 "max_price": price
             }),

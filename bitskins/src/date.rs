@@ -6,10 +6,7 @@ use time::OffsetDateTime;
 pub struct DateTime(pub OffsetDateTime);
 
 impl<'de> Deserialize<'de> for DateTime {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         OffsetDateTime::parse(&String::deserialize(deserializer)?, &Rfc3339)
             .map(DateTime)
             .map_err(serde::de::Error::custom)
