@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 use log::{error, info, warn};
 
@@ -24,15 +24,20 @@ impl Trader {
         if !self.is_item_eligible(&item) {
             return;
         }
-
-        let stats = match self.fetch_price_statistics(item.skin_id).await {
+    
+        let stats = match self.db.get_price_statistics(item.skin_id).await {
             Ok(stats) => stats,
-            Err(_) => return,
+            Err(e) => {
+                error!("Received error getting price stats: {e}");
+                return
+            },
         };
 
         match channel {
             Channel::Listed | Channel::PriceChanged => {
-                self.attempt_purchase(item, stats).await;
+                if let Err(e) = self.attempt_purchase(item, stats).await {
+                    error!("attempt purchase failed: {e}")
+                }
             }
             _ => warn!("Received data from unhandled channel: {channel:?}"),
         }
@@ -52,25 +57,19 @@ impl Trader {
         true
     }
 
-    async fn fetch_price_statistics(&self, skin_id: i32) -> bitskins::Result<PriceStatistics> {
-        self.db.get_price_statistics(skin_id).await
-    }
-
-    async fn attempt_purchase(&self, item: WsData, stats: PriceStatistics) {
+    async fn attempt_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
         let (mean, ws_price) = match (stats.mean_price, item.price) {
             (Some(mean), Some(price)) => (mean, price),
             _ => {
-                info!(
+                bail!(
                     "Missing mean price or item price for skin_id: {}",
                     item.skin_id
-                );
-                return;
+                )
             }
         };
 
         if !Self::is_mean_reliable(&stats) {
-            info!("Mean price is not reliable for skin_id: {}", item.skin_id);
-            return;
+            bail!("Mean price is not reliable for skin_id: {}", item.skin_id);
         }
 
         let ws_deal = MarketDeal::new(item.id, ws_price);
@@ -79,21 +78,20 @@ impl Trader {
             Ok(Some(market_deal)) if market_deal.price < ws_deal.price => market_deal,
             Ok(_) => ws_deal,
             Err(e) => {
-                error!(
+                bail!(
                     "Error fetching market data for skin_id {}: {}",
                     item.skin_id, e
-                );
-                ws_deal
+                )
             }
         };
 
         if self.is_deal_worth_buying(&best_deal, mean) {
-            if let Err(e) = self.execute_purchase(&best_deal, mean as i32).await {
-                error!("Purchase failed for item {}: {}", best_deal.id, e);
-            }
+            self.execute_purchase(&best_deal, mean as i32).await?;
         } else {
             info!("No good deals found for skin_id: {}", item.skin_id);
         }
+        
+        Ok(())
     }
 
     fn is_deal_worth_buying(&self, deal: &MarketDeal, mean_price: f64) -> bool {
