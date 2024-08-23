@@ -1,7 +1,7 @@
 mod trader;
 
 use anyhow::Result;
-use bitskins::{HttpClient, MarketDataList, WsClient};
+use bitskins::WsClient;
 use trader::Trader;
 
 #[tokio::main]
