@@ -62,9 +62,9 @@ impl Trader {
                             Err(e) => {
                                 log::error!("Couldn't fetch market data: {e}");
                                 return;
-                            },
+                            }
                         };
-                        
+
                         let mut id_lowest = data.id.as_str();
                         let mut price_lowest = price;
                         for market_data in &list {
