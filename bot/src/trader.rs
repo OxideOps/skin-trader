@@ -19,15 +19,13 @@ impl Trader {
         })
     }
 
-    async fn handle_purchase(&self, data: &WsData, mean: f64) -> Result<()> {
+    async fn handle_purchase(&self, id: &str, price: i32, mean: f64) -> anyhow::Result<()> {
         let balance = self.http.check_balance().await?;
-        if data.price < Some(balance) {
-            if let (Some(app_id), Some(price)) = (data.app_id, data.price) {
-                log::info!("Buying {} for {}", data.id, price);
-                self.http.buy_item(app_id, &data.id, price).await?;
-                log::info!("Listing {} for {}", data.id, mean);
-                self.http.list_item(app_id, &data.id, mean as i32).await?;
-            }
+        if price < balance {
+            log::info!("Buying {} for {}", id, price);
+            self.http.buy_item(CS2_APP_ID, &id, price).await?;
+            log::info!("Listing {} for {}", id, mean);
+            self.http.list_item(CS2_APP_ID, &id, mean as i32).await?;
         }
         Ok(())
     }
@@ -59,7 +57,24 @@ impl Trader {
             Channel::Listed | Channel::PriceChanged => {
                 if let (Some(mean), Some(price)) = (stats.mean_price, data.price) {
                     if Self::is_mean_reliable(&stats) && (price as f64) < BUY_THRESHOLD * mean {
-                        if let Err(e) = self.handle_purchase(&data, mean).await {
+                        let list = match self.http.fetch_market_data(data.skin_id, 0).await {
+                            Ok(list) => list,
+                            Err(e) => {
+                                log::error!("Couldn't fetch market data: {e}");
+                                return;
+                            }
+                        };
+
+                        let mut id_lowest = data.id.as_str();
+                        let mut price_lowest = price;
+                        for market_data in &list {
+                            if market_data.price < price as f64 {
+                                id_lowest = &market_data.id;
+                                price_lowest = market_data.price as i32;
+                            }
+                        }
+
+                        if let Err(e) = self.handle_purchase(id_lowest, price_lowest, mean).await {
                             log::error!("handle_purchase returned error: {e}")
                         }
                     }

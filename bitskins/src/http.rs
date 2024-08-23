@@ -44,6 +44,17 @@ pub struct Sticker {
     pub rotation: Option<f64>,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct MarketData {
+    pub id: String,
+    pub price: f64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct MarketDataList {
+    pub list: Vec<MarketData>,
+}
+
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
@@ -157,21 +168,18 @@ impl HttpClient {
         self.get(&format!("/market/skin/{CS2_APP_ID}")).await
     }
 
-    pub async fn fetch_market_data<T: DeserializeOwned>(
-        &self,
-        app_id: i32,
-        skin_id: i32,
-        offset: usize,
-    ) -> Result<T> {
-        self.post(
-            &format!("/market/search/{app_id}"),
-            json!({
-                "where": { "skin_id": [skin_id] },
-                "limit": MAX_LIMIT,
-                "offset": offset,
-            }),
-        )
-        .await
+    pub async fn fetch_market_data(&self, skin_id: i32, offset: usize) -> Result<Vec<MarketData>> {
+        let m: MarketDataList = self
+            .post(
+                &format!("/market/search/{CS2_APP_ID}"),
+                json!({
+                    "where": { "skin_id": [skin_id] },
+                    "limit": MAX_LIMIT,
+                    "offset": offset,
+                }),
+            )
+            .await?;
+        Ok(m.list)
     }
 
     // This might be useful if it ever starts working
