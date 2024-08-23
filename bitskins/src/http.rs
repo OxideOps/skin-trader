@@ -195,8 +195,6 @@ impl HttpClient {
     }
 
     pub async fn fetch_all_market_data(&self, skin_id: i32) -> Result<Vec<MarketData>> {
-        const MAX_OFFSET: usize = 2000;
-        const MAX_LIMIT: usize = 500;
         let mut offset = 0;
 
         // Initial request to get the total count
