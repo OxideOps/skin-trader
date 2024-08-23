@@ -74,16 +74,9 @@ impl Trader {
 
         let ws_deal = MarketDeal::new(item.id, ws_price);
 
-        let best_deal = match self.find_best_market_deal(item.skin_id).await {
-            Ok(Some(market_deal)) if market_deal.price < ws_deal.price => market_deal,
-            Ok(_) => ws_deal,
-            Err(e) => {
-                bail!(
-                    "Error fetching market data for skin_id {}: {}",
-                    item.skin_id,
-                    e
-                )
-            }
+        let best_deal = match self.find_best_market_deal(item.skin_id).await? {
+            Some(market_deal) if market_deal.price < ws_deal.price => market_deal,
+            _ => ws_deal,
         };
 
         if self.is_deal_worth_buying(&best_deal, mean) {
