@@ -63,11 +63,11 @@ impl Trader {
                         dbg!(&list);
                         for market_data in &list {
                             if market_data.price < price as f64 {
-                                id_lowest = &market_data.id; 
+                                id_lowest = &market_data.id;
                                 price_lowest = market_data.price as i32;
                             }
                         }
-                      
+
                         if let Err(e) = self.handle_purchase(&data, mean).await {
                             log::error!("handle_purchase returned error: {e}")
                         }

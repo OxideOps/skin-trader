@@ -93,8 +93,8 @@ where
 
     /// Sends an action to the WebSocket server.
     async fn send_action<S: Serialize>(&mut self, action: WsAction, data: S) -> Result<()> {
-        let message = json!([action, data]);
-        self.write.send(Message::Text(message.to_string())).await?;
+        let message = json!([action, data]).to_string();
+        self.write.send(Message::Text(message)).await?;
         Ok(())
     }
 
