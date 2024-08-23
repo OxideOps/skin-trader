@@ -57,10 +57,16 @@ impl Trader {
             Channel::Listed | Channel::PriceChanged => {
                 if let (Some(mean), Some(price)) = (stats.mean_price, data.price) {
                     if Self::is_mean_reliable(&stats) && (price as f64) < BUY_THRESHOLD * mean {
-                        let list = self.http.fetch_market_data(data.skin_id, 0).await?;
+                        let list = match self.http.fetch_market_data(data.skin_id, 0).await {
+                            Ok(list) => list,
+                            Err(e) => {
+                                log::error!("Couldn't fetch market data: {e}");
+                                return;
+                            },
+                        };
+                        
                         let mut id_lowest = data.id.as_str();
                         let mut price_lowest = price;
-                        dbg!(&list);
                         for market_data in &list {
                             if market_data.price < price as f64 {
                                 id_lowest = &market_data.id;
@@ -68,7 +74,7 @@ impl Trader {
                             }
                         }
 
-                        if let Err(e) = self.handle_purchase(&data, mean).await {
+                        if let Err(e) = self.handle_purchase(id_lowest, price_lowest, mean).await {
                             log::error!("handle_purchase returned error: {e}")
                         }
                     }
