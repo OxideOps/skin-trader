@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 use log::{error, info, warn};
 
@@ -24,13 +24,13 @@ impl Trader {
         if !self.is_item_eligible(&item) {
             return;
         }
-    
+
         let stats = match self.db.get_price_statistics(item.skin_id).await {
             Ok(stats) => stats,
             Err(e) => {
                 error!("Received error getting price stats: {e}");
-                return
-            },
+                return;
+            }
         };
 
         match channel {
@@ -80,7 +80,8 @@ impl Trader {
             Err(e) => {
                 bail!(
                     "Error fetching market data for skin_id {}: {}",
-                    item.skin_id, e
+                    item.skin_id,
+                    e
                 )
             }
         };
@@ -90,7 +91,7 @@ impl Trader {
         } else {
             info!("No good deals found for skin_id: {}", item.skin_id);
         }
-        
+
         Ok(())
     }
 
