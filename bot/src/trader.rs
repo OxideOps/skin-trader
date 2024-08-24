@@ -32,7 +32,7 @@ impl Trader {
             Channel::Listed => self.handle_listed_item(item).await,
             Channel::PriceChanged => self.handle_price_change(item).await,
             _ => {
-                warn!("Received data from unhandled channel: {channel:?}");
+                warn!("Unhandled channel: {channel:?}");
             }
         }
     }
@@ -43,7 +43,9 @@ impl Trader {
             return;
         }
 
-        self.attempt_purchase(item).await;
+        if let Err(e) = self.attempt_purchase(item).await {
+            error!("Error: {e}")
+        }
     }
 
     async fn handle_price_change(&self, item: WsData) {
@@ -57,7 +59,9 @@ impl Trader {
             }
         }
 
-        self.attempt_purchase(item).await;
+        if let Err(e) = self.attempt_purchase(item).await {
+            error!("Error: {e}")
+        }
     }
 
     async fn insert_item(&self, id: &str) -> Result<()> {
@@ -66,21 +70,9 @@ impl Trader {
         Ok(())
     }
 
-    async fn attempt_purchase(&self, item: WsData) {
-        let stats = match self.db.get_price_statistics(item.skin_id).await {
-            Ok(stats) => stats,
-            Err(e) => {
-                error!("Error getting price stats: {e}");
-                return;
-            }
-        };
+    async fn attempt_purchase(&self, item: WsData) -> Result<()> {
+        let stats = self.db.get_price_statistics(item.skin_id).await?;
 
-        if let Err(e) = self.process_purchase(item, stats).await {
-            error!("Attempt purchase failed: {e}");
-        }
-    }
-
-    async fn process_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
         if item.price > Some(MAX_PRICE) {
             bail!("item price exceeds max price: {MAX_PRICE}, skipping..")
         }
@@ -112,7 +104,7 @@ impl Trader {
 
         Ok(())
     }
-
+    
     fn is_deal_worth_buying(&self, deal: &MarketDeal, mean_price: f64) -> bool {
         (deal.price as f64) < BUY_THRESHOLD * mean_price
     }
