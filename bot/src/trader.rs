@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 use log::{error, info, warn};
 
-const MAX_PRICE: i32 = 100000;
+const MAX_PRICE: i32 = 50;
 const BUY_THRESHOLD: f64 = 0.8;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
