@@ -65,7 +65,7 @@ pub struct MarketItem {
     pub skin_id: i32,
     pub price: f64,
     pub discount: i32,
-    pub float_value: f64,
+    pub float_value: Option<f64>,
 }
 
 /// Handles database operations for BitSkins data.
