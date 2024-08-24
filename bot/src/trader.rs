@@ -28,15 +28,15 @@ impl Trader {
         // Update our tables with received data
         match channel {
             Channel::Listed => {
-                let item = match self.http.fetch_market_item(&item.id).await {
-                    Ok(item) => item,
+                let db_item = match self.http.fetch_market_item(&item.id).await {
+                    Ok(item) => item.into(),
                     Err(e) => {
                         error!("fetch market item failed: {e}");
                         return;
                     }
                 };
 
-                if let Err(e) = self.db.insert_market_data(item.into()).await {
+                if let Err(e) = self.db.insert_market_data(db_item).await {
                     error!("insert market data failed: {e}")
                 }
             }
