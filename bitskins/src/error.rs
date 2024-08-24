@@ -15,7 +15,7 @@ pub enum Error {
 
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
-  
+
     #[error("Failed to deserialize response")]
     Deserialization,
 
