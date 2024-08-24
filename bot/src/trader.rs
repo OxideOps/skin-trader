@@ -29,7 +29,8 @@ impl Trader {
     pub async fn process_data(&self, channel: Channel, item: WsData) {
         info!("Received data from {channel:?}");
 
-        if !self.is_item_eligible(&item) {
+        if item.app_id != Some(CS2_APP_ID) {
+            info!("app_id is not {CS2_APP_ID}, skipping..");
             return;
         }
 
@@ -53,7 +54,7 @@ impl Trader {
                 }
             }
             _ => {
-                warn!("Received data from unhandled channel");
+                warn!("Received data from unhandled channel: {channel:?}");
                 return;
             }
         }
@@ -77,21 +78,12 @@ impl Trader {
         }
     }
 
-    fn is_item_eligible(&self, item: &WsData) -> bool {
-        if item.app_id != Some(CS2_APP_ID) {
-            info!("app_id is not {CS2_APP_ID}, skipping..");
-            return false;
-        }
-
+    async fn attempt_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
         if item.price > Some(MAX_PRICE) {
             info!("item price exceeds max price: {MAX_PRICE}, skipping..");
-            return false;
+            return Ok(());
         }
 
-        true
-    }
-
-    async fn attempt_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
         let (mean, ws_price) = match (stats.mean_price, item.price) {
             (Some(mean), Some(price)) => (mean, price),
             _ => bail!(
