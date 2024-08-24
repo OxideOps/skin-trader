@@ -36,14 +36,14 @@ impl Trader {
                     }
                 };
 
-                if let Err(e) = self.db.insert_market_data(db_item).await {
+                if let Err(e) = self.db.insert_market_item(db_item).await {
                     error!("insert market data failed: {e}")
                 }
             }
             Channel::PriceChanged => {
                 if let Err(e) = self
                     .db
-                    .update_market_data_price(item.id.parse().unwrap(), item.price.unwrap() as f64)
+                    .update_market_item_price(item.id.parse().unwrap(), item.price.unwrap() as f64)
                     .await
                 {
                     error!("update market data price failed: {e}");

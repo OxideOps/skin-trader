@@ -222,10 +222,10 @@ impl Database {
         Ok(row.id)
     }
 
-    pub async fn insert_market_data(&self, item: MarketItem) -> Result<()> {
+    pub async fn insert_market_item(&self, item: MarketItem) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO MarketData (created_at, id, skin_id, price, discount, float_value)
+            INSERT INTO MarketItem (created_at, id, skin_id, price, discount, float_value)
             VALUES ($1, $2, $3, $4, $5, $6)
             "#,
             item.created_at.0,
@@ -241,10 +241,10 @@ impl Database {
         Ok(())
     }
 
-    pub async fn update_market_data_price(&self, item_id: i32, price: f64) -> Result<()> {
+    pub async fn update_market_item_price(&self, item_id: i32, price: f64) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE MarketData
+            UPDATE MarketItem
             SET price = $1
             WHERE id = $2
             "#,
