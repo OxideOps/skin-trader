@@ -20,9 +20,42 @@ impl Trader {
         })
     }
 
+    async fn insert_item(&self, id: &str) -> Result<()> {
+        let db_item = self.http.fetch_market_item(id).await?.into();
+        self.db.insert_market_item(db_item).await?;
+        Ok(())
+    }
+
     pub async fn process_data(&self, channel: Channel, item: WsData) {
+        info!("Received data from {channel:?}");
+
         if !self.is_item_eligible(&item) {
             return;
+        }
+
+        // Update our tables with received data
+        match channel {
+            Channel::Listed => {
+                if let Err(e) = self.insert_item(&item.id).await {
+                    error!("insert item failed: {e}")
+                }
+            }
+            Channel::PriceChanged => {
+                if self
+                    .db
+                    .update_market_item_price(item.id.parse().unwrap(), item.price.unwrap() as f64)
+                    .await
+                    .is_err()
+                {
+                    if let Err(e) = self.insert_item(&item.id).await {
+                        error!("insert item failed: {e}")
+                    }
+                }
+            }
+            _ => {
+                warn!("Received data from unhandled channel");
+                return;
+            }
         }
 
         let stats = match self.db.get_price_statistics(item.skin_id).await {
@@ -33,13 +66,14 @@ impl Trader {
             }
         };
 
+        // Now, lets try to buy this item
         match channel {
             Channel::Listed | Channel::PriceChanged => {
                 if let Err(e) = self.attempt_purchase(item, stats).await {
                     error!("attempt purchase failed: {e}")
                 }
             }
-            _ => warn!("Received data from unhandled channel: {channel:?}"),
+            _ => (),
         }
     }
 
@@ -95,7 +129,7 @@ impl Trader {
     }
 
     async fn find_best_market_deal(&self, skin_id: i32) -> Result<Option<MarketDeal>> {
-        let market_list = self.http.fetch_market_data(skin_id, 0).await?;
+        let market_list = self.http.fetch_market_items_for_skin(skin_id).await?;
 
         Ok(market_list
             .into_iter()

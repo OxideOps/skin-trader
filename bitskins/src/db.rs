@@ -2,6 +2,7 @@
 //!
 //! This module provides structures and methods for interacting with a PostgreSQL database
 //! that stores information about CS:GO skins, sales, and related statistics.
+use crate::date::DateTime;
 use crate::Result;
 use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, PgPool};
 use std::env;
@@ -56,6 +57,15 @@ pub struct PriceStatistics {
     pub time_correlation: Option<f64>,
     pub price_slope: Option<f64>,
     pub last_update: Option<OffsetDateTime>,
+}
+
+pub struct MarketItem {
+    pub created_at: DateTime,
+    pub id: i32,
+    pub skin_id: i32,
+    pub price: f64,
+    pub discount: i32,
+    pub float_value: f64,
 }
 
 /// Handles database operations for BitSkins data.
@@ -210,6 +220,41 @@ impl Database {
         .await?;
 
         Ok(row.id)
+    }
+
+    pub async fn insert_market_item(&self, item: MarketItem) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO MarketItem (created_at, id, skin_id, price, discount, float_value)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            "#,
+            item.created_at.0,
+            item.id,
+            item.skin_id,
+            item.price,
+            item.discount,
+            item.float_value
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn update_market_item_price(&self, item_id: i32, price: f64) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE MarketItem
+            SET price = $1
+            WHERE id = $2
+            "#,
+            price,
+            item_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 
     pub async fn get_sale(&self, id: i32) -> Result<Option<Sale>> {

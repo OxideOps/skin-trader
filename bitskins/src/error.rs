@@ -15,6 +15,12 @@ pub enum Error {
 
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
+  
+    #[error("Failed to deserialize response")]
+    Deserialization,
+
+    #[error("Failed to get a market item")]
+    FetchMarketItem,
 
     #[error("Bad status code {0}")]
     StatusCode(reqwest::StatusCode),
