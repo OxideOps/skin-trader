@@ -10,14 +10,11 @@ pub enum Error {
     #[error("Failed to parse JSON: {0}")]
     JsonParsing(#[from] serde_json::Error),
 
-    #[error("Environment variable not found: {0}")]
+    #[error("EnvVar error: {0}")]
     EnvVar(#[from] env::VarError),
 
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
-
-    #[error("Failed to deserialize response")]
-    Deserialization,
 
     #[error("Bad status code {0}")]
     StatusCode(reqwest::StatusCode),

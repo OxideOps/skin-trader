@@ -1,4 +1,5 @@
 use crate::date::DateTime;
+use crate::Error::JsonParsing;
 use crate::{Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
@@ -84,7 +85,7 @@ impl HttpClient {
             return Err(Error::StatusCode(status));
         }
 
-        response.json().await.map_err(|_| Error::Deserialization)
+        response.json().await.map_err(Error::HttpClient)
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
