@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 use log::{error, info, warn};
 
-const MAX_PRICE: i32 = 50;
+const MAX_PRICE: i32 = 100000;
 const BUY_THRESHOLD: f64 = 0.8;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
@@ -27,6 +27,8 @@ impl Trader {
     }
 
     pub async fn process_data(&self, channel: Channel, item: WsData) {
+        info!("Received data from {channel:?}");
+        
         if !self.is_item_eligible(&item) {
             return;
         }
@@ -54,6 +56,10 @@ impl Trader {
                 warn!("Received data from unhandled channel");
                 return;
             }
+        }
+        
+        if let Err(e) = self.db.calculate_and_update_price_statistics().await {
+            error!("Could not update price statistics: {e}");
         }
 
         let stats = match self.db.get_price_statistics(item.skin_id).await {
