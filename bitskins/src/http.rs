@@ -181,7 +181,7 @@ impl HttpClient {
         offset: usize,
     ) -> Result<MarketDataResponse> {
         let response = self
-            .post::<MarketDataResponse>(
+            .post(
                 &format!("/market/search/{CS2_APP_ID}"),
                 json!({
                     "where": { "skin_id": [skin_id] },
