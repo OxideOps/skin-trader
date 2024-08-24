@@ -82,8 +82,7 @@ impl Trader {
 
     async fn process_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
         if item.price > Some(MAX_PRICE) {
-            info!("item price exceeds max price: {MAX_PRICE}, skipping..");
-            return Ok(());
+            bail!("item price exceeds max price: {MAX_PRICE}, skipping..")
         }
 
         let (mean, ws_price) = match (stats.mean_price, item.price) {
