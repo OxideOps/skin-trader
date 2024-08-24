@@ -29,44 +29,35 @@ impl Trader {
         }
 
         match channel {
-            Channel::Listed => self.handle_listed_item(&item).await,
-            Channel::PriceChanged => self.handle_price_change(&item).await,
+            Channel::Listed => self.handle_listed_item(item).await,
+            Channel::PriceChanged => self.handle_price_change(item).await,
             _ => {
                 warn!("Received data from unhandled channel: {channel:?}");
-                return;
-            }
-        }
-
-        let stats = match self.db.get_price_statistics(item.skin_id).await {
-            Ok(stats) => stats,
-            Err(e) => {
-                error!("Error getting price stats: {e}");
-                return;
-            }
-        };
-
-        if matches!(channel, Channel::Listed | Channel::PriceChanged) {
-            if let Err(e) = self.attempt_purchase(item, stats).await {
-                error!("Attempt purchase failed: {e}");
             }
         }
     }
 
-    async fn handle_listed_item(&self, item: &WsData) {
+    async fn handle_listed_item(&self, item: WsData) {
         if let Err(e) = self.insert_item(&item.id).await {
             error!("Insert item failed: {e}");
+            return;
         }
+
+        self.attempt_purchase(item).await;
     }
 
-    async fn handle_price_change(&self, item: &WsData) {
+    async fn handle_price_change(&self, item: WsData) {
         let price = item.price.unwrap() as f64;
         let id = item.id.parse().unwrap();
 
         if self.db.update_market_item_price(id, price).await.is_err() {
             if let Err(e) = self.insert_item(&item.id).await {
                 error!("Insert item failed after failed update: {e}");
+                return;
             }
         }
+
+        self.attempt_purchase(item).await;
     }
 
     async fn insert_item(&self, id: &str) -> Result<()> {
@@ -75,7 +66,21 @@ impl Trader {
         Ok(())
     }
 
-    async fn attempt_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
+    async fn attempt_purchase(&self, item: WsData) {
+        let stats = match self.db.get_price_statistics(item.skin_id).await {
+            Ok(stats) => stats,
+            Err(e) => {
+                error!("Error getting price stats: {e}");
+                return;
+            }
+        };
+
+        if let Err(e) = self.process_purchase(item, stats).await {
+            error!("Attempt purchase failed: {e}");
+        }
+    }
+
+    async fn process_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
         if item.price > Some(MAX_PRICE) {
             info!("item price exceeds max price: {MAX_PRICE}, skipping..");
             return Ok(());
