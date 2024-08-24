@@ -241,6 +241,22 @@ impl Database {
         Ok(())
     }
 
+    pub async fn update_market_data_price(&self, item_id: i32, price: f64) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE MarketData
+            SET price = $1
+            WHERE id = $2
+            "#,
+            price,
+            item_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     pub async fn get_sale(&self, id: i32) -> Result<Option<Sale>> {
         let sale = sqlx::query_as!(
             Sale,
@@ -387,6 +403,4 @@ impl Database {
 
         Ok(())
     }
-
-    pub async fn update_market_data_price(&self, item_id: i32, price: f64) {}
 }
