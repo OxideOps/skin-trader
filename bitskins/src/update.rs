@@ -14,8 +14,8 @@ impl From<http::Skin> for db::Skin {
     }
 }
 
-impl From<http::MarketData> for db::MarketData {
-    fn from(item: http::MarketData) -> Self {
+impl From<http::MarketItem> for db::MarketItem {
+    fn from(item: http::MarketItem) -> Self {
         Self {
             created_at: item.created_at,
             id: item.id.parse().unwrap(),

@@ -1,4 +1,4 @@
-CREATE TABLE MarketData (
+CREATE TABLE MarketItem (
     id          INTEGER PRIMARY KEY,
     skin_id     INTEGER NOT NULL REFERENCES Skin(id),
     price       DOUBLE PRECISION NOT NULL,
@@ -7,4 +7,4 @@ CREATE TABLE MarketData (
     float_value DOUBLE PRECISION
 );
 
-CREATE INDEX idx_MarketData_skin_id ON MarketData(skin_id)
+CREATE INDEX idx_MarketItem_skin_id ON MarketItem(skin_id)

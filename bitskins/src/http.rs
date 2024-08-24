@@ -46,7 +46,7 @@ pub struct Sticker {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct MarketData {
+pub struct MarketItem {
     pub created_at: DateTime,
     pub id: String,
     pub skin_id: i32,
@@ -56,8 +56,8 @@ pub struct MarketData {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct MarketDataResponse {
-    pub list: Vec<MarketData>,
+pub struct MarketData {
+    pub list: Vec<MarketItem>,
     pub counter: MarketDataCounter,
 }
 
@@ -179,11 +179,31 @@ impl HttpClient {
         self.get(&format!("/market/skin/{CS2_APP_ID}")).await
     }
 
-    pub async fn fetch_market_data_response(
+    pub async fn fetch_market_item(&self, id: &str) -> Result<MarketItem> {
+        let data = self
+            .post::<MarketData>(
+                &format!("/market/search/{CS2_APP_ID}"),
+                json!({
+                    "where": { "id": [id] },
+                    "limit": 1,
+                    "offset": 0,
+                }),
+            )
+            .await?;
+
+        // Should be a list with only 1 item
+        data.list
+            .into_iter()
+            .next()
+            .map(Into::into)
+            .ok_or(Error::MarketItem(id.to_string()))
+    }
+
+    async fn fetch_market_data_response_by_skin(
         &self,
         skin_id: i32,
         offset: usize,
-    ) -> Result<MarketDataResponse> {
+    ) -> Result<MarketData> {
         let response = self
             .post(
                 &format!("/market/search/{CS2_APP_ID}"),
@@ -198,24 +218,28 @@ impl HttpClient {
         Ok(response)
     }
 
-    pub async fn fetch_all_market_data(&self, skin_id: i32) -> Result<Vec<MarketData>> {
+    pub async fn fetch_market_items_for_skin(&self, skin_id: i32) -> Result<Vec<MarketItem>> {
         let mut offset = 0;
 
         // Initial request to get the total count
-        let initial_response = self.fetch_market_data_response(skin_id, offset).await?;
+        let initial_response = self
+            .fetch_market_data_response_by_skin(skin_id, offset)
+            .await?;
 
         let total = initial_response.counter.filtered;
-        let mut all_market_data = initial_response.list;
+        let mut all_market_items = initial_response.list;
         offset += MAX_LIMIT;
 
         while offset < total && offset <= MAX_OFFSET {
-            let response = self.fetch_market_data_response(skin_id, offset).await?;
+            let response = self
+                .fetch_market_data_response_by_skin(skin_id, offset)
+                .await?;
 
-            all_market_data.extend(response.list);
+            all_market_items.extend(response.list);
             offset += MAX_LIMIT;
         }
 
-        Ok(all_market_data)
+        Ok(all_market_items)
     }
 
     // This might be useful if it ever starts working

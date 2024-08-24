@@ -1,7 +1,5 @@
 use anyhow::{bail, Result};
-use bitskins::{
-    Channel, Database, DateTime, HttpClient, MarketData, PriceStatistics, WsData, CS2_APP_ID,
-};
+use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
 use log::{error, info, warn};
 
 const MAX_PRICE: i32 = 50;
@@ -26,23 +24,22 @@ impl Trader {
         if !self.is_item_eligible(&item) {
             return;
         }
-        
+
         // Update our tables with received data
         match channel {
             Channel::Listed => {
-                let data = MarketData {
-                    created_at: DateTime::now(),
-                    id: item.id.parse().unwrap(),
-                    skin_id: item.skin_id,
-                    price: item.price.unwrap() as f64,
-                    discount: 0,
-                    float_value: 0.0,
+                let item = match self.http.fetch_market_item(&item.id).await {
+                    Ok(item) => item,
+                    Err(e) => {
+                        error!("fetch market item failed: {e}");
+                        return;
+                    }
                 };
 
-                if let Err(e) = self.db.insert_market_data(&data).await {
+                if let Err(e) = self.db.insert_market_data(item.into()).await {
                     error!("insert market data failed: {e}")
                 }
-            },
+            }
             Channel::PriceChanged => {
                 if let Err(e) = self
                     .db
@@ -51,13 +48,13 @@ impl Trader {
                 {
                     error!("update market data price failed: {e}");
                 }
-            },
+            }
             _ => {
                 warn!("Received data from unhandled channel");
                 return;
-            },
+            }
         }
-        
+
         let stats = match self.db.get_price_statistics(item.skin_id).await {
             Ok(stats) => stats,
             Err(e) => {
@@ -65,14 +62,14 @@ impl Trader {
                 return;
             }
         };
-        
+
         // Now, lets try to buy this item
         match channel {
-            Channel::Listed  | Channel::PriceChanged => {
+            Channel::Listed | Channel::PriceChanged => {
                 if let Err(e) = self.attempt_purchase(item, stats).await {
                     error!("attempt purchase failed: {e}")
                 }
-            },
+            }
             _ => (),
         }
     }
@@ -129,7 +126,7 @@ impl Trader {
     }
 
     async fn find_best_market_deal(&self, skin_id: i32) -> Result<Option<MarketDeal>> {
-        let market_list = self.http.fetch_all_market_data(skin_id).await?;
+        let market_list = self.http.fetch_market_items_for_skin(skin_id).await?;
 
         Ok(market_list
             .into_iter()

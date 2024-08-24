@@ -59,7 +59,7 @@ pub struct PriceStatistics {
     pub last_update: Option<OffsetDateTime>,
 }
 
-pub struct MarketData {
+pub struct MarketItem {
     pub created_at: DateTime,
     pub id: i32,
     pub skin_id: i32,
@@ -222,7 +222,7 @@ impl Database {
         Ok(row.id)
     }
 
-    pub async fn insert_market_data(&self, item: &MarketData) -> Result<()> {
+    pub async fn insert_market_data(&self, item: MarketItem) -> Result<()> {
         sqlx::query!(
             r#"
             INSERT INTO MarketData (created_at, id, skin_id, price, discount, float_value)
