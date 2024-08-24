@@ -162,6 +162,8 @@ where
                 }
                 Err(err) => {
                     log::error!("Error receiving message: {:?}", err);
+                    self = Self::connect(self.handler).await?;
+                    self.authenticate().await?;
                 }
                 _ => {}
             }
