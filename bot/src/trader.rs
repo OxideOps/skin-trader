@@ -2,7 +2,7 @@ use anyhow::{bail, Result};
 use bitskins::{
     Channel, Database, DateTime, HttpClient, MarketData, PriceStatistics, WsData, CS2_APP_ID,
 };
-use log::{error, info, warn};
+use log::{error, info};
 
 const MAX_PRICE: i32 = 50;
 const BUY_THRESHOLD: f64 = 0.8;
@@ -40,9 +40,7 @@ impl Trader {
             if let Err(e) = self.db.insert_market_data(&data).await {
                 error!("insert market data failed: {e}")
             }
-        }
-
-        if matches!(channel, Channel::PriceChanged) {
+        } else if matches!(channel, Channel::PriceChanged) {
             if let Err(e) = self
                 .db
                 .update_market_data_price(item.id.parse().unwrap(), item.price.unwrap() as f64)
@@ -50,12 +48,6 @@ impl Trader {
             {
                 error!("update market data price failed: {e}");
             }
-        }
-
-        match channel {
-            Channel::Listed => {}
-            Channel::PriceChanged => {}
-            _ => (),
         }
 
         let stats = match self.db.get_price_statistics(item.skin_id).await {
