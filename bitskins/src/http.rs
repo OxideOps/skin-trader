@@ -95,7 +95,7 @@ impl HttpClient {
             return Err(Error::StatusCode(status));
         }
 
-        response.json().await.map_err(Error::HttpClient)
+        Ok(response.json().await?)
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
