@@ -20,6 +20,12 @@ impl Trader {
         })
     }
 
+    async fn insert_item(&self, id: &str) -> Result<()> {
+        let db_item = self.http.fetch_market_item(id).await?.into();
+        self.db.insert_market_item(db_item).await?;
+        Ok(())
+    }
+
     pub async fn process_data(&self, channel: Channel, item: WsData) {
         if !self.is_item_eligible(&item) {
             return;
@@ -28,25 +34,20 @@ impl Trader {
         // Update our tables with received data
         match channel {
             Channel::Listed => {
-                let db_item = match self.http.fetch_market_item(&item.id).await {
-                    Ok(item) => item.into(),
-                    Err(e) => {
-                        error!("fetch market item failed: {e}");
-                        return;
-                    }
-                };
-
-                if let Err(e) = self.db.insert_market_item(db_item).await {
-                    error!("insert market data failed: {e}")
+                if let Err(e) = self.insert_item(&item.id).await {
+                    error!("insert item failed: {e}")
                 }
             }
             Channel::PriceChanged => {
-                if let Err(e) = self
+                if self
                     .db
                     .update_market_item_price(item.id.parse().unwrap(), item.price.unwrap() as f64)
                     .await
+                    .is_err()
                 {
-                    error!("update market data price failed: {e}");
+                    if let Err(e) = self.insert_item(&item.id).await {
+                        error!("insert item failed: {e}")
+                    }
                 }
             }
             _ => {

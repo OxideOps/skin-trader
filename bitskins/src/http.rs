@@ -196,7 +196,7 @@ impl HttpClient {
             .into_iter()
             .next()
             .map(Into::into)
-            .ok_or(Error::MarketItem(id.to_string()))
+            .ok_or(Error::FetchMarketItem)
     }
 
     async fn fetch_market_data_response_by_skin(

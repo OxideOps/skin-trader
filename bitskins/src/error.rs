@@ -19,8 +19,8 @@ pub enum Error {
     #[error("Failed to deserialize response")]
     Deserialization,
 
-    #[error("Failed to get a market item for id: {0}")]
-    MarketItem(String),
+    #[error("Failed to get a market item")]
+    FetchMarketItem,
 
     #[error("Bad status code {0}")]
     StatusCode(reqwest::StatusCode),
