@@ -104,7 +104,7 @@ impl Trader {
 
         Ok(())
     }
-    
+
     fn is_deal_worth_buying(&self, deal: &MarketDeal, mean_price: f64) -> bool {
         (deal.price as f64) < BUY_THRESHOLD * mean_price
     }
