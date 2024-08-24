@@ -151,10 +151,19 @@ where
         self.authenticate().await?;
 
         while let Some(message) = self.read.next().await {
-            if let Ok(Message::Text(text)) = message {
-                if let Err(e) = self.handle_message(text).await {
-                    log::error!("Error occurred handling message: {e}")
+            match message {
+                Ok(Message::Text(text)) => {
+                    if let Err(e) = self.handle_message(text).await {
+                        log::error!("Error occurred handling message: {e}")
+                    }
                 }
+                Ok(Message::Close(frame)) => {
+                    log::warn!("Received close frame: {:?}", frame);
+                }
+                Err(err) => {
+                    log::error!("Error receiving message: {:?}", err);
+                }
+                _ => {}
             }
         }
 
