@@ -28,40 +28,36 @@ impl Trader {
             return;
         }
 
+        if let Err(e) = self.process_data_fallible(channel, item).await {
+            error!("Failed to process data: {e}");
+        }
+    }
+
+    async fn process_data_fallible(&self, channel: Channel, item: WsData) -> Result<()> {
         match channel {
             Channel::Listed => self.handle_listed_item(item).await,
             Channel::PriceChanged => self.handle_price_change(item).await,
             _ => {
                 warn!("Unhandled channel: {channel:?}");
+                Ok(())
             }
         }
     }
 
-    async fn handle_listed_item(&self, item: WsData) {
-        if let Err(e) = self.insert_item(&item.id).await {
-            error!("Insert item failed: {e}");
-            return;
-        }
-
-        if let Err(e) = self.attempt_purchase(item).await {
-            error!("Error: {e}")
-        }
+    async fn handle_listed_item(&self, item: WsData) -> Result<()> {
+        self.insert_item(&item.id).await?;
+        self.attempt_purchase(item).await
     }
 
-    async fn handle_price_change(&self, item: WsData) {
+    async fn handle_price_change(&self, item: WsData) -> Result<()> {
         let price = item.price.unwrap() as f64;
-        let id = item.id.parse().unwrap();
+        let id = item.id.parse()?;
 
         if self.db.update_market_item_price(id, price).await.is_err() {
-            if let Err(e) = self.insert_item(&item.id).await {
-                error!("Insert item failed after failed update: {e}");
-                return;
-            }
+            self.insert_item(&item.id).await?;
         }
 
-        if let Err(e) = self.attempt_purchase(item).await {
-            error!("Error: {e}")
-        }
+        self.attempt_purchase(item).await
     }
 
     async fn insert_item(&self, id: &str) -> Result<()> {
