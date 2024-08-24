@@ -47,8 +47,12 @@ pub struct Sticker {
 
 #[derive(Deserialize, Debug)]
 pub struct MarketData {
+    pub created_at: DateTime,
     pub id: String,
+    pub skin_id: i32,
     pub price: f64,
+    pub discount: i32,
+    pub float_value: f64,
 }
 
 #[derive(Deserialize, Debug)]

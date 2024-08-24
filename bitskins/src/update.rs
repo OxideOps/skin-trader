@@ -14,6 +14,19 @@ impl From<http::Skin> for db::Skin {
     }
 }
 
+impl From<http::MarketData> for db::MarketData {
+    fn from(item: http::MarketData) -> Self {
+        Self {
+            created_at: item.created_at,
+            id: item.id.parse().unwrap(),
+            skin_id: item.skin_id,
+            price: item.price,
+            float_value: item.float_value,
+            discount: item.discount,
+        }
+    }
+}
+
 impl db::Sticker {
     fn new(sticker: http::Sticker, sale_id: &i32) -> Self {
         Self {
