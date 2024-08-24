@@ -20,12 +20,6 @@ impl Trader {
         })
     }
 
-    async fn insert_item(&self, id: &str) -> Result<()> {
-        let db_item = self.http.fetch_market_item(id).await?.into();
-        self.db.insert_market_item(db_item).await?;
-        Ok(())
-    }
-
     pub async fn process_data(&self, channel: Channel, item: WsData) {
         info!("Received data from {channel:?}");
 
@@ -34,25 +28,9 @@ impl Trader {
             return;
         }
 
-        // Update our tables with received data
         match channel {
-            Channel::Listed => {
-                if let Err(e) = self.insert_item(&item.id).await {
-                    error!("insert item failed: {e}")
-                }
-            }
-            Channel::PriceChanged => {
-                if self
-                    .db
-                    .update_market_item_price(item.id.parse().unwrap(), item.price.unwrap() as f64)
-                    .await
-                    .is_err()
-                {
-                    if let Err(e) = self.insert_item(&item.id).await {
-                        error!("insert item failed: {e}")
-                    }
-                }
-            }
+            Channel::Listed => self.handle_listed_item(&item).await,
+            Channel::PriceChanged => self.handle_price_change(&item).await,
             _ => {
                 warn!("Received data from unhandled channel: {channel:?}");
                 return;
@@ -62,20 +40,39 @@ impl Trader {
         let stats = match self.db.get_price_statistics(item.skin_id).await {
             Ok(stats) => stats,
             Err(e) => {
-                error!("Received error getting price stats: {e}");
+                error!("Error getting price stats: {e}");
                 return;
             }
         };
 
-        // Now, lets try to buy this item
-        match channel {
-            Channel::Listed | Channel::PriceChanged => {
-                if let Err(e) = self.attempt_purchase(item, stats).await {
-                    error!("attempt purchase failed: {e}")
-                }
+        if matches!(channel, Channel::Listed | Channel::PriceChanged) {
+            if let Err(e) = self.attempt_purchase(item, stats).await {
+                error!("Attempt purchase failed: {e}");
             }
-            _ => (),
         }
+    }
+
+    async fn handle_listed_item(&self, item: &WsData) {
+        if let Err(e) = self.insert_item(&item.id).await {
+            error!("Insert item failed: {e}");
+        }
+    }
+
+    async fn handle_price_change(&self, item: &WsData) {
+        let price = item.price.unwrap() as f64;
+        let id = item.id.parse().unwrap();
+
+        if self.db.update_market_item_price(id, price).await.is_err() {
+            if let Err(e) = self.insert_item(&item.id).await {
+                error!("Insert item failed after failed update: {e}");
+            }
+        }
+    }
+
+    async fn insert_item(&self, id: &str) -> Result<()> {
+        let db_item = self.http.fetch_market_item(id).await?.into();
+        self.db.insert_market_item(db_item).await?;
+        Ok(())
     }
 
     async fn attempt_purchase(&self, item: WsData, stats: PriceStatistics) -> Result<()> {
