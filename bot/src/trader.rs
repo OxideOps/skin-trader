@@ -114,7 +114,7 @@ impl Trader {
     }
 
     fn is_deal_worth_buying(&self, deal: &MarketDeal, mean_price: f64) -> bool {
-        (deal.price as f64) < BUY_THRESHOLD * mean_price && deal.price <= MAX_PRICE
+        (deal.price as f64) < BUY_THRESHOLD * mean_price
     }
 
     fn is_mean_reliable(stats: &PriceStatistics) -> bool {
