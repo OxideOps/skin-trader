@@ -107,7 +107,7 @@ impl Trader {
         if self.is_deal_worth_buying(&best_deal, mean) {
             self.execute_purchase(best_deal, mean as i32).await?;
         } else {
-            info!("No good deals found for skin_id: {}", item.skin_id);
+            bail!("No good deals found for skin_id: {}", item.skin_id)
         }
 
         Ok(())
