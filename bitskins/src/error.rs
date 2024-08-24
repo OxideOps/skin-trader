@@ -22,6 +22,9 @@ pub enum Error {
     #[error("Failed to get a market item")]
     FetchMarketItem,
 
+    #[error("Failed to update market item")]
+    UpdateMarketItem,
+
     #[error("Bad status code {0}")]
     StatusCode(reqwest::StatusCode),
 

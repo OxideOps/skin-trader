@@ -3,7 +3,7 @@
 //! This module provides structures and methods for interacting with a PostgreSQL database
 //! that stores information about CS:GO skins, sales, and related statistics.
 use crate::date::DateTime;
-use crate::Result;
+use crate::{Error, Result};
 use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, PgPool};
 use std::env;
 
@@ -242,7 +242,7 @@ impl Database {
     }
 
     pub async fn update_market_item_price(&self, item_id: i32, price: f64) -> Result<()> {
-        sqlx::query!(
+        let result = sqlx::query!(
             r#"
             UPDATE MarketItem
             SET price = $1
@@ -253,6 +253,10 @@ impl Database {
         )
         .execute(&self.pool)
         .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Error::UpdateMarketItem);
+        }
 
         Ok(())
     }
