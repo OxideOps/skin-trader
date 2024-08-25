@@ -25,9 +25,6 @@ pub enum Error {
     #[error("Market item {0} not present in table")]
     MarketItemUpdateFailed(i32),
 
-    #[error("Market item {0} couldn't be fetched from server")]
-    MarketItemFetchFailed(String),
-
     #[error("Bad status code {0}")]
     StatusCode(reqwest::StatusCode),
 
