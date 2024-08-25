@@ -71,7 +71,7 @@ impl Trader {
         let db_item = self.http.fetch_market_item(&item.id).await?.into();
         self.db
             .insert_skin(Skin {
-                id: item.id.parse()?,
+                id: item.skin_id,
                 name: item.name.clone().unwrap(),
                 class_id: item.class_id.clone().unwrap(),
                 suggested_price: item.suggested_price,
