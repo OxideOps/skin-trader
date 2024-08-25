@@ -170,13 +170,14 @@ impl Database {
     }
 
     pub async fn get_price_statistics(&self, skin_id: Id) -> Result<PriceStatistics> {
-        Ok(sqlx::query_as!(
+        sqlx::query_as!(
             PriceStatistics,
             "SELECT * FROM price_statistics WHERE skin_id = $1",
             skin_id
         )
-        .fetch_one(&self.pool)
-        .await?)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(Error::PriceStatisticsFetchFailed(skin_id))
     }
 
     pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<PriceStatistics>> {

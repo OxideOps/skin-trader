@@ -25,6 +25,9 @@ pub enum Error {
     #[error("Market item {0} not present in table")]
     MarketItemUpdateFailed(i32),
 
+    #[error("Skin {0} has no price statistics in table")]
+    PriceStatisticsFetchFailed(i32),
+
     #[error("Bad status code {0}")]
     StatusCode(reqwest::StatusCode),
 
