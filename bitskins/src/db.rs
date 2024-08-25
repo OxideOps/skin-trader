@@ -37,6 +37,7 @@ pub struct Sticker {
     pub sale_id: Option<i32>,
     pub skin_id: Option<i32>,
     pub image: Option<String>,
+    pub market_item_id: Option<i32>,
     pub slot: Option<i16>,
     pub wear: Option<f64>,
     pub suggested_price: Option<i32>,
@@ -64,8 +65,8 @@ pub struct MarketItem {
     pub id: i32,
     pub skin_id: i32,
     pub price: f64,
-    pub discount: i32,
     pub float_value: Option<f64>,
+    pub phase_id: Option<i32>,
 }
 
 /// Handles database operations for BitSkins data.
@@ -225,14 +226,14 @@ impl Database {
     pub async fn insert_market_item(&self, item: MarketItem) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO MarketItem (created_at, id, skin_id, price, discount, float_value)
+            INSERT INTO MarketItem (created_at, id, skin_id, price, phase_id, float_value)
             VALUES ($1, $2, $3, $4, $5, $6)
             "#,
             item.created_at.0,
             item.id,
             item.skin_id,
             item.price,
-            item.discount,
+            item.phase_id,
             item.float_value
         )
         .execute(&self.pool)

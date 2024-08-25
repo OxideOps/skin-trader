@@ -2,7 +2,7 @@ use serde::{de, Deserialize, Deserializer};
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DateTime(pub OffsetDateTime);
 
 impl DateTime {
