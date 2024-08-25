@@ -143,7 +143,8 @@ impl HttpClient {
                     }
                     log::warn!(
                         "Error in response: {e}, retrying in {backoff} seconds \
-                        ({attempt} / {MAX_ATTEMPTS} attempts)"
+                        ({} tries remaining)",
+                        MAX_ATTEMPTS - attempt
                     );
                     sleep(Duration::from_secs(backoff)).await;
                     backoff *= 2;
