@@ -70,6 +70,7 @@ impl Trader {
     async fn insert_item(&self, id: &str) -> Result<()> {
         let db_item = self.http.fetch_market_item(id).await?.into();
         self.db.insert_market_item(db_item).await?;
+        //TODO: if there isn't a corresponding skin, fetch it and store it.
         Ok(())
     }
 
