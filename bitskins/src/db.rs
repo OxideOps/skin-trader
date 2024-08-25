@@ -427,4 +427,18 @@ impl Database {
 
         Ok(())
     }
+
+    async fn flush_table(&self, table_name: &str) -> Result<()> {
+        sqlx::query(&format!("DELETE FROM {}", table_name))
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn flush_all(&self) -> Result<()> {
+        for table in ["Sticker", "Sale", "MarketItem", "Skin", "price_statistics"] {
+            self.flush_table(table).await?;
+        }
+        Ok(())
+    }
 }
