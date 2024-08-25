@@ -35,8 +35,9 @@ impl Trader {
 
     async fn process_data_fallible(&self, channel: Channel, item: WsData) -> Result<()> {
         match channel {
-            Channel::Listed => self.handle_listed_item(item).await,
+            Channel::Listed => self.handle_listed(item).await,
             Channel::PriceChanged => self.handle_price_change(item).await,
+            Channel::DelistedOrSold => self.handle_delisted_or_sold(item).await,
             _ => {
                 warn!("Unhandled channel: {channel:?}");
                 Ok(())
@@ -58,6 +59,10 @@ impl Trader {
         }
 
         self.attempt_purchase(item).await
+    }
+
+    async fn handle_delisted_or_sold(&self) -> Result<()> {
+        todo!()
     }
 
     async fn insert_item(&self, id: &str) -> Result<()> {
