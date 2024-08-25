@@ -19,13 +19,10 @@ pub enum Error {
     #[error("Failed to deserialize response")]
     Deserialization,
 
-    #[error("Market item {0} not found in table")]
-    MarketItemNotFound(i32),
-
-    #[error("Market item {0} couldn't be deleted from table")]
+    #[error("Market item {0} not present in table")]
     MarketItemDeleteFailed(i32),
 
-    #[error("Market item {0} couldn't be updated in table")]
+    #[error("Market item {0} not present in table")]
     MarketItemUpdateFailed(i32),
 
     #[error("Market item {0} couldn't be fetched from server")]
