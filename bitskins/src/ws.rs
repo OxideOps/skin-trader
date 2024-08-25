@@ -1,6 +1,6 @@
 //! WebSocket client for real-time communication with the BitSkins API.
 
-use crate::Result;
+use crate::{Error, Result};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -117,7 +117,9 @@ where
             if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
                 self.setup_channels().await?
             } else if let Ok(channel) = Channel::deserialize(action) {
-                (self.handler)(channel, WsData::deserialize(data)?).await
+                let ws_data =
+                    WsData::deserialize(data).map_err(|_| Error::Deserialization(data.clone()))?;
+                (self.handler)(channel, ws_data).await;
             }
         } else {
             log::warn!("Invalid message format: {}", text);
