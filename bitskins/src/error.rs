@@ -19,11 +19,17 @@ pub enum Error {
     #[error("Failed to deserialize response")]
     Deserialization,
 
-    #[error("Failed to get a market item")]
-    FetchMarketItem,
+    #[error("Market item {0} not found in table")]
+    MarketItemNotFound(i32),
 
-    #[error("Failed to update market item")]
-    UpdateMarketItem,
+    #[error("Market item {0} couldn't be deleted from table")]
+    MarketItemDeleteFailed(i32),
+
+    #[error("Market item {0} couldn't be updated in table")]
+    MarketItemUpdateFailed(i32),
+
+    #[error("Market item {0} couldn't be fetched from server")]
+    MarketItemFetchFailed(String),
 
     #[error("Bad status code {0}")]
     StatusCode(reqwest::StatusCode),
