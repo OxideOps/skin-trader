@@ -146,7 +146,12 @@ pub async fn sync_sales_data(db: &Database, client: &HttpClient) -> Result<()> {
     for skin in skins {
         count += 1;
 
-        log::info!("Processing skin {}, {}/{}", skin.id, count, total);
+        log::info!(
+            "Syncing sales data for skin {}, {}/{}",
+            skin.id,
+            count,
+            total
+        );
 
         let skin: db::Skin = skin.into();
         let sales = get_sales(client, skin.id).await?;
@@ -172,7 +177,12 @@ pub async fn sync_market_data(db: &Database, client: &HttpClient) -> Result<()> 
     for skin in skins {
         count += 1;
 
-        log::info!("Processing skin {}, {}/{}", skin.id, count, total);
+        log::info!(
+            "Syncing market data for skin {}, {}/{}",
+            skin.id,
+            count,
+            total
+        );
 
         let skin: db::Skin = skin.into();
         let market_items = client.fetch_market_items_for_skin(skin.id).await?;
