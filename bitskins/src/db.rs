@@ -228,6 +228,7 @@ impl Database {
             r#"
             INSERT INTO MarketItem (created_at, id, skin_id, price, phase_id, float_value)
             VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (id) DO NOTHING
             "#,
             item.created_at.0,
             item.id,
