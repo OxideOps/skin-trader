@@ -126,7 +126,8 @@ impl HttpClient {
             return Err(Error::StatusCode(status));
         }
 
-        Ok(response.json().await?)
+        let json: Value = response.json().await?;
+        serde_json::from_value(json.clone()).map_err(|_| Error::Deserialization(json))
     }
 
     async fn request_with_retries<T: DeserializeOwned>(
@@ -137,12 +138,9 @@ impl HttpClient {
         for attempt in 1..MAX_ATTEMPTS {
             match self.request(builder.try_clone().unwrap()).await {
                 Ok(response) => return Ok(response),
-                Err(Error::HttpClient(e)) => {
-                    if e.is_decode() {
-                        return Err(Error::Deserialization(self.request(builder).await?));
-                    }
+                Err(Error::StatusCode(status)) => {
                     log::warn!(
-                        "Response was not Ok: {e}, retrying in {backoff} seconds \
+                        "Response failed with status code: {status}, retrying in {backoff} seconds \
                         ({} tries remaining)",
                         MAX_ATTEMPTS - attempt
                     );
