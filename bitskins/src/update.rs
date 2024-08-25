@@ -22,18 +22,36 @@ impl From<http::MarketItem> for db::MarketItem {
             skin_id: item.skin_id,
             price: item.price,
             float_value: item.float_value,
-            discount: item.discount,
+            phase_id: item.phase_id,
         }
     }
 }
 
 impl db::Sticker {
-    fn new(sticker: http::Sticker, sale_id: &i32) -> Self {
+    fn from_sale(sticker: http::Sticker, sale_id: &i32) -> Self {
         Self {
             id: 0,
             sale_id: Some(*sale_id),
             skin_id: sticker.skin_id,
             image: sticker.image,
+            market_item_id: None,
+            slot: sticker.slot,
+            wear: sticker.wear,
+            suggested_price: sticker.suggested_price,
+            offset_x: sticker.offset_x,
+            offset_y: sticker.offset_y,
+            skin_status: sticker.skin_status,
+            rotation: sticker.rotation,
+        }
+    }
+
+    fn from_market_item(sticker: http::Sticker, market_item_id: &str) -> Self {
+        Self {
+            id: 0,
+            sale_id: None,
+            skin_id: sticker.skin_id,
+            image: sticker.image,
+            market_item_id: market_item_id.parse().ok(),
             slot: sticker.slot,
             wear: sticker.wear,
             suggested_price: sticker.suggested_price,
@@ -61,23 +79,50 @@ impl db::Sale {
     }
 }
 
+async fn handle_sticker(
+    db: &Database,
+    sticker: http::Sticker,
+    db_sticker: db::Sticker,
+) -> Result<()> {
+    if let (Some(id), Some(class_id), Some(name)) =
+        (sticker.skin_id, sticker.class_id, sticker.name)
+    {
+        let skin = db::Skin {
+            id,
+            name,
+            class_id,
+            suggested_price: sticker.suggested_price,
+        };
+
+        db.insert_skin(skin).await?;
+        db.insert_sticker(&db_sticker).await?;
+    }
+
+    Ok(())
+}
+
 async fn handle_sale(db: &Database, skin: &db::Skin, sale: http::Sale) -> Result<()> {
     let sale_id = db.insert_sale(&db::Sale::new(&sale, skin.id)).await?;
     for sticker in sale.stickers.into_iter().flatten() {
-        let db_sticker = db::Sticker::new(sticker.clone(), &sale_id);
-        if let (Some(id), Some(class_id), Some(name)) =
-            (sticker.skin_id, sticker.class_id, sticker.name)
-        {
-            let skin = db::Skin {
-                id,
-                name,
-                class_id,
-                suggested_price: sticker.suggested_price,
-            };
+        handle_sticker(
+            db,
+            sticker.clone(),
+            db::Sticker::from_sale(sticker, &sale_id),
+        )
+        .await?;
+    }
+    Ok(())
+}
 
-            db.insert_skin(skin).await?;
-            db.insert_sticker(&db_sticker).await?;
-        }
+async fn handle_market_item(db: &Database, item: http::MarketItem) -> Result<()> {
+    db.insert_market_item(item.clone().into()).await?;
+    for sticker in item.stickers.into_iter().flatten() {
+        handle_sticker(
+            db,
+            sticker.clone(),
+            db::Sticker::from_market_item(sticker, &item.id),
+        )
+        .await?;
     }
     Ok(())
 }
@@ -93,7 +138,7 @@ async fn get_sales(client: &HttpClient, skin_id: i32) -> Result<Vec<http::Sale>>
     }
 }
 
-pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()> {
+pub async fn sync_sales_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
 
     for skin in skins {
@@ -111,6 +156,25 @@ pub async fn sync_bitskins_data(db: &Database, client: &HttpClient) -> Result<()
 
     log::info!("Updating price statistics");
     db.calculate_and_update_price_statistics().await?;
+
+    Ok(())
+}
+
+pub async fn sync_market_data(db: &Database, client: &HttpClient) -> Result<()> {
+    let skins = client.fetch_skins().await?;
+
+    for skin in skins {
+        log::info!("Processing skin {}", skin.id);
+
+        let skin: db::Skin = skin.into();
+        let market_items = client.fetch_market_items_for_skin(skin.id).await?;
+
+        db.insert_skin(skin.clone()).await?;
+
+        for sale in market_items {
+            handle_market_item(db, sale).await?;
+        }
+    }
 
     Ok(())
 }

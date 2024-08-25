@@ -1,4 +1,4 @@
-use bitskins::{sync_bitskins_data, Database, HttpClient};
+use bitskins::{sync_market_data, Database, HttpClient};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -6,7 +6,7 @@ async fn main() -> anyhow::Result<()> {
     let db = Database::new().await?;
     let client = HttpClient::new();
 
-    sync_bitskins_data(&db, &client).await?;
+    sync_market_data(&db, &client).await?;
 
     Ok(())
 }

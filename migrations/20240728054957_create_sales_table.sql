@@ -20,21 +20,3 @@ CREATE TABLE Sale
 );
 
 CREATE INDEX idx_sale_skin_id ON Sale (skin_id);
-
-CREATE TABLE Sticker
-(
-    id              SERIAL PRIMARY KEY,
-    sale_id         INTEGER REFERENCES Sale (id),
-    skin_id         INTEGER REFERENCES Skin (id),
-    image           VARCHAR(255),
-    slot            SMALLINT CHECK (slot >= 0),
-    wear            DOUBLE PRECISION,
-    suggested_price INTEGER CHECK (suggested_price >= 0),
-    offset_x        DOUBLE PRECISION,
-    offset_y        DOUBLE PRECISION,
-    skin_status     INTEGER,
-    rotation        DOUBLE PRECISION
-);
-
-CREATE INDEX idx_sticker_sale_id ON Sticker (sale_id);
-CREATE INDEX idx_sticker_skin_id ON Sticker (skin_id);

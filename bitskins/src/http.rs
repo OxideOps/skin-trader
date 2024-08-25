@@ -45,7 +45,7 @@ pub struct Sticker {
     pub rotation: Option<f64>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct MarketItem {
     pub asset_id: String,
     pub bot_id: i32,
