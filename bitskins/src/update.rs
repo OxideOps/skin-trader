@@ -140,9 +140,13 @@ async fn get_sales(client: &HttpClient, skin_id: i32) -> Result<Vec<http::Sale>>
 
 pub async fn sync_sales_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
+    let mut count = 0;
+    let total = skins.len();
 
     for skin in skins {
-        log::info!("Processing skin {}", skin.id);
+        count += 1;
+
+        log::info!("Processing skin {}, {}/{}", skin.id, count, total);
 
         let skin: db::Skin = skin.into();
         let sales = get_sales(client, skin.id).await?;
@@ -162,9 +166,13 @@ pub async fn sync_sales_data(db: &Database, client: &HttpClient) -> Result<()> {
 
 pub async fn sync_market_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
+    let mut count = 0;
+    let total = skins.len();
 
     for skin in skins {
-        log::info!("Processing skin {}", skin.id);
+        count += 1;
+
+        log::info!("Processing skin {}, {}/{}", skin.id, count, total);
 
         let skin: db::Skin = skin.into();
         let market_items = client.fetch_market_items_for_skin(skin.id).await?;

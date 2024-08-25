@@ -3,10 +3,13 @@ use crate::{Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
+use std::time::Duration;
+use tokio::time::sleep;
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
+const MAX_ATTEMPTS: usize = 3;
 
 pub const CS2_APP_ID: i32 = 730;
 
@@ -126,8 +129,28 @@ impl HttpClient {
         Ok(response.json().await?)
     }
 
+    async fn request_with_retries<T: DeserializeOwned>(
+        &self,
+        builder: reqwest::RequestBuilder,
+    ) -> Result<T> {
+        let mut backoff = 1;
+        for attempt in 1..=MAX_ATTEMPTS {
+            match self.request(builder.try_clone().unwrap()).await {
+                Ok(response) => return Ok(response),
+                Err(e) => {
+                    if attempt == MAX_ATTEMPTS {
+                        return Err(e);
+                    }
+                    sleep(Duration::from_secs(backoff)).await;
+                    backoff *= 2;
+                }
+            }
+        }
+        unreachable!()
+    }
+
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
-        self.request(
+        self.request_with_retries(
             self.client
                 .post(format!("{BASE_URL}{endpoint}"))
                 .json(&payload),
@@ -136,7 +159,7 @@ impl HttpClient {
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
-        self.request(self.client.get(format!("{BASE_URL}{endpoint}")))
+        self.request_with_retries(self.client.get(format!("{BASE_URL}{endpoint}")))
             .await
     }
 
