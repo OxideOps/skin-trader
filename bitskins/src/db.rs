@@ -414,7 +414,7 @@ impl Database {
             r#"
             INSERT INTO Skin (id, name, class_id, suggested_price)
             VALUES ($1, $2, $3, $4)
-            ON CONFLICT (name) DO NOTHING
+            ON CONFLICT (id) DO NOTHING
             "#,
             skin.id,
             skin.name,
