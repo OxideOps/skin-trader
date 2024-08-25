@@ -16,13 +16,13 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
-RUN sqlx migrate run
-RUN cargo build --release --bin bot
+RUN sqlx database reset
+RUN cargo build --release -p sandbox
 
 # We do not need the Rust toolchain to run the binary!
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS runtime
 ARG BITSKIN_API_KEY
 ENV BITSKIN_API_KEY=$BITSKIN_API_KEY
 WORKDIR /app
-COPY --from=builder /app/target/release/bot /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/bot"]
+COPY --from=builder /app/target/release/sandbox /usr/local/bin
+ENTRYPOINT ["/usr/local/bin/sandbox"]
