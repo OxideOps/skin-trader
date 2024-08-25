@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use bitskins::{Channel, Database, HttpClient, PriceStatistics, WsData, CS2_APP_ID};
+use bitskins::{Channel, Database, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
 use log::{error, info, warn};
 
 const MAX_PRICE: i32 = 50;
@@ -46,7 +46,7 @@ impl Trader {
     }
 
     async fn handle_listed(&self, item: WsData) -> Result<()> {
-        self.insert_item(&item.id).await?;
+        self.insert_item(&item).await?;
         self.attempt_purchase(item).await
     }
 
@@ -55,7 +55,7 @@ impl Trader {
         let id = item.id.parse()?;
 
         if self.db.update_market_item_price(id, price).await.is_err() {
-            self.insert_item(&item.id).await?;
+            self.insert_item(&item).await?;
         }
 
         self.attempt_purchase(item).await
@@ -67,10 +67,17 @@ impl Trader {
         Ok(())
     }
 
-    async fn insert_item(&self, id: &str) -> Result<()> {
-        let db_item = self.http.fetch_market_item(id).await?.into();
+    async fn insert_item(&self, item: &WsData) -> Result<()> {
+        let db_item = self.http.fetch_market_item(&item.id).await?.into();
+        self.db
+            .insert_skin(Skin {
+                id: item.id.parse()?,
+                name: item.name.clone().unwrap(),
+                class_id: item.class_id.clone().unwrap(),
+                suggested_price: item.suggested_price,
+            })
+            .await?;
         self.db.insert_market_item(db_item).await?;
-        //TODO: if there isn't a corresponding skin, fetch it and store it.
         Ok(())
     }
 
