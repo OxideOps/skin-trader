@@ -134,19 +134,24 @@ impl HttpClient {
         builder: reqwest::RequestBuilder,
     ) -> Result<T> {
         let mut backoff = 1;
-        for attempt in 1..=MAX_ATTEMPTS {
+        for attempt in 1..MAX_ATTEMPTS {
             match self.request(builder.try_clone().unwrap()).await {
                 Ok(response) => return Ok(response),
                 Err(e) => {
                     if attempt == MAX_ATTEMPTS {
                         return Err(e);
                     }
+                    log::warn!(
+                        "Response was not Ok: {e}, retrying in {backoff} seconds \
+                        ({} tries remaining)",
+                        MAX_ATTEMPTS - attempt
+                    );
                     sleep(Duration::from_secs(backoff)).await;
                     backoff *= 2;
                 }
             }
         }
-        unreachable!()
+        self.request(builder).await
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
