@@ -160,8 +160,8 @@ where
                 Ok(Message::Close(frame)) => {
                     log::warn!("Received close frame: {:?}", frame);
                 }
-                Err(err) => {
-                    log::error!("Error receiving message: {:?}", err);
+                Err(_) => {
+                    log::info!("Got disconnected, reconnecting..");
                     self = Self::connect(self.handler).await?;
                     self.authenticate().await?;
                 }

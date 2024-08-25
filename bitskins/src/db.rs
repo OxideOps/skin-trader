@@ -242,6 +242,24 @@ impl Database {
         Ok(())
     }
 
+    pub async fn delete_market_item(&self, item_id: i32) -> Result<()> {
+        let result = sqlx::query!(
+            r#"
+            DELETE FROM MarketItem
+            WHERE id = $1
+            "#,
+            item_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Error::MarketItemDeleteFailed(item_id));
+        }
+
+        Ok(())
+    }
+
     pub async fn update_market_item_price(&self, item_id: i32, price: f64) -> Result<()> {
         let result = sqlx::query!(
             r#"
@@ -256,7 +274,7 @@ impl Database {
         .await?;
 
         if result.rows_affected() == 0 {
-            return Err(Error::UpdateMarketItem);
+            return Err(Error::MarketItemUpdateFailed(item_id));
         }
 
         Ok(())
