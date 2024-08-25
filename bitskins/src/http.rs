@@ -208,23 +208,7 @@ impl HttpClient {
     }
 
     pub async fn fetch_market_item(&self, id: &str) -> Result<MarketItem> {
-        let data = self
-            .post::<MarketData>(
-                &format!("/market/search/{CS2_APP_ID}"),
-                json!({
-                    "where": { "id": [id] },
-                    "limit": 1,
-                    "offset": 0,
-                }),
-            )
-            .await?;
-
-        // Should be a list with only 1 item
-        data.list
-            .into_iter()
-            .next()
-            .map(Into::into)
-            .ok_or(Error::MarketItemFetchFailed(id.to_string()))
+        self.post("/market/search/get", json!({"id": id})).await
     }
 
     async fn fetch_market_data_response_by_skin(
