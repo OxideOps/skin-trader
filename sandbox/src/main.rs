@@ -1,6 +1,4 @@
-use bitskins::{sync_market_data, sync_sales_data, Database, HttpClient};
-
-use tokio::try_join;
+use bitskins::{sync_data, Database, HttpClient};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -10,10 +8,7 @@ async fn main() -> anyhow::Result<()> {
 
     db.flush_all().await?;
 
-    try_join!(
-        sync_market_data(&db, &client),
-        sync_sales_data(&db, &client)
-    )?;
+    sync_data(&db, &client).await?;
 
     Ok(())
 }

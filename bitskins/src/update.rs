@@ -1,7 +1,6 @@
 use crate::Result;
 use crate::{db, http, Database, HttpClient};
-use std::time::Duration;
-use tokio::time::sleep;
+use futures_util::future::join_all;
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -127,84 +126,37 @@ async fn handle_market_item(db: &Database, item: http::MarketItem) -> Result<()>
     Ok(())
 }
 
-async fn get_sales(client: &HttpClient, skin_id: i32) -> Result<Vec<http::Sale>> {
-    match client.fetch_sales(skin_id).await {
-        Ok(sales) => Ok(sales),
-        Err(_) => {
-            log::info!("Delaying fetching sales for skin {} for 1 second", skin_id);
-            sleep(Duration::from_secs(1)).await;
-            client.fetch_sales(skin_id).await
-        }
-    }
-}
+async fn handle_skin(db: Database, client: HttpClient, skin: http::Skin) -> Result<()> {
+    let sales = client.fetch_market_items_for_skin(skin.id).await?;
+    let market_items = client.fetch_sales(skin.id).await?;
+    let skin: db::Skin = skin.into();
 
-pub async fn sync_sales_data(db: &Database, client: &HttpClient) -> Result<()> {
-    let skins = client.fetch_skins().await?;
-    let mut count = 0;
-    let total = skins.len();
+    db.insert_skin(skin.clone()).await?;
 
-    for skin in skins {
-        count += 1;
-
-        log::info!(
-            "Syncing sales data for skin {}, {}/{}",
-            skin.id,
-            count,
-            total
-        );
-
-        let skin: db::Skin = skin.into();
-        let sales = match get_sales(client, skin.id).await {
-            Ok(sales) => sales,
-            Err(_) => {
-                log::warn!("Failed to fetch sales for skin {}", skin.id);
-                continue;
-            }
-        };
-
-        db.insert_skin(skin.clone()).await?;
-
-        for sale in sales {
-            handle_sale(db, &skin, sale).await?;
-        }
+    for sale in sales {
+        handle_market_item(&db, sale).await?;
     }
 
-    log::info!("Updating price statistics");
-    db.calculate_and_update_price_statistics().await?;
+    for sale in market_items {
+        handle_sale(&db, &skin, sale).await?;
+    }
 
     Ok(())
 }
 
-pub async fn sync_market_data(db: &Database, client: &HttpClient) -> Result<()> {
+pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
-    let mut count = 0;
-    let total = skins.len();
 
-    for skin in skins {
-        count += 1;
-
-        log::info!(
-            "Syncing market data for skin {}, {}/{}",
-            skin.id,
-            count,
-            total
-        );
-
-        let skin: db::Skin = skin.into();
-        let market_items = match client.fetch_market_items_for_skin(skin.id).await {
-            Ok(items) => items,
-            Err(e) => {
-                log::warn!("Failed to fetch market items for skin {}: {}", skin.id, e);
-                continue;
-            }
+    join_all(skins.into_iter().map(|skin| async move {
+        match handle_skin(db.clone(), client.clone(), skin.clone()).await {
+            Ok(_) => log::info!("Synced data for skin {}", skin.id),
+            Err(e) => log::error!("Error syncing data for skin {}: {}", skin.id, e),
         };
+    }))
+    .await;
 
-        db.insert_skin(skin.clone()).await?;
-
-        for sale in market_items {
-            handle_market_item(db, sale).await?;
-        }
-    }
+    log::info!("Updating price statistics");
+    db.calculate_and_update_price_statistics().await?;
 
     Ok(())
 }

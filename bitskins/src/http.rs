@@ -1,19 +1,22 @@
 use crate::date::DateTime;
 use crate::{Error, Result};
+use priority_async_mutex::PriorityMutex;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
+use std::sync::Arc;
 use std::time::Duration;
-use tokio::time::sleep;
+use tokio::time::{sleep, Instant};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 const MAX_ATTEMPTS: usize = 3;
+const INTERVAL: Duration = Duration::from_millis(250);
 
 pub const CS2_APP_ID: i32 = 730;
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Skin {
     pub id: i32,
     pub name: String,
@@ -100,6 +103,7 @@ pub struct MarketDataCounter {
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
+    wait_until: Arc<PriorityMutex<Instant>>,
 }
 
 impl Default for HttpClient {
@@ -112,10 +116,18 @@ impl HttpClient {
     pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),
+            wait_until: Arc::new(PriorityMutex::new(Instant::now())),
         }
     }
 
+    async fn acquire(&self) {
+        let mut wait_until = self.wait_until.lock(1).await;
+        sleep(*wait_until - Instant::now()).await;
+        *wait_until = Instant::now() + INTERVAL;
+    }
+
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
+        self.acquire().await;
         let response = builder
             .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .send()
@@ -144,7 +156,7 @@ impl HttpClient {
                         ({} tries remaining)",
                         MAX_ATTEMPTS - attempt
                     );
-                    sleep(Duration::from_secs(backoff)).await;
+                    *self.wait_until.lock(0).await = Instant::now() + Duration::from_secs(backoff);
                     backoff *= 2;
                 }
                 Err(e) => return Err(e),
