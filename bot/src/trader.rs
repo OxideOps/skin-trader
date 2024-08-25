@@ -82,7 +82,12 @@ impl Trader {
     }
 
     async fn attempt_purchase(&self, item: WsData) -> Result<()> {
-        let stats = self.db.get_price_statistics(item.skin_id).await?;
+        let stats = match self.db.get_price_statistics(item.skin_id).await? {
+            Some(stats) => stats,
+            _ => {
+                bail!("no price stats found for skin_id: {}", item.skin_id)
+            }
+        };
 
         if item.price > Some(MAX_PRICE) {
             bail!("item price exceeds max price: {MAX_PRICE}, skipping..")
