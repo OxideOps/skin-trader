@@ -137,9 +137,9 @@ impl HttpClient {
         for attempt in 1..MAX_ATTEMPTS {
             match self.request(builder.try_clone().unwrap()).await {
                 Ok(response) => return Ok(response),
-                Err(e) => {
-                    if attempt == MAX_ATTEMPTS {
-                        return Err(e);
+                Err(Error::HttpClient(e)) => {
+                    if e.is_decode() {
+                        return Err(Error::Deserialization(self.request(builder).await?));
                     }
                     log::warn!(
                         "Response was not Ok: {e}, retrying in {backoff} seconds \
@@ -149,6 +149,7 @@ impl HttpClient {
                     sleep(Duration::from_secs(backoff)).await;
                     backoff *= 2;
                 }
+                Err(e) => return Err(e),
             }
         }
         self.request(builder).await

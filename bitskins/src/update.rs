@@ -154,7 +154,13 @@ pub async fn sync_sales_data(db: &Database, client: &HttpClient) -> Result<()> {
         );
 
         let skin: db::Skin = skin.into();
-        let sales = get_sales(client, skin.id).await?;
+        let sales = match get_sales(client, skin.id).await {
+            Ok(sales) => sales,
+            Err(_) => {
+                log::warn!("Failed to fetch sales for skin {}", skin.id);
+                continue;
+            }
+        };
 
         db.insert_skin(skin.clone()).await?;
 
@@ -185,7 +191,13 @@ pub async fn sync_market_data(db: &Database, client: &HttpClient) -> Result<()> 
         );
 
         let skin: db::Skin = skin.into();
-        let market_items = client.fetch_market_items_for_skin(skin.id).await?;
+        let market_items = match client.fetch_market_items_for_skin(skin.id).await {
+            Ok(items) => items,
+            Err(e) => {
+                log::warn!("Failed to fetch market items for skin {}: {}", skin.id, e);
+                continue;
+            }
+        };
 
         db.insert_skin(skin.clone()).await?;
 
