@@ -134,10 +134,13 @@ impl HttpClient {
         builder: reqwest::RequestBuilder,
     ) -> Result<T> {
         let mut backoff = 1;
-        for _ in 1..MAX_ATTEMPTS {
+        for attempt in 1..MAX_ATTEMPTS {
             match self.request(builder.try_clone().unwrap()).await {
                 Ok(response) => return Ok(response),
-                Err(_) => {
+                Err(e) => {
+                    log::warn!(
+                        "Error in response: {e}, retrying... ({attempt} / {MAX_ATTEMPTS} attempts)"
+                    );
                     sleep(Duration::from_secs(backoff)).await;
                     backoff *= 2;
                 }
