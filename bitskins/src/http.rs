@@ -138,6 +138,9 @@ impl HttpClient {
             match self.request(builder.try_clone().unwrap()).await {
                 Ok(response) => return Ok(response),
                 Err(e) => {
+                    if attempt == MAX_ATTEMPTS {
+                        return Err(e);
+                    }
                     log::warn!(
                         "Error in response: {e}, retrying... ({attempt} / {MAX_ATTEMPTS} attempts)"
                     );
