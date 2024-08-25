@@ -142,7 +142,7 @@ impl HttpClient {
                         return Err(e);
                     }
                     log::warn!(
-                        "Error in response: {e}, retrying in {backoff} seconds \
+                        "Response was not Ok: {e}, retrying in {backoff} seconds \
                         ({} tries remaining)",
                         MAX_ATTEMPTS - attempt
                     );
