@@ -63,6 +63,7 @@ impl Trader {
 
     async fn handle_delisted_or_sold(&self, item: WsData) -> Result<()> {
         self.db.delete_market_item(item.id.parse()?).await?;
+        //TODO: if it was a sale, add it to sale table
         Ok(())
     }
 
