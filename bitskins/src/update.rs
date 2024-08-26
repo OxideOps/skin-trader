@@ -1,5 +1,8 @@
 use crate::Result;
 use crate::{db, http, Database, HttpClient};
+use futures_util::future::join_all;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -155,15 +158,26 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
         .map(|skin| skin.into())
         .collect();
     let total = skins.len();
+    let i = Arc::new(AtomicUsize::new(1));
 
     db.insert_skins(&skins).await?;
 
-    for (i, skin) in skins.into_iter().enumerate() {
-        match handle_skin(db, client, &skin).await {
-            Ok(_) => log::info!("Synced data for skin {}, {}/{}", skin.id, i, total),
-            Err(e) => log::error!("Error syncing data for skin {}: {}", skin.id, e),
-        };
-    }
+    join_all(skins.into_iter().map(|skin| {
+        let i = i.clone();
+        async move {
+            match handle_skin(db, client, &skin).await {
+                Ok(_) => {
+                    let i = i.fetch_add(1, Ordering::Relaxed);
+                    log::info!("Synced data for skin {}, {}/{}", skin.id, i, total)
+                }
+                Err(e) => {
+                    i.fetch_add(1, Ordering::Relaxed);
+                    log::error!("Error syncing data for skin {}: {}", skin.id, e)
+                }
+            };
+        }
+    }))
+    .await;
 
     log::info!("Updating price statistics");
     db.calculate_and_update_price_statistics().await?;
