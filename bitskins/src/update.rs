@@ -125,20 +125,25 @@ async fn handle_market_item(db: &Database, item: http::MarketItem) -> Result<()>
     Ok(())
 }
 
+async fn handle_market_items(db: Database, client: HttpClient, skin: &db::Skin) -> Result<()> {
+    for market_item in client.fetch_market_items_for_skin(skin.id).await? {
+        handle_market_item(&db, market_item).await?;
+    }
+    Ok(())
+}
+
+async fn handle_sales(db: Database, client: HttpClient, skin: &db::Skin) -> Result<()> {
+    for sale in client.fetch_sales(skin.id).await? {
+        handle_sale(&db, skin, sale).await?;
+    }
+    Ok(())
+}
+
 async fn handle_skin(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
-    let (market_items, sales) = tokio::try_join!(
-        client.fetch_market_items_for_skin(skin.id),
-        client.fetch_sales(skin.id),
+    tokio::try_join!(
+        handle_market_items(db.clone(), client.clone(), skin),
+        handle_sales(db.clone(), client.clone(), skin),
     )?;
-
-    for market_item in market_items {
-        handle_market_item(db, market_item).await?;
-    }
-
-    for sale in sales {
-        handle_sale(db, skin, sale).await?;
-    }
-
     Ok(())
 }
 
