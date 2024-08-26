@@ -10,7 +10,6 @@ pub(crate) fn get_lock_for_endpoint(endpoint: Endpoint) -> &'static Mutex<()> {
 
 /// Enum for  all endpoints for Bitskins API
 #[derive(EnumString, Display, EnumCount, Copy, Clone)]
-#[strum(serialize_all = "snake_case")]
 pub enum Endpoint {
     #[strum(serialize = "/market/delist/single")]
     DelistSingle,
