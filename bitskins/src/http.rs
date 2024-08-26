@@ -147,13 +147,14 @@ impl HttpClient {
 
     async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
         let url = format!("{BASE_URL}{endpoint}");
-        self.request(endpoint, self.client.post(url).json(&payload))
+        self.request_with_retries(endpoint, self.client.post(url).json(&payload))
             .await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
         let url = format!("{BASE_URL}{endpoint}");
-        self.request(endpoint, self.client.get(url)).await
+        self.request_with_retries(endpoint, self.client.get(url))
+            .await
     }
 
     async fn request_with_retries<T: DeserializeOwned>(
