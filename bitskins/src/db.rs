@@ -410,6 +410,30 @@ impl Database {
         Ok(skin_ids.into_iter().map(|r| r.skin_id).collect())
     }
 
+    pub async fn insert_skins(&self, skins: &[Skin]) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        for skin in skins {
+            sqlx::query!(
+                r#"
+                INSERT INTO Skin (id, name, class_id, suggested_price)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (id) DO NOTHING
+                "#,
+                skin.id,
+                skin.name,
+                skin.class_id,
+                skin.suggested_price,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
     pub async fn insert_skin(&self, skin: Skin) -> Result<()> {
         sqlx::query!(
             r#"
