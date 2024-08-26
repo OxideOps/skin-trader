@@ -1,11 +1,10 @@
 use crate::date::DateTime;
-use crate::endpoint::{Endpoint, get_lock_for_endpoint}
-use crate::{endpoint, Error, Result};
+use crate::endpoint::{get_lock_for_endpoint, Endpoint};
+use crate::{Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
 use std::time::Duration;
-use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 const BASE_URL: &str = "https://api.bitskins.com";
@@ -140,14 +139,17 @@ impl HttpClient {
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: Endpoint, payload: Value) -> Result<T> {
-        let url = format!("{BASE_URL}{endpoint}");
-        self.request_with_retries(endpoint, self.client.post(url).json(&payload))
-            .await
+        self.request_with_retries(
+            endpoint,
+            self.client
+                .post(format!("{BASE_URL}{endpoint}"))
+                .json(&payload),
+        )
+        .await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
-        let url = format!("{BASE_URL}{endpoint}");
-        self.request_with_retries(endpoint, self.client.get(url))
+        self.request_with_retries(endpoint, self.client.get(format!("{BASE_URL}{endpoint}")))
             .await
     }
 

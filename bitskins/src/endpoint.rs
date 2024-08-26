@@ -4,6 +4,10 @@ use tokio::sync::Mutex;
 
 static ENDPOINT_LOCKS: EndpointLocks = EndpointLocks::new();
 
+pub(crate) fn get_lock_for_endpoint(endpoint: Endpoint) -> &'static Mutex<()> {
+    &ENDPOINT_LOCKS.locks[endpoint as usize]
+}
+
 /// Enum for  all endpoints for Bitskins API
 #[derive(EnumString, Display, EnumCount, Copy, Clone)]
 #[strum(serialize_all = "snake_case")]
@@ -43,8 +47,4 @@ impl EndpointLocks {
             locks: [INIT; Endpoint::COUNT],
         }
     }
-}
-
-pub(crate) fn get_lock_for_endpoint(endpoint: Endpoint) -> &'static Mutex<()> {
-    &ENDPOINT_LOCKS.locks[endpoint as usize]
 }
