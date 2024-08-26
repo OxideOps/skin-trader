@@ -6,13 +6,15 @@ use serde_json::{json, Value};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::{Semaphore, SemaphorePermit};
 use tokio::time::{sleep, Instant};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 const MAX_ATTEMPTS: usize = 3;
-const INTERVAL: Duration = Duration::from_millis(250);
+const INTERVAL: Duration = Duration::from_millis(200);
+const MAX_CONCURRENT_REQUESTS: usize = 2;
 
 pub const CS2_APP_ID: i32 = 730;
 
@@ -104,6 +106,7 @@ pub struct MarketDataCounter {
 pub struct HttpClient {
     client: reqwest::Client,
     wait_until: Arc<PriorityMutex<Instant>>,
+    semaphore: Arc<Semaphore>,
 }
 
 impl Default for HttpClient {
@@ -117,17 +120,19 @@ impl HttpClient {
         Self {
             client: reqwest::Client::new(),
             wait_until: Arc::new(PriorityMutex::new(Instant::now())),
+            semaphore: Arc::new(Semaphore::new(MAX_CONCURRENT_REQUESTS)),
         }
     }
 
-    async fn acquire(&self) {
+    async fn acquire(&self) -> Result<SemaphorePermit> {
         let mut wait_until = self.wait_until.lock(1).await;
         sleep(*wait_until - Instant::now()).await;
         *wait_until = Instant::now() + INTERVAL;
+        Ok(self.semaphore.acquire().await?)
     }
 
     async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
-        self.acquire().await;
+        let _ = self.acquire().await?;
         let response = builder
             .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .send()
