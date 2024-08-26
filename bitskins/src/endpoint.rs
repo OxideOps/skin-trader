@@ -2,7 +2,7 @@ use strum::EnumCount;
 use strum_macros::{Display, EnumCount, EnumString};
 use tokio::sync::Mutex;
 
-pub(crate) static ENDPOINT_LOCKS: EndpointLocks = EndpointLocks::new();
+static ENDPOINT_LOCKS: EndpointLocks = EndpointLocks::new();
 
 /// Enum for  all endpoints for Bitskins API
 #[derive(EnumString, Display, EnumCount, Copy, Clone)]
@@ -43,4 +43,8 @@ impl EndpointLocks {
             locks: [INIT; Endpoint::COUNT],
         }
     }
+}
+
+pub(crate) fn get_lock_for_endpoint(endpoint: Endpoint) -> &'static Mutex<()> {
+    &ENDPOINT_LOCKS.locks[endpoint as usize]
 }

@@ -1,6 +1,6 @@
 use crate::date::DateTime;
-use crate::endpoint::{Endpoint, ENDPOINT_LOCKS};
-use crate::{Error, Result};
+use crate::endpoint::{Endpoint, get_lock_for_endpoint}
+use crate::{endpoint, Error, Result};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
@@ -117,16 +117,12 @@ impl HttpClient {
         }
     }
 
-    fn get_lock_for_endpoint(endpoint: Endpoint) -> &'static Mutex<()> {
-        &ENDPOINT_LOCKS.locks[endpoint as usize]
-    }
-
     async fn request<T: DeserializeOwned>(
         &self,
         endpoint: Endpoint,
         builder: reqwest::RequestBuilder,
     ) -> Result<T> {
-        let lock = Self::get_lock_for_endpoint(endpoint);
+        let lock = get_lock_for_endpoint(endpoint);
         let _guard = lock.lock().await;
 
         let response = builder
