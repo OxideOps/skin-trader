@@ -1,11 +1,9 @@
 use crate::date::DateTime;
 use crate::endpoint::{Endpoint, ENDPOINT_LOCKS};
 use crate::{Error, Result};
-use dashmap::DashMap;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
@@ -146,13 +144,13 @@ impl HttpClient {
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: Endpoint, payload: Value) -> Result<T> {
-        let url = format!("{}{}", BASE_URL, endpoint.to_string());
+        let url = format!("{BASE_URL}{endpoint}");
         self.request_with_retries(endpoint, self.client.post(url).json(&payload))
             .await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
-        let url = format!("{}{}", BASE_URL, endpoint.to_string());
+        let url = format!("{BASE_URL}{endpoint}");
         self.request_with_retries(endpoint, self.client.get(url))
             .await
     }
