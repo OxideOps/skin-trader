@@ -2,6 +2,7 @@
 //! It includes modules for database operations, HTTP requests, and WebSocket communication.
 mod date;
 mod db;
+mod endpoint;
 mod error;
 mod http;
 mod update;

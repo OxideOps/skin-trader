@@ -1,4 +1,5 @@
 use crate::date::DateTime;
+use crate::endpoint::{Endpoint, ENDPOINT_LOCKS};
 use crate::{Error, Result};
 use dashmap::DashMap;
 use serde::{de::DeserializeOwned, Deserialize};
@@ -109,26 +110,25 @@ impl Default for HttpClient {
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
-    endpoint_locks: Arc<DashMap<String, Mutex<()>>>,
 }
 
 impl HttpClient {
     pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),
-            endpoint_locks: Arc::new(DashMap::new()),
         }
+    }
+
+    fn get_lock_for_endpoint(endpoint: Endpoint) -> &'static Mutex<()> {
+        &ENDPOINT_LOCKS.locks[endpoint as usize]
     }
 
     async fn request<T: DeserializeOwned>(
         &self,
-        endpoint: &str,
+        endpoint: Endpoint,
         builder: reqwest::RequestBuilder,
     ) -> Result<T> {
-        let lock = self
-            .endpoint_locks
-            .entry(endpoint.to_string())
-            .or_insert_with(|| Mutex::new(()));
+        let lock = Self::get_lock_for_endpoint(endpoint);
         let _guard = lock.lock().await;
 
         let response = builder
@@ -145,21 +145,21 @@ impl HttpClient {
         serde_json::from_value(json.clone()).map_err(|_| Error::Deserialization(json))
     }
 
-    async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
-        let url = format!("{BASE_URL}{endpoint}");
+    async fn post<T: DeserializeOwned>(&self, endpoint: Endpoint, payload: Value) -> Result<T> {
+        let url = format!("{}{}", BASE_URL, endpoint.to_string());
         self.request_with_retries(endpoint, self.client.post(url).json(&payload))
             .await
     }
 
-    async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
-        let url = format!("{BASE_URL}{endpoint}");
+    async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
+        let url = format!("{}{}", BASE_URL, endpoint.to_string());
         self.request_with_retries(endpoint, self.client.get(url))
             .await
     }
 
     async fn request_with_retries<T: DeserializeOwned>(
         &self,
-        endpoint: &str,
+        endpoint: Endpoint,
         builder: reqwest::RequestBuilder,
     ) -> Result<T> {
         let mut backoff = 1;
@@ -183,7 +183,7 @@ impl HttpClient {
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
         self.post(
-            "/market/delist/single",
+            Endpoint::DelistSingle,
             json!({
                 "app_id": app_id,
                 "id": item_id,
@@ -194,7 +194,7 @@ impl HttpClient {
 
     pub async fn update_price(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
         self.post(
-            "/market/update_price/single",
+            Endpoint::UpdatePriceSingle,
             json!({
                 "app_id": app_id,
                 "id": item_id,
@@ -206,7 +206,7 @@ impl HttpClient {
 
     pub async fn list_item(&self, item_id: &str, price: i32) -> Result<()> {
         self.post(
-            "/market/relist/single",
+            Endpoint::RelistSingle,
             json!({
                 "app_id": CS2_APP_ID,
                 "id": item_id,
@@ -217,12 +217,12 @@ impl HttpClient {
     }
 
     pub async fn check_balance(&self) -> Result<i32> {
-        self.post("/account/profile/balance", json!({})).await
+        self.post(Endpoint::ProfileBalance, json!({})).await
     }
 
     pub async fn buy_item(&self, item_id: &str, price: i32) -> Result<()> {
         self.post(
-            "/market/buy/single",
+            Endpoint::BuySingle,
             json!({
                 "app_id": CS2_APP_ID,
                 "id": item_id,
@@ -234,7 +234,7 @@ impl HttpClient {
 
     pub(crate) async fn fetch_sales(&self, skin_id: i32) -> Result<Vec<Sale>> {
         self.post(
-            "/market/pricing/list",
+            Endpoint::PricingList,
             json!({
                 "app_id": CS2_APP_ID,
                 "skin_id": skin_id,
@@ -245,11 +245,11 @@ impl HttpClient {
     }
 
     pub async fn fetch_skins(&self) -> Result<Vec<Skin>> {
-        self.get(&format!("/market/skin/{CS2_APP_ID}")).await
+        self.get(Endpoint::Skin).await
     }
 
     pub async fn fetch_market_item(&self, id: &str) -> Result<MarketItem> {
-        self.post("/market/search/get", json!({"id": id})).await
+        self.post(Endpoint::SearchGet, json!({"id": id})).await
     }
 
     async fn fetch_market_data_response_by_skin(
@@ -259,7 +259,7 @@ impl HttpClient {
     ) -> Result<MarketData> {
         let response = self
             .post(
-                &format!("/market/search/{CS2_APP_ID}"),
+                Endpoint::SearchCsgo,
                 json!({
                     "where": { "skin_id": [skin_id] },
                     "limit": MAX_LIMIT,
@@ -298,7 +298,7 @@ impl HttpClient {
     // This might be useful if it ever starts working
     pub async fn _fetch_items_history<T: DeserializeOwned>(&self, offset: usize) -> Result<T> {
         self.post(
-            "/market/history/list",
+            Endpoint::HistoryList,
             json!({"type": "buyer", "limit": MAX_LIMIT, "offset": offset}),
         )
         .await
