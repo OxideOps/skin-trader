@@ -1,7 +1,6 @@
 use serde_json::Value;
 use std::env;
 use thiserror::Error;
-use tokio::sync::AcquireError;
 
 /// Represents any possible Bitskin error
 #[derive(Error, Debug)]
@@ -35,7 +34,4 @@ pub enum Error {
 
     #[error("WebSocket error: {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
-
-    #[error("Failed to acquire semaphore permit: {0}")]
-    AcquireError(#[from] AcquireError),
 }

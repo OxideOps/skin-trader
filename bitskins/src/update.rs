@@ -1,6 +1,5 @@
 use crate::Result;
 use crate::{db, http, Database, HttpClient};
-use futures_util::future::join_all;
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
@@ -126,19 +125,22 @@ async fn handle_market_item(db: &Database, item: http::MarketItem) -> Result<()>
     Ok(())
 }
 
-async fn handle_skin(db: Database, client: HttpClient, skin: http::Skin) -> Result<()> {
-    let sales = client.fetch_market_items_for_skin(skin.id).await?;
-    let market_items = client.fetch_sales(skin.id).await?;
+async fn handle_skin(db: &Database, client: &HttpClient, skin: http::Skin) -> Result<()> {
+    let (market_items, sales) = tokio::try_join!(
+        client.fetch_market_items_for_skin(skin.id),
+        client.fetch_sales(skin.id),
+    )?;
+
     let skin: db::Skin = skin.into();
 
     db.insert_skin(skin.clone()).await?;
 
-    for sale in sales {
-        handle_market_item(&db, sale).await?;
+    for market_item in market_items {
+        handle_market_item(db, market_item).await?;
     }
 
-    for sale in market_items {
-        handle_sale(&db, &skin, sale).await?;
+    for sale in sales {
+        handle_sale(db, &skin, sale).await?;
     }
 
     Ok(())
@@ -146,14 +148,14 @@ async fn handle_skin(db: Database, client: HttpClient, skin: http::Skin) -> Resu
 
 pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
     let skins = client.fetch_skins().await?;
+    let total = skins.len();
 
-    join_all(skins.into_iter().map(|skin| async move {
-        match handle_skin(db.clone(), client.clone(), skin.clone()).await {
-            Ok(_) => log::info!("Synced data for skin {}", skin.id),
+    for (i, skin) in skins.into_iter().enumerate() {
+        match handle_skin(db, client, skin.clone()).await {
+            Ok(_) => log::info!("Synced data for skin {}, {}/{}", skin.id, i, total),
             Err(e) => log::error!("Error syncing data for skin {}: {}", skin.id, e),
         };
-    }))
-    .await;
+    }
 
     log::info!("Updating price statistics");
     db.calculate_and_update_price_statistics().await?;
