@@ -164,8 +164,8 @@ impl HttpClient {
                 Ok(response) => return Ok(response),
                 Err(Error::StatusCode(status)) => {
                     log::warn!(
-                        "Response failed with status code: {status}, retrying in {backoff} seconds \
-                        ({} tries remaining)",
+                        "Response failed with status code: {status} for endpoint {endpoint}, \
+                        retrying in {backoff} seconds ({} tries remaining)",
                         MAX_ATTEMPTS - attempt
                     );
                     sleep(Duration::from_secs(backoff)).await;
