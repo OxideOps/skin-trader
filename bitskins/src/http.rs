@@ -13,7 +13,7 @@ const MAX_ATTEMPTS: usize = 3;
 
 pub const CS2_APP_ID: i32 = 730;
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Skin {
     pub id: i32,
     pub name: String,
