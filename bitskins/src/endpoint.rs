@@ -37,6 +37,7 @@ pub(crate) struct EndpointLocks {
 
 impl EndpointLocks {
     const fn new() -> Self {
+        #[allow(clippy::declare_interior_mutable_const)]
         const INIT: Mutex<()> = Mutex::const_new(());
         Self {
             locks: [INIT; Endpoint::COUNT],
