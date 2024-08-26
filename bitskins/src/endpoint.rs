@@ -23,7 +23,7 @@ pub enum Endpoint {
     BuySingle,
     #[strum(serialize = "/market/pricing/list")]
     PricingList,
-    #[strum(serialize = "/market/skin")]
+    #[strum(serialize = "/market/skin/730")]
     Skin,
     #[strum(serialize = "/market/search/get")]
     SearchGet,
