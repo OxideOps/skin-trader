@@ -1,9 +1,12 @@
 use crate::date::DateTime;
 use crate::{Error, Result};
+use dashmap::DashMap;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 const BASE_URL: &str = "https://api.bitskins.com";
@@ -97,25 +100,37 @@ pub struct MarketDataCounter {
     filtered: usize,
 }
 
-#[derive(Clone)]
-pub struct HttpClient {
-    client: reqwest::Client,
-}
-
 impl Default for HttpClient {
     fn default() -> Self {
         Self::new()
     }
 }
 
+#[derive(Clone)]
+pub struct HttpClient {
+    client: reqwest::Client,
+    endpoint_locks: Arc<DashMap<String, Mutex<()>>>,
+}
+
 impl HttpClient {
     pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),
+            endpoint_locks: Arc::new(DashMap::new()),
         }
     }
 
-    async fn request<T: DeserializeOwned>(&self, builder: reqwest::RequestBuilder) -> Result<T> {
+    async fn request<T: DeserializeOwned>(
+        &self,
+        endpoint: &str,
+        builder: reqwest::RequestBuilder,
+    ) -> Result<T> {
+        let lock = self
+            .endpoint_locks
+            .entry(endpoint.to_string())
+            .or_insert_with(|| Mutex::new(()));
+        let _guard = lock.lock().await;
+
         let response = builder
             .header("x-apikey", env::var("BITSKIN_API_KEY")?)
             .send()
@@ -130,13 +145,26 @@ impl HttpClient {
         serde_json::from_value(json.clone()).map_err(|_| Error::Deserialization(json))
     }
 
+    async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
+        let url = format!("{BASE_URL}{endpoint}");
+        self.request_with_retries(endpoint, self.client.post(url).json(&payload))
+            .await
+    }
+
+    async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
+        let url = format!("{BASE_URL}{endpoint}");
+        self.request_with_retries(endpoint, self.client.get(url))
+            .await
+    }
+
     async fn request_with_retries<T: DeserializeOwned>(
         &self,
+        endpoint: &str,
         builder: reqwest::RequestBuilder,
     ) -> Result<T> {
         let mut backoff = 1;
         for attempt in 1..MAX_ATTEMPTS {
-            match self.request(builder.try_clone().unwrap()).await {
+            match self.request(endpoint, builder.try_clone().unwrap()).await {
                 Ok(response) => return Ok(response),
                 Err(Error::StatusCode(status)) => {
                     log::warn!(
@@ -150,21 +178,7 @@ impl HttpClient {
                 Err(e) => return Err(e),
             }
         }
-        self.request(builder).await
-    }
-
-    async fn post<T: DeserializeOwned>(&self, endpoint: &str, payload: Value) -> Result<T> {
-        self.request_with_retries(
-            self.client
-                .post(format!("{BASE_URL}{endpoint}"))
-                .json(&payload),
-        )
-        .await
-    }
-
-    async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T> {
-        self.request_with_retries(self.client.get(format!("{BASE_URL}{endpoint}")))
-            .await
+        self.request(endpoint, builder).await
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
