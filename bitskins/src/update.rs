@@ -125,33 +125,36 @@ async fn handle_market_item(db: &Database, item: http::MarketItem) -> Result<()>
     Ok(())
 }
 
-async fn handle_skin(db: &Database, client: &HttpClient, skin: http::Skin) -> Result<()> {
+async fn handle_skin(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
     let (market_items, sales) = tokio::try_join!(
         client.fetch_market_items_for_skin(skin.id),
         client.fetch_sales(skin.id),
     )?;
-
-    let skin: db::Skin = skin.into();
-
-    db.insert_skin(skin.clone()).await?;
 
     for market_item in market_items {
         handle_market_item(db, market_item).await?;
     }
 
     for sale in sales {
-        handle_sale(db, &skin, sale).await?;
+        handle_sale(db, skin, sale).await?;
     }
 
     Ok(())
 }
 
 pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
-    let skins = client.fetch_skins().await?;
+    let skins: Vec<db::Skin> = client
+        .fetch_skins()
+        .await?
+        .into_iter()
+        .map(|skin| skin.into())
+        .collect();
     let total = skins.len();
 
+    db.insert_skins(&skins).await?;
+
     for (i, skin) in skins.into_iter().enumerate() {
-        match handle_skin(db, client, skin.clone()).await {
+        match handle_skin(db, client, &skin).await {
             Ok(_) => log::info!("Synced data for skin {}, {}/{}", skin.id, i, total),
             Err(e) => log::error!("Error syncing data for skin {}: {}", skin.id, e),
         };
