@@ -1,6 +1,6 @@
 use crate::Result;
 use crate::{db, http, Database, HttpClient};
-use futures_util::future::join_all;
+use futures_util::future::{join_all, try_join};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -128,25 +128,26 @@ async fn handle_market_item(db: &Database, item: http::MarketItem) -> Result<()>
     Ok(())
 }
 
-async fn handle_market_items(db: Database, client: HttpClient, skin: &db::Skin) -> Result<()> {
+async fn handle_market_items(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
     for market_item in client.fetch_market_items_for_skin(skin.id).await? {
-        handle_market_item(&db, market_item).await?;
+        handle_market_item(db, market_item).await?;
     }
     Ok(())
 }
 
-async fn handle_sales(db: Database, client: HttpClient, skin: &db::Skin) -> Result<()> {
+async fn handle_sales(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
     for sale in client.fetch_sales(skin.id).await? {
-        handle_sale(&db, skin, sale).await?;
+        handle_sale(db, skin, sale).await?;
     }
     Ok(())
 }
 
 async fn handle_skin(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
-    tokio::try_join!(
-        handle_market_items(db.clone(), client.clone(), skin),
-        handle_sales(db.clone(), client.clone(), skin),
-    )?;
+    try_join(
+        handle_market_items(db, client, skin),
+        handle_sales(db, client, skin),
+    )
+    .await?;
     Ok(())
 }
 
@@ -158,24 +159,21 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
         .map(|skin| skin.into())
         .collect();
     let total = skins.len();
-    let i = Arc::new(AtomicUsize::new(1));
+    let i = &AtomicUsize::new(0);
 
     db.insert_skins(&skins).await?;
 
-    join_all(skins.into_iter().map(|skin| {
-        let i = i.clone();
-        async move {
-            match handle_skin(db, client, &skin).await {
-                Ok(_) => {
-                    let i = i.fetch_add(1, Ordering::Relaxed);
-                    log::info!("Synced data for skin {}, {}/{}", skin.id, i, total)
-                }
-                Err(e) => {
-                    i.fetch_add(1, Ordering::Relaxed);
-                    log::error!("Error syncing data for skin {}: {}", skin.id, e)
-                }
-            };
-        }
+    join_all(skins.into_iter().map(|skin| async move {
+        match handle_skin(db, client, &skin).await {
+            Ok(_) => {
+                let i = i.fetch_add(1, Ordering::Relaxed);
+                log::info!("Synced data for skin {}, {}/{}", skin.id, i, total)
+            }
+            Err(e) => {
+                i.fetch_add(1, Ordering::Relaxed);
+                log::error!("Error syncing data for skin {}: {}", skin.id, e)
+            }
+        };
     }))
     .await;
 
