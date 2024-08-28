@@ -105,19 +105,15 @@ impl Trader {
 
         let balance = self.http.check_balance().await? as f64;
 
-        if best_deal.price > (MAX_PRICE_BALANCE_THRESHOLD * balance) as i32 {
+        if !best_deal.is_affordable(balance) {
             bail!("Price for best deal exceeds our max price for our current balance")
         }
 
-        if !Self::is_deal_worth_buying(&best_deal, mean) {
+        if !best_deal.is_profitable(mean) {
             bail!("No good deals found for skin_id: {}", item.skin_id)
         }
 
         self.execute_purchase(best_deal, mean as i32).await
-    }
-
-    fn is_deal_worth_buying(deal: &MarketDeal, mean_price: f64) -> bool {
-        (deal.price as f64) < BUY_THRESHOLD * mean_price
     }
 
     fn is_mean_reliable(stats: &PriceStatistics) -> bool {
@@ -150,7 +146,14 @@ struct MarketDeal {
 }
 
 impl MarketDeal {
-    pub fn new(id: String, price: i32) -> Self {
+    fn new(id: String, price: i32) -> Self {
         Self { id, price }
+    }
+    fn is_affordable(&self, balance: f64) -> bool {
+        self.price < (MAX_PRICE_BALANCE_THRESHOLD * balance) as i32
+    }
+
+    fn is_profitable(&self, mean_price: f64) -> bool {
+        self.price < (BUY_THRESHOLD * mean_price) as i32
     }
 }
