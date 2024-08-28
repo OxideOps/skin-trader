@@ -1,6 +1,7 @@
 use crate::date::DateTime;
 use crate::endpoint::{get_lock_for_endpoint, Endpoint};
 use crate::{Error, Result};
+use reqwest::{RequestBuilder, Response};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
@@ -11,6 +12,7 @@ const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 const MAX_ATTEMPTS: usize = 3;
+const INITIAL_BACKOFF: u64 = 1;
 
 pub const CS2_APP_ID: i32 = 730;
 
@@ -116,30 +118,54 @@ impl HttpClient {
         }
     }
 
-    async fn request<T: DeserializeOwned>(
+    async fn process_request(
         &self,
         endpoint: Endpoint,
-        builder: reqwest::RequestBuilder,
-    ) -> Result<T> {
-        let lock = get_lock_for_endpoint(endpoint);
-        let _guard = lock.lock().await;
+        builder: RequestBuilder,
+    ) -> Result<Response> {
+        let _lock = get_lock_for_endpoint(endpoint).lock().await;
 
-        let response = builder
-            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
-            .send()
-            .await?;
+        let mut backoff = INITIAL_BACKOFF;
 
-        let status = response.status();
-        if !status.is_success() {
-            return Err(Error::StatusCode(status));
+        for attempt in 1..=MAX_ATTEMPTS {
+            let response = builder.try_clone().unwrap().send().await?;
+            let status = response.status();
+
+            if status.is_success() {
+                return Ok(response);
+            }
+
+            if attempt == MAX_ATTEMPTS {
+                return Err(Error::StatusCode(status));
+            }
+
+            log::warn!(
+                "Request failed with status: {status} for endpoint {endpoint}. \
+                Retrying in {backoff} seconds. (Attempt {attempt}/{MAX_ATTEMPTS})"
+            );
+
+            sleep(Duration::from_secs(backoff)).await;
+            backoff *= 2;
         }
+        unreachable!()
+    }
 
-        let json: Value = response.json().await?;
-        serde_json::from_value(json.clone()).map_err(|_| Error::Deserialization(json))
+    async fn request<T>(&self, endpoint: Endpoint, builder: RequestBuilder) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        let response = self
+            .process_request(
+                endpoint,
+                builder.header("x-apikey", env::var("BITSKIN_API_KEY")?),
+            )
+            .await?;
+        let text = response.text().await?;
+        serde_json::from_str(&text).map_err(|_| Error::Deserialize(text))
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: Endpoint, payload: Value) -> Result<T> {
-        self.request_with_retries(
+        self.request(
             endpoint,
             self.client
                 .post(format!("{BASE_URL}{endpoint}"))
@@ -149,32 +175,8 @@ impl HttpClient {
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
-        self.request_with_retries(endpoint, self.client.get(format!("{BASE_URL}{endpoint}")))
+        self.request(endpoint, self.client.get(format!("{BASE_URL}{endpoint}")))
             .await
-    }
-
-    async fn request_with_retries<T: DeserializeOwned>(
-        &self,
-        endpoint: Endpoint,
-        builder: reqwest::RequestBuilder,
-    ) -> Result<T> {
-        let mut backoff = 1;
-        for attempt in 1..MAX_ATTEMPTS {
-            match self.request(endpoint, builder.try_clone().unwrap()).await {
-                Ok(response) => return Ok(response),
-                Err(Error::StatusCode(status)) => {
-                    log::warn!(
-                        "Response failed with status code: {status} for endpoint {endpoint}, \
-                        retrying in {backoff} seconds ({} tries remaining)",
-                        MAX_ATTEMPTS - attempt
-                    );
-                    sleep(Duration::from_secs(backoff)).await;
-                    backoff *= 2;
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        self.request(endpoint, builder).await
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {

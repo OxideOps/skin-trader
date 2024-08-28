@@ -2,7 +2,6 @@ use crate::Result;
 use crate::{db, http, Database, HttpClient};
 use futures_util::future::{join_all, try_join};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 
 impl From<http::Skin> for db::Skin {
     fn from(skin: http::Skin) -> Self {
