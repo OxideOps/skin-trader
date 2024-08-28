@@ -116,28 +116,6 @@ impl HttpClient {
         }
     }
 
-    async fn request<T: DeserializeOwned>(
-        &self,
-        endpoint: Endpoint,
-        builder: reqwest::RequestBuilder,
-    ) -> Result<T> {
-        let lock = get_lock_for_endpoint(endpoint);
-        let _guard = lock.lock().await;
-
-        let response = builder
-            .header("x-apikey", env::var("BITSKIN_API_KEY")?)
-            .send()
-            .await?;
-
-        let status = response.status();
-        if !status.is_success() {
-            return Err(Error::StatusCode(status));
-        }
-
-        let json: Value = response.json().await?;
-        serde_json::from_value(json.clone()).map_err(|_| Error::Deserialization(json))
-    }
-
     async fn post<T: DeserializeOwned>(&self, endpoint: Endpoint, payload: Value) -> Result<T> {
         self.request_with_retries(
             endpoint,
@@ -158,9 +136,24 @@ impl HttpClient {
         endpoint: Endpoint,
         builder: reqwest::RequestBuilder,
     ) -> Result<T> {
+        let request = |builder: reqwest::RequestBuilder| async {
+            let response = builder
+                .header("x-apikey", env::var("BITSKIN_API_KEY")?)
+                .send()
+                .await?;
+
+            let status = response.status();
+            if !status.is_success() {
+                return Err(Error::StatusCode(status));
+            }
+
+            let json: Value = response.json().await?;
+            serde_json::from_value(json.clone()).map_err(|_| Error::Deserialization(json))
+        };
+        let _ = get_lock_for_endpoint(endpoint).lock().await;
         let mut backoff = 1;
         for attempt in 1..MAX_ATTEMPTS {
-            match self.request(endpoint, builder.try_clone().unwrap()).await {
+            match request(builder.try_clone().unwrap()).await {
                 Ok(response) => return Ok(response),
                 Err(Error::StatusCode(status)) => {
                     log::warn!(
@@ -174,7 +167,7 @@ impl HttpClient {
                 Err(e) => return Err(e),
             }
         }
-        self.request(endpoint, builder).await
+        request(builder).await
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
