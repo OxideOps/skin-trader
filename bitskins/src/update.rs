@@ -128,15 +128,19 @@ async fn handle_market_item(db: &Database, item: http::MarketItem) -> Result<()>
 }
 
 async fn handle_market_items(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
-    for market_item in client.fetch_market_items_for_skin(skin.id).await? {
-        handle_market_item(db, market_item).await?;
+    if !db.has_market_items(skin.id).await? {
+        for market_item in client.fetch_market_items_for_skin(skin.id).await? {
+            handle_market_item(db, market_item).await?;
+        }
     }
     Ok(())
 }
 
 async fn handle_sales(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
-    for sale in client.fetch_sales(skin.id).await? {
-        handle_sale(db, skin, sale).await?;
+    if !db.has_sales(skin.id).await? {
+        for sale in client.fetch_sales(skin.id).await? {
+            handle_sale(db, skin, sale).await?;
+        }
     }
     Ok(())
 }

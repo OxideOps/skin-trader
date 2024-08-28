@@ -465,4 +465,32 @@ impl Database {
         }
         Ok(())
     }
+
+    pub async fn has_market_items(&self, skin_id: i32) -> Result<bool> {
+        Ok(sqlx::query!(
+            r#"
+            SELECT id FROM MarketItem
+            WHERE skin_id = $1
+            LIMIT 1
+            "#,
+            skin_id
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        .is_some())
+    }
+
+    pub async fn has_sales(&self, skin_id: i32) -> Result<bool> {
+        Ok(sqlx::query!(
+            r#"
+            SELECT id FROM Sale
+            WHERE skin_id = $1
+            LIMIT 1
+            "#,
+            skin_id
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        .is_some())
+    }
 }
