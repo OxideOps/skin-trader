@@ -120,8 +120,8 @@ impl HttpClient {
 
     async fn process_request(
         &self,
-        endpoint: Endpoint,
         builder: RequestBuilder,
+        endpoint: Endpoint,
     ) -> Result<Response> {
         let _lock = get_lock_for_endpoint(endpoint).lock().await;
 
@@ -150,33 +150,33 @@ impl HttpClient {
         unreachable!()
     }
 
-    async fn request<T>(&self, endpoint: Endpoint, builder: RequestBuilder) -> Result<T>
+    async fn request<T>(&self, builder: RequestBuilder, endpoint: Endpoint) -> Result<T>
     where
         T: DeserializeOwned,
     {
         let response = self
             .process_request(
-                endpoint,
                 builder.header("x-apikey", env::var("BITSKIN_API_KEY")?),
+                endpoint,
             )
             .await?;
+
         let text = response.text().await?;
         serde_json::from_str(&text).map_err(|_| Error::Deserialize(text))
     }
 
     async fn post<T: DeserializeOwned>(&self, endpoint: Endpoint, payload: Value) -> Result<T> {
-        self.request(
-            endpoint,
-            self.client
-                .post(format!("{BASE_URL}{endpoint}"))
-                .json(&payload),
-        )
-        .await
+        let builder = self
+            .client
+            .post(format!("{BASE_URL}{endpoint}"))
+            .json(&payload);
+
+        self.request(builder, endpoint).await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
-        self.request(endpoint, self.client.get(format!("{BASE_URL}{endpoint}")))
-            .await
+        let builder = self.client.get(format!("{BASE_URL}{endpoint}"));
+        self.request(builder, endpoint).await
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
