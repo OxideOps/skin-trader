@@ -1,4 +1,4 @@
-use serde_json::Value;
+use bytes::Bytes;
 use std::env;
 use thiserror::Error;
 
@@ -17,8 +17,8 @@ pub enum Error {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
-    #[error("Failed to deserialize response: {0}")]
-    Deserialization(Value),
+    #[error("Failed to deserialize response:")]
+    Deserialize(Bytes),
 
     #[error("Market item {0} not present in table")]
     MarketItemDeleteFailed(i32),
