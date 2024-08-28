@@ -128,19 +128,15 @@ async fn handle_market_item(db: &Database, item: http::MarketItem) -> Result<()>
 }
 
 async fn handle_market_items(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
-    if !db.has_market_items(skin.id).await? {
-        for market_item in client.fetch_market_items_for_skin(skin.id).await? {
-            handle_market_item(db, market_item).await?;
-        }
+    for market_item in client.fetch_market_items_for_skin(skin.id).await? {
+        handle_market_item(db, market_item).await?;
     }
     Ok(())
 }
 
 async fn handle_sales(db: &Database, client: &HttpClient, skin: &db::Skin) -> Result<()> {
-    if !db.has_sales(skin.id).await? {
-        for sale in client.fetch_sales(skin.id).await? {
-            handle_sale(db, skin, sale).await?;
-        }
+    for sale in client.fetch_sales(skin.id).await? {
+        handle_sale(db, skin, sale).await?;
     }
     Ok(())
 }
@@ -163,10 +159,17 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
         .collect();
     let total = skins.len();
     let i = &AtomicUsize::new(0);
+    let mut filtered_skins = Vec::new();
+
+    for skin in &skins {
+        if !db.has_market_items(skin.id).await? {
+            filtered_skins.push(skin.clone());
+        }
+    }
 
     db.insert_skins(&skins).await?;
 
-    join_all(skins.into_iter().map(|skin| async move {
+    join_all(filtered_skins.into_iter().map(|skin| async move {
         match handle_skin(db, client, &skin).await {
             Ok(_) => {
                 let i = i.fetch_add(1, Ordering::Relaxed);
