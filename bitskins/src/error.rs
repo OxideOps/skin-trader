@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use std::env;
 use thiserror::Error;
 
@@ -17,8 +16,8 @@ pub enum Error {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
-    #[error("Failed to deserialize response:")]
-    Deserialize(Bytes),
+    #[error("Failed to deserialize response: {0}")]
+    Deserialize(String),
 
     #[error("Market item {0} not present in table")]
     MarketItemDeleteFailed(i32),

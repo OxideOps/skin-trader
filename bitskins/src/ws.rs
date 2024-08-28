@@ -118,7 +118,7 @@ where
                 self.setup_channels().await?
             } else if let Ok(channel) = Channel::deserialize(action) {
                 let ws_data =
-                    WsData::deserialize(data).map_err(|_| Error::Deserialization(data.))?;
+                    WsData::deserialize(data).map_err(|_| Error::Deserialize(data.to_string()))?;
                 (self.handler)(channel, ws_data).await;
             }
         } else {

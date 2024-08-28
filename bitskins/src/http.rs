@@ -160,9 +160,9 @@ impl HttpClient {
                     .json(&payload),
             )
             .await?;
-        let bytes = response.bytes().await?;
 
-        serde_json::from_slice(&bytes).map_err(|_| Error::Deserialize(bytes))
+        let text = response.text().await?;
+        serde_json::from_str(&text).map_err(|_| Error::Deserialize(text))
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
@@ -170,9 +170,8 @@ impl HttpClient {
             .request(endpoint, self.client.get(format!("{BASE_URL}{endpoint}")))
             .await?;
 
-        let bytes = response.bytes().await?;
-
-        serde_json::from_slice(&bytes).map_err(|_| Error::Deserialize(bytes))
+        let text = response.text().await?;
+        serde_json::from_str(&text).map_err(|_| Error::Deserialize(text))
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
