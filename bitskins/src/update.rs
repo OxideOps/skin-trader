@@ -159,10 +159,17 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
         .collect();
     let total = skins.len();
     let i = &AtomicUsize::new(0);
+    let mut filtered_skins = Vec::new();
+
+    for skin in &skins {
+        if !db.has_market_items(skin.id).await? {
+            filtered_skins.push(skin.clone());
+        }
+    }
 
     db.insert_skins(&skins).await?;
 
-    join_all(skins.into_iter().map(|skin| async move {
+    join_all(filtered_skins.into_iter().map(|skin| async move {
         match handle_skin(db, client, &skin).await {
             Ok(_) => {
                 let i = i.fetch_add(1, Ordering::Relaxed);
