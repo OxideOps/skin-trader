@@ -129,23 +129,19 @@ impl HttpClient {
 
         for attempt in 1..=MAX_ATTEMPTS {
             let response = builder.try_clone().unwrap().send().await?;
+            let status = response.status();
 
-            if response.status().is_success() {
+            if status.is_success() {
                 return Ok(response);
             }
 
             if attempt == MAX_ATTEMPTS {
-                return Err(Error::StatusCode(response.status()));
+                return Err(Error::StatusCode(status));
             }
 
             log::warn!(
-                "Request failed with status: {} for endpoint {}. Retrying in {} seconds. \
-                (Attempt {}/{})",
-                response.status(),
-                endpoint,
-                backoff,
-                attempt,
-                MAX_ATTEMPTS
+                "Request failed with status: {status} for endpoint {endpoint}. \
+                Retrying in {backoff} seconds. (Attempt {attempt}/{MAX_ATTEMPTS})"
             );
 
             sleep(Duration::from_secs(backoff)).await;
