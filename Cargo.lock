@@ -181,7 +181,6 @@ dependencies = [
 name = "bitskins"
 version = "0.1.0"
 dependencies = [
- "bytes",
  "dashmap",
  "dotenvy",
  "env_logger",

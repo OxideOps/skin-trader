@@ -118,12 +118,15 @@ impl HttpClient {
         }
     }
 
-    async fn request(&self, endpoint: Endpoint, builder: RequestBuilder) -> Result<Response> {
+    async fn process_request(
+        &self,
+        endpoint: Endpoint,
+        builder: RequestBuilder,
+    ) -> Result<Response> {
         let _lock = get_lock_for_endpoint(endpoint).lock().await;
 
         let mut backoff = INITIAL_BACKOFF;
 
-        let builder = builder.header("x-apikey", env::var("BITSKIN_API_KEY")?);
         for attempt in 1..=MAX_ATTEMPTS {
             let response = builder.try_clone().unwrap().send().await?;
 
@@ -151,27 +154,39 @@ impl HttpClient {
         unreachable!()
     }
 
-    async fn post<T: DeserializeOwned>(&self, endpoint: Endpoint, payload: Value) -> Result<T> {
+    async fn request<T>(&self, endpoint: Endpoint, request_builder: RequestBuilder) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
         let response = self
-            .request(
+            .process_request(
                 endpoint,
-                self.client
-                    .post(format!("{BASE_URL}{endpoint}"))
-                    .json(&payload),
+                request_builder.header("x-apikey", env::var("BITSKIN_API_KEY")?),
             )
             .await?;
-
         let text = response.text().await?;
         serde_json::from_str(&text).map_err(|_| Error::Deserialize(text))
     }
 
-    async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
-        let response = self
-            .request(endpoint, self.client.get(format!("{BASE_URL}{endpoint}")))
-            .await?;
+    async fn post<T>(&self, endpoint: Endpoint, payload: Value) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        self.request(
+            endpoint,
+            self.client
+                .post(format!("{BASE_URL}{endpoint}"))
+                .json(&payload),
+        )
+        .await
+    }
 
-        let text = response.text().await?;
-        serde_json::from_str(&text).map_err(|_| Error::Deserialize(text))
+    async fn get<T>(&self, endpoint: Endpoint) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        self.request(endpoint, self.client.get(format!("{BASE_URL}{endpoint}")))
+            .await
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
