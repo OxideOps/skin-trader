@@ -154,24 +154,21 @@ impl HttpClient {
         unreachable!()
     }
 
-    async fn request<T>(&self, endpoint: Endpoint, request_builder: RequestBuilder) -> Result<T>
+    async fn request<T>(&self, endpoint: Endpoint, builder: RequestBuilder) -> Result<T>
     where
         T: DeserializeOwned,
     {
         let response = self
             .process_request(
                 endpoint,
-                request_builder.header("x-apikey", env::var("BITSKIN_API_KEY")?),
+                builder.header("x-apikey", env::var("BITSKIN_API_KEY")?),
             )
             .await?;
         let text = response.text().await?;
         serde_json::from_str(&text).map_err(|_| Error::Deserialize(text))
     }
 
-    async fn post<T>(&self, endpoint: Endpoint, payload: Value) -> Result<T>
-    where
-        T: DeserializeOwned,
-    {
+    async fn post<T: DeserializeOwned>(&self, endpoint: Endpoint, payload: Value) -> Result<T> {
         self.request(
             endpoint,
             self.client
