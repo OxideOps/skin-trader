@@ -19,5 +19,4 @@ thiserror = "1.0.63"
 dashmap = "6.0.1"
 strum_macros = "0.26.4"
 strum = "0.26.3"
-bytes = "1.7.1"
 
