@@ -178,10 +178,7 @@ impl HttpClient {
         .await
     }
 
-    async fn get<T>(&self, endpoint: Endpoint) -> Result<T>
-    where
-        T: DeserializeOwned,
-    {
+    async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
         self.request(endpoint, self.client.get(format!("{BASE_URL}{endpoint}")))
             .await
     }
