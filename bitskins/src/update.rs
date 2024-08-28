@@ -173,7 +173,7 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
         match handle_skin(db, client, &skin).await {
             Ok(_) => {
                 let i = i.fetch_add(1, Ordering::Relaxed);
-                log::info!("Synced data for skin {}, {}/{}", skin.id, i, total)
+                log::info!("Synced data for skin {} ({}/{})", skin.id, i, total)
             }
             Err(e) => {
                 i.fetch_add(1, Ordering::Relaxed);

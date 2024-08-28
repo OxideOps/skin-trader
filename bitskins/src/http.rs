@@ -1,11 +1,13 @@
 use crate::date::DateTime;
-use crate::endpoint::{get_lock_for_endpoint, Endpoint};
+use crate::endpoint::Endpoint;
 use crate::{Error, Result};
 use reqwest::{RequestBuilder, Response};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::env;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 const BASE_URL: &str = "https://api.bitskins.com";
@@ -109,22 +111,20 @@ impl Default for HttpClient {
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
+    /// Prevents a thread from making a request before another has finished
+    lock: Arc<Mutex<()>>,
 }
 
 impl HttpClient {
     pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),
+            lock: Arc::new(Mutex::new(())),
         }
     }
 
-    async fn process_request(
-        &self,
-        builder: RequestBuilder,
-        endpoint: Endpoint,
-    ) -> Result<Response> {
-        let _lock = get_lock_for_endpoint(endpoint).lock().await;
-
+    async fn process_request(&self, builder: RequestBuilder) -> Result<Response> {
+        let _lock = self.lock.lock().await;
         let mut backoff = INITIAL_BACKOFF;
 
         for attempt in 1..=MAX_ATTEMPTS {
@@ -140,8 +140,8 @@ impl HttpClient {
             }
 
             log::warn!(
-                "Request failed with status: {status} for endpoint {endpoint}. \
-                Retrying in {backoff} seconds. (Attempt {attempt}/{MAX_ATTEMPTS})"
+                "Request failed with status: {status} Retrying in {backoff} seconds. \
+                (Attempt {attempt}/{MAX_ATTEMPTS})"
             );
 
             sleep(Duration::from_secs(backoff)).await;
@@ -150,15 +150,9 @@ impl HttpClient {
         unreachable!()
     }
 
-    async fn request<T>(&self, builder: RequestBuilder, endpoint: Endpoint) -> Result<T>
-    where
-        T: DeserializeOwned,
-    {
+    async fn request<T: DeserializeOwned>(&self, builder: RequestBuilder) -> Result<T> {
         let response = self
-            .process_request(
-                builder.header("x-apikey", env::var("BITSKIN_API_KEY")?),
-                endpoint,
-            )
+            .process_request(builder.header("x-apikey", env::var("BITSKIN_API_KEY")?))
             .await?;
 
         let text = response.text().await?;
@@ -171,12 +165,12 @@ impl HttpClient {
             .post(format!("{BASE_URL}{endpoint}"))
             .json(&payload);
 
-        self.request(builder, endpoint).await
+        self.request(builder).await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
         let builder = self.client.get(format!("{BASE_URL}{endpoint}"));
-        self.request(builder, endpoint).await
+        self.request(builder).await
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
