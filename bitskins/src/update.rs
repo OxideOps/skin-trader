@@ -157,11 +157,11 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
         .into_iter()
         .map(|skin| skin.into())
         .collect();
-    let i = &AtomicUsize::new(0);
+    let i = &AtomicUsize::new(1);
     let mut filtered_skins = Vec::new();
 
     for skin in &skins {
-        if !db.has_market_items(skin.id).await? {
+        if !db.has_sales(skin.id).await? {
             filtered_skins.push(skin.clone());
         }
     }

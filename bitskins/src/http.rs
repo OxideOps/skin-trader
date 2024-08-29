@@ -4,16 +4,16 @@ use crate::{Error, Result};
 use reqwest::{RequestBuilder, Response};
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
+use std::cmp::max;
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use tokio::time::sleep;
+use tokio::time::{sleep, Instant};
 
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
-
 pub const CS2_APP_ID: i32 = 730;
 
 #[derive(Clone, Deserialize)]
@@ -111,6 +111,8 @@ pub struct HttpClient {
     client: reqwest::Client,
     /// Prevents a thread from making a request before another has finished
     lock: Arc<Mutex<()>>,
+    request_ok: Arc<Mutex<Instant>>,
+    market_request_ok: Arc<Mutex<Instant>>,
 }
 
 impl HttpClient {
@@ -118,13 +120,29 @@ impl HttpClient {
         Self {
             client: reqwest::Client::new(),
             lock: Arc::new(Mutex::new(())),
+            request_ok: Arc::new(Mutex::new(Instant::now())),
+            market_request_ok: Arc::new(Mutex::new(Instant::now())),
         }
     }
 
-    async fn process_request(&self, builder: RequestBuilder) -> Result<Response> {
+    async fn process_request(
+        &self,
+        builder: RequestBuilder,
+        endpoint: Endpoint,
+    ) -> Result<Response> {
         let _lock = self.lock.lock().await;
 
         loop {
+            let mut request_ok = self.request_ok.lock().await;
+            if endpoint.to_string().starts_with("/market/search") {
+                let mut market_request_ok = self.market_request_ok.lock().await;
+                sleep(max(*market_request_ok, *request_ok) - Instant::now()).await;
+                *market_request_ok = Instant::now() + Duration::from_millis(1500);
+            } else {
+                sleep(*request_ok - Instant::now()).await;
+            }
+            *request_ok = Instant::now() + Duration::from_millis(300);
+
             let response = builder.try_clone().unwrap().send().await?;
             let status = response.status();
 
@@ -138,9 +156,16 @@ impl HttpClient {
         }
     }
 
-    async fn request<T: DeserializeOwned>(&self, builder: RequestBuilder) -> Result<T> {
+    async fn request<T: DeserializeOwned>(
+        &self,
+        builder: RequestBuilder,
+        endpoint: Endpoint,
+    ) -> Result<T> {
         let response = self
-            .process_request(builder.header("x-apikey", env::var("BITSKIN_API_KEY")?))
+            .process_request(
+                builder.header("x-apikey", env::var("BITSKIN_API_KEY")?),
+                endpoint,
+            )
             .await?;
 
         let text = response.text().await?;
@@ -153,12 +178,12 @@ impl HttpClient {
             .post(format!("{BASE_URL}{endpoint}"))
             .json(&payload);
 
-        self.request(builder).await
+        self.request(builder, endpoint).await
     }
 
     async fn get<T: DeserializeOwned>(&self, endpoint: Endpoint) -> Result<T> {
         let builder = self.client.get(format!("{BASE_URL}{endpoint}"));
-        self.request(builder).await
+        self.request(builder, endpoint).await
     }
 
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
