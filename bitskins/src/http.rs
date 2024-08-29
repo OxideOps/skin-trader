@@ -15,6 +15,7 @@ const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 pub const CS2_APP_ID: i32 = 730;
+const SPEED: f64 = 0.8; // Fraction of the default rate limit
 
 #[derive(Clone, Deserialize)]
 pub struct Skin {
@@ -137,11 +138,12 @@ impl HttpClient {
             if endpoint.to_string().starts_with("/market/search") {
                 let mut market_request_ok = self.market_request_ok.lock().await;
                 sleep(max(*market_request_ok, *request_ok) - Instant::now()).await;
-                *market_request_ok = Instant::now() + Duration::from_millis(1500);
+                *market_request_ok =
+                    Instant::now() + Duration::from_millis((1000.0 / SPEED) as u64);
             } else {
                 sleep(*request_ok - Instant::now()).await;
             }
-            *request_ok = Instant::now() + Duration::from_millis(300);
+            *request_ok = Instant::now() + Duration::from_millis((200.0 / SPEED) as u64);
 
             let response = builder.try_clone().unwrap().send().await?;
             let status = response.status();
