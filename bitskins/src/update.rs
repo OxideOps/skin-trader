@@ -161,7 +161,7 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
     let mut filtered_skins = Vec::new();
 
     for skin in &skins {
-        if !db.has_market_items(skin.id).await? {
+        if !db.has_sales(skin.id).await? {
             filtered_skins.push(skin.clone());
         }
     }
