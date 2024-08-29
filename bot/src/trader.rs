@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use bitskins::{Channel, Database, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
 const BUY_THRESHOLD: f64 = 0.8;
@@ -24,7 +24,7 @@ impl Trader {
         info!("Received data from {channel:?}");
 
         if item.app_id != Some(CS2_APP_ID) {
-            info!("app_id is not {CS2_APP_ID}, skipping..");
+            debug!("app_id is not {CS2_APP_ID}, skipping..");
             return;
         }
 
@@ -92,8 +92,8 @@ impl Trader {
             ),
         };
 
-        if !Self::is_mean_reliable(&stats) {
-            bail!("Mean price is not reliable for skin_id: {}", item.skin_id);
+        if !Self::is_stats_reliable(&stats) {
+            bail!("Price stats are not reliable for skin_id: {}", item.skin_id);
         }
 
         let ws_deal = MarketDeal::new(item.id, ws_price);
@@ -110,13 +110,13 @@ impl Trader {
         }
 
         if !best_deal.is_profitable(mean) {
-            bail!("No good deals found for skin_id: {}", item.skin_id)
+            bail!("Item is not profitable: {}", item.skin_id)
         }
 
         self.execute_purchase(best_deal, mean as i32).await
     }
 
-    fn is_mean_reliable(stats: &PriceStatistics) -> bool {
+    fn is_stats_reliable(stats: &PriceStatistics) -> bool {
         stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 
