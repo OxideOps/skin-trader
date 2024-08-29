@@ -92,7 +92,7 @@ impl Trader {
             ),
         };
 
-        if !Self::is_stats_reliable(&stats) {
+        if !Self::are_stats_reliable(&stats) {
             bail!("Price stats are not reliable for skin_id: {}", item.skin_id);
         }
 
@@ -116,7 +116,7 @@ impl Trader {
         self.execute_purchase(best_deal, mean as i32).await
     }
 
-    fn is_stats_reliable(stats: &PriceStatistics) -> bool {
+    fn are_stats_reliable(stats: &PriceStatistics) -> bool {
         stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 
