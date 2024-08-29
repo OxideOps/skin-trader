@@ -13,8 +13,6 @@ use tokio::time::sleep;
 const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
-const MAX_ATTEMPTS: usize = 3;
-const INITIAL_BACKOFF: u64 = 1;
 
 pub const CS2_APP_ID: i32 = 730;
 
@@ -125,9 +123,8 @@ impl HttpClient {
 
     async fn process_request(&self, builder: RequestBuilder) -> Result<Response> {
         let _lock = self.lock.lock().await;
-        let mut backoff = INITIAL_BACKOFF;
 
-        for attempt in 1..=MAX_ATTEMPTS {
+        loop {
             let response = builder.try_clone().unwrap().send().await?;
             let status = response.status();
 
@@ -135,19 +132,10 @@ impl HttpClient {
                 return Ok(response);
             }
 
-            if attempt == MAX_ATTEMPTS {
-                return Err(Error::StatusCode(status));
-            }
+            log::warn!("Request failed with status: {status} Retrying in 5 seconds");
 
-            log::warn!(
-                "Request failed with status: {status} Retrying in {backoff} seconds. \
-                (Attempt {attempt}/{MAX_ATTEMPTS})"
-            );
-
-            sleep(Duration::from_secs(backoff)).await;
-            backoff *= 2;
+            sleep(Duration::from_secs(5)).await;
         }
-        unreachable!()
     }
 
     async fn request<T: DeserializeOwned>(&self, builder: RequestBuilder) -> Result<T> {
