@@ -157,7 +157,7 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
         .into_iter()
         .map(|skin| skin.into())
         .collect();
-    let i = &AtomicUsize::new(0);
+    let i = &AtomicUsize::new(1);
     let mut filtered_skins = Vec::new();
 
     for skin in &skins {

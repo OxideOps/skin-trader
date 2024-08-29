@@ -137,11 +137,11 @@ impl HttpClient {
             if endpoint.to_string().starts_with("/market/search") {
                 let mut market_request_ok = self.market_request_ok.lock().await;
                 sleep(max(*market_request_ok, *request_ok) - Instant::now()).await;
-                *market_request_ok = Instant::now() + Duration::from_secs(1);
+                *market_request_ok = Instant::now() + Duration::from_millis(1500);
             } else {
                 sleep(*request_ok - Instant::now()).await;
             }
-            *request_ok = Instant::now() + Duration::from_millis(200);
+            *request_ok = Instant::now() + Duration::from_millis(300);
 
             let response = builder.try_clone().unwrap().send().await?;
             let status = response.status();
