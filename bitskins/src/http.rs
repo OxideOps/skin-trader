@@ -200,10 +200,10 @@ impl HttpClient {
     pub async fn fetch_inventory(&self) -> Result<Value> {
         let request_body = json!({
             "where_mine": {
-                "status": [2, 3, 4, 0, 5, 1, -1, -4]
+                "status": [2, 3, 4, 0, 5, 1, -1, -4] //absolutely no documentation on these
             },
-            "limit": 500,  // Maximum allowed by the schema
-            "offset": 0    // Start from the beginning
+            "limit": 500,
+            "offset": 0
         });
 
         self.post::<Value>(Endpoint::Inventory, request_body).await
