@@ -17,6 +17,11 @@ const MAX_OFFSET: usize = 2000;
 pub const CS2_APP_ID: i32 = 730;
 const SPEED: f64 = 0.8; // Fraction of the default rate limit
 
+#[derive(Deserialize)]
+pub struct Balance {
+    pub balance: i32,
+}
+
 #[derive(Clone, Deserialize)]
 pub struct Skin {
     pub id: i32,
@@ -223,7 +228,7 @@ impl HttpClient {
         .await
     }
 
-    pub async fn check_balance(&self) -> Result<i32> {
+    pub async fn check_balance(&self) -> Result<Balance> {
         self.post(Endpoint::ProfileBalance, json!({})).await
     }
 
