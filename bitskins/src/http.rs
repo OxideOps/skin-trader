@@ -6,6 +6,7 @@ use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::cmp::max;
 use std::env;
+use std::num::{NonZero, NonZeroU16};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -16,6 +17,8 @@ const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 pub const CS2_APP_ID: i32 = 730;
 const SPEED: f64 = 0.8; // Fraction of the default rate limit
+
+const INTERNAL_SERVICE_ERROR: u16 = 500;
 
 #[derive(Deserialize)]
 pub struct Balance {
@@ -155,6 +158,8 @@ impl HttpClient {
 
             if status.is_success() {
                 return Ok(response);
+            } else if status == INTERNAL_SERVICE_ERROR {
+                return Err(Error::InternalService(endpoint.to_string()));
             }
 
             log::warn!(

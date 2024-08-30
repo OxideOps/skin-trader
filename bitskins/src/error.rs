@@ -33,4 +33,7 @@ pub enum Error {
 
     #[error("WebSocket error: {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
+
+    #[error("Internal Service Error for endpoint: {0}")]
+    InternalService(String),
 }
