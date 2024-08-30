@@ -59,7 +59,7 @@ pub struct WsData {
     pub float_value: Option<f64>,
     pub name: Option<String>,
     pub paint_seed: Option<i32>,
-    pub price: Option<i32>,
+    pub price: Option<f64>,
     pub suggested_price: Option<i32>,
     pub tradehold: Option<i32>,
     pub old_price: Option<i32>,
