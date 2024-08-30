@@ -103,7 +103,7 @@ impl Trader {
             _ => ws_deal,
         };
 
-        let balance = self.http.check_balance().await?.balance as f64;
+        let balance = self.http.fetch_balance().await?;
 
         if !best_deal.is_affordable(balance) {
             bail!("Price for best deal exceeds our max price for our current balance")
