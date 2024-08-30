@@ -51,7 +51,7 @@ impl Trader {
     }
 
     async fn handle_price_change(&self, item: WsData) -> Result<()> {
-        let price = item.price.unwrap() as f64;
+        let price = item.price.unwrap();
         let id = item.id.parse()?;
 
         if self.db.update_market_item_price(id, price).await.is_err() {
@@ -125,8 +125,12 @@ impl Trader {
 
         Ok(market_list
             .into_iter()
-            .map(|data| MarketDeal::new(data.id, data.price as i32))
-            .min_by_key(|deal| deal.price))
+            .map(|data| MarketDeal::new(data.id, data.price))
+            .min_by(|a, b| {
+                a.price
+                    .partial_cmp(&b.price)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            }))
     }
 
     async fn execute_purchase(&self, deal: MarketDeal, mean_price: i32) -> Result<()> {
@@ -142,18 +146,18 @@ impl Trader {
 
 struct MarketDeal {
     id: String,
-    price: i32,
+    price: f64,
 }
 
 impl MarketDeal {
-    fn new(id: String, price: i32) -> Self {
+    fn new(id: String, price: f64) -> Self {
         Self { id, price }
     }
     fn is_affordable(&self, balance: f64) -> bool {
-        self.price < (MAX_PRICE_BALANCE_THRESHOLD * balance) as i32
+        self.price < (MAX_PRICE_BALANCE_THRESHOLD * balance)
     }
 
     fn is_profitable(&self, mean_price: f64) -> bool {
-        self.price < (BUY_THRESHOLD * mean_price) as i32
+        self.price < (BUY_THRESHOLD * mean_price)
     }
 }
