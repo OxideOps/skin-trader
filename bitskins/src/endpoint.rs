@@ -22,6 +22,4 @@ pub enum Endpoint {
     SearchCsgo,
     #[strum(serialize = "/market/history/list")]
     HistoryList,
-    #[strum(serialize = "/market/search/mine/730")]
-    Inventory,
 }
