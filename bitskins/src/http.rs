@@ -155,6 +155,8 @@ impl HttpClient {
 
             if status.is_success() {
                 return Ok(response);
+            } else if status.is_server_error() {
+                return Err(Error::InternalService(endpoint));
             }
 
             log::warn!(
