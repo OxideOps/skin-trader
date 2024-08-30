@@ -17,8 +17,6 @@ const MAX_OFFSET: usize = 2000;
 pub const CS2_APP_ID: i32 = 730;
 const SPEED: f64 = 0.8; // Fraction of the default rate limit
 
-const INTERNAL_SERVICE_ERROR: u16 = 500;
-
 #[derive(Deserialize)]
 pub struct Balance {
     pub balance: i32,
@@ -157,7 +155,7 @@ impl HttpClient {
 
             if status.is_success() {
                 return Ok(response);
-            } else if status == INTERNAL_SERVICE_ERROR {
+            } else if status.is_server_error() {
                 return Err(Error::InternalService(endpoint));
             }
 
