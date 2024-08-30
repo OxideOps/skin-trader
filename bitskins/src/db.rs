@@ -229,6 +229,7 @@ impl Database {
             r#"
             INSERT INTO MarketItem (created_at, id, skin_id, price, phase_id, float_value)
             VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (id) DO NOTHING
             "#,
             item.created_at.0,
             item.id,
@@ -460,7 +461,7 @@ impl Database {
     }
 
     pub async fn flush_all(&self) -> Result<()> {
-        for table in ["Sticker", "Sale", "MarketItem", "Skin", "price_statistics"] {
+        for table in ["Sticker", "Sale", "MarketItem", "price_statistics", "Skin"] {
             self.flush_table(table).await?;
         }
         Ok(())

@@ -157,7 +157,9 @@ impl HttpClient {
                 return Ok(response);
             }
 
-            log::warn!("Request failed with status: {status} Retrying in 5 seconds");
+            log::warn!(
+                "Request failed with status {status} for endpoint {endpoint}. Retrying in 5 seconds"
+            );
 
             sleep(Duration::from_secs(5)).await;
         }
