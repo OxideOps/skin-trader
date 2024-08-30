@@ -198,7 +198,9 @@ impl HttpClient {
             .post::<Value>(
                 Endpoint::Inventory,
                 json!({
-                    "where_mine": [2, 3, 4, 0, 5, 1, -1, -4]
+                    "where_mine": {
+                        "status": [2, 3, 4, 0, 5, 1, -1, -4]
+                    }
                 })
             )
             .await
@@ -235,7 +237,6 @@ impl HttpClient {
                 "app_id": CS2_APP_ID,
                 "id": item_id,
                 "price": price,
-                "type": [1, 2, 3]
             }),
         )
         .await
