@@ -7,7 +7,8 @@ use trader::Trader;
 #[tokio::main]
 async fn main() -> Result<()> {
     bitskins::setup_env();
-    dbg!(bitskins::HttpClient::new().fetch_inventory().await?);
+    let http = bitskins::HttpClient::new();
+    http.delist_item("4751481").await?;
     // let trader = Trader::new().await?;
     // let ws = WsClient::connect(|channel, ws_data| trader.process_data(channel, ws_data)).await?;
     //

@@ -143,9 +143,7 @@ impl Trader {
         }
 
         info!("Listing {} for {}", deal.id, mean_price);
-        self.http
-            .list_item(&deal.id, mean_price, deal.type_id)
-            .await?;
+        self.http.list_item(&deal.id, mean_price).await?;
 
         Ok(())
     }

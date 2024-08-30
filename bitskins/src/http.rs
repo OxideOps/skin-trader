@@ -209,11 +209,10 @@ impl HttpClient {
         self.post::<Value>(Endpoint::Inventory, request_body).await
     }
 
-    pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
+    pub async fn delist_item(&self, item_id: &str) -> Result<bool> {
         self.post(
             Endpoint::DelistSingle,
             json!({
-                "app_id": app_id,
                 "id": item_id,
             }),
         )
@@ -232,14 +231,13 @@ impl HttpClient {
         .await
     }
 
-    pub async fn list_item(&self, item_id: &str, price: f64, type_id: i8) -> Result<()> {
+    pub async fn list_item(&self, item_id: &str, price: f64) -> Result<bool> {
         self.post(
             Endpoint::RelistSingle,
             json!({
                 "app_id": CS2_APP_ID,
                 "id": item_id,
                 "price": price,
-                "type": type_id,
             }),
         )
         .await
