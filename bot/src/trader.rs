@@ -97,11 +97,9 @@ impl Trader {
             bail!("Price stats are not reliable for skin_id: {}", item.skin_id);
         }
 
-        let ws_deal = MarketDeal::new(item.id, ws_price);
-
         let best_deal = match self.find_best_market_deal(item.skin_id).await? {
             Some(market_deal) if market_deal.price < ws_price => market_deal,
-            _ => ws_deal,
+            _ => MarketDeal::new(item.id, ws_price),
         };
 
         let balance = self.http.fetch_balance().await?;
