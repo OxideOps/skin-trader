@@ -216,7 +216,7 @@ impl HttpClient {
         .await
     }
 
-    pub async fn list_item(&self, item_id: &str, price: i32) -> Result<()> {
+    pub async fn list_item(&self, item_id: &str, price: f64) -> Result<()> {
         self.post(
             Endpoint::RelistSingle,
             json!({
