@@ -97,13 +97,11 @@ impl Trader {
             bail!("Price stats are not reliable for skin_id: {}", item.skin_id);
         }
 
-        let market_deal = self.find_best_market_deal(item.skin_id).await?.unwrap();
-        let ws_deal = MarketDeal::new(item.id, ws_price, market_deal.type_id);
+        let ws_deal = MarketDeal::new(item.id, ws_price);
 
-        let best_deal = if market_deal.price < ws_deal.price {
-            market_deal
-        } else {
-            ws_deal
+        let best_deal = match self.find_best_market_deal(item.skin_id).await? {
+            Some(market_deal) if market_deal.price < ws_price => market_deal,
+            _ => ws_deal,
         };
 
         let balance = self.http.fetch_balance().await?;
@@ -128,7 +126,7 @@ impl Trader {
 
         Ok(market_list
             .into_iter()
-            .map(|data| MarketDeal::new(data.id, data.price, data.type_id))
+            .map(|data| MarketDeal::new(data.id, data.price))
             .min_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(Ordering::Equal)))
     }
 
@@ -152,12 +150,11 @@ impl Trader {
 struct MarketDeal {
     id: String,
     price: f64,
-    type_id: i8,
 }
 
 impl MarketDeal {
-    fn new(id: String, price: f64, type_id: i8) -> Self {
-        Self { id, price, type_id }
+    fn new(id: String, price: f64) -> Self {
+        Self { id, price }
     }
     fn is_affordable(&self, balance: f64) -> bool {
         self.price < (MAX_PRICE_BALANCE_THRESHOLD * balance)
