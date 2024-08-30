@@ -228,8 +228,11 @@ impl HttpClient {
         .await
     }
 
-    pub async fn check_balance(&self) -> Result<Balance> {
-        self.post(Endpoint::ProfileBalance, json!({})).await
+    pub async fn fetch_balance(&self) -> Result<f64> {
+        Ok(self
+            .post::<Balance>(Endpoint::ProfileBalance, json!({}))
+            .await?
+            .balance as f64)
     }
 
     pub async fn buy_item(&self, item_id: &str, price: i32) -> Result<()> {
