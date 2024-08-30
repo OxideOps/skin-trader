@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use bitskins::{Channel, Database, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
+use bitskins::{Channel, Database, Error, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
 
@@ -134,7 +134,13 @@ impl Trader {
 
     async fn execute_purchase(&self, deal: MarketDeal, mean_price: f64) -> Result<()> {
         info!("Buying {} for {}", deal.id, deal.price);
-        self.http.buy_item(&deal.id, deal.price).await?;
+        match self.http.buy_item(&deal.id, deal.price).await {
+            Ok(_) => (),
+            Err(Error::InternalService(_)) => {
+                bail!("Internal Service Error: Could not buy item {}", deal.id)
+            }
+            Err(e) => bail!(e),
+        }
 
         info!("Listing {} for {}", deal.id, mean_price);
         self.http

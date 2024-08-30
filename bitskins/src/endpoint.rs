@@ -1,6 +1,6 @@
 use strum_macros::{Display, EnumString};
 /// Enum for  all endpoints for Bitskins API
-#[derive(EnumString, Display, Copy, Clone)]
+#[derive(EnumString, Display, Copy, Clone, Debug)]
 pub enum Endpoint {
     #[strum(serialize = "/market/delist/single")]
     DelistSingle,
