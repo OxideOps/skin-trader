@@ -197,6 +197,18 @@ impl HttpClient {
         self.request(builder, endpoint).await
     }
 
+    pub async fn fetch_inventory(&self) -> Result<Value> {
+        let request_body = json!({
+            "where_mine": {
+                "status": [2, 3, 4, 0, 5, 1, -1, -4]
+            },
+            "limit": 500,  // Maximum allowed by the schema
+            "offset": 0    // Start from the beginning
+        });
+
+        self.post::<Value>(Endpoint::Inventory, request_body).await
+    }
+
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
         self.post(
             Endpoint::DelistSingle,
