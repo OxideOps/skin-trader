@@ -1,3 +1,4 @@
+use crate::endpoint::Endpoint;
 use std::env;
 use thiserror::Error;
 
@@ -35,5 +36,5 @@ pub enum Error {
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
 
     #[error("Internal Service Error for endpoint: {0}")]
-    InternalService(String),
+    InternalService(Endpoint),
 }

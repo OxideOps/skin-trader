@@ -6,7 +6,6 @@ use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::cmp::max;
 use std::env;
-use std::num::{NonZero, NonZeroU16};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -159,7 +158,7 @@ impl HttpClient {
             if status.is_success() {
                 return Ok(response);
             } else if status == INTERNAL_SERVICE_ERROR {
-                return Err(Error::InternalService(endpoint.to_string()));
+                return Err(Error::InternalService(endpoint));
             }
 
             log::warn!(
