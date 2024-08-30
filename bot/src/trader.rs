@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use bitskins::{Channel, Database, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
+use std::cmp::Ordering;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
 const BUY_THRESHOLD: f64 = 0.8;
@@ -113,7 +114,7 @@ impl Trader {
             bail!("Item is not profitable: {}", item.skin_id)
         }
 
-        self.execute_purchase(best_deal, mean as i32).await
+        self.execute_purchase(best_deal, mean).await
     }
 
     fn are_stats_reliable(stats: &PriceStatistics) -> bool {
@@ -126,14 +127,10 @@ impl Trader {
         Ok(market_list
             .into_iter()
             .map(|data| MarketDeal::new(data.id, data.price))
-            .min_by(|a, b| {
-                a.price
-                    .partial_cmp(&b.price)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            }))
+            .min_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(Ordering::Equal)))
     }
 
-    async fn execute_purchase(&self, deal: MarketDeal, mean_price: i32) -> Result<()> {
+    async fn execute_purchase(&self, deal: MarketDeal, mean_price: f64) -> Result<()> {
         info!("Buying {} for {}", deal.id, deal.price);
         self.http.buy_item(&deal.id, deal.price).await?;
 
