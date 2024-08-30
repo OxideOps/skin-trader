@@ -193,6 +193,18 @@ impl HttpClient {
         self.request(builder, endpoint).await
     }
 
+    pub async fn fetch_inventory(&self) {
+        dbg!(self
+            .post::<Value>(
+                Endpoint::Inventory,
+                json!({
+                    "where_mine": [2, 3, 4, 0, 5, 1, -1, -4]
+                })
+            )
+            .await
+            .unwrap());
+    }
+
     pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
         self.post(
             Endpoint::DelistSingle,
