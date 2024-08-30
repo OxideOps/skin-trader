@@ -1,7 +1,6 @@
 use anyhow::{bail, Result};
 use bitskins::{Channel, Database, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
-use std::any::Any;
 use std::cmp::Ordering;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
