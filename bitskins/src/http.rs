@@ -91,7 +91,7 @@ pub struct MarketItem {
     pub stickers: Option<Vec<Sticker>>,
     pub suggested_price: Option<i32>,
     pub tradehold: i32,
-    pub type_id: i32,
+    pub type_id: i8,
     pub typesub_id: Option<i32>,
 }
 
@@ -216,7 +216,7 @@ impl HttpClient {
         .await
     }
 
-    pub async fn list_item(&self, item_id: &str, price: f64, type_id: u8) -> Result<()> {
+    pub async fn list_item(&self, item_id: &str, price: f64, type_id: i8) -> Result<()> {
         self.post(
             Endpoint::RelistSingle,
             json!({

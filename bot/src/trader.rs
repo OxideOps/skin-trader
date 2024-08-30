@@ -128,7 +128,7 @@ impl Trader {
 
         Ok(market_list
             .into_iter()
-            .map(|data| MarketDeal::new(data.id, data.price, data.type_id as u8))
+            .map(|data| MarketDeal::new(data.id, data.price, data.type_id))
             .min_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(Ordering::Equal)))
     }
 
@@ -148,11 +148,11 @@ impl Trader {
 struct MarketDeal {
     id: String,
     price: f64,
-    type_id: u8,
+    type_id: i8,
 }
 
 impl MarketDeal {
-    fn new(id: String, price: f64, type_id: u8) -> Self {
+    fn new(id: String, price: f64, type_id: i8) -> Self {
         Self { id, price, type_id }
     }
     fn is_affordable(&self, balance: f64) -> bool {
