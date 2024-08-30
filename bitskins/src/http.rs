@@ -235,6 +235,7 @@ impl HttpClient {
                 "app_id": CS2_APP_ID,
                 "id": item_id,
                 "price": price,
+                "type": [1, 2, 3]
             }),
         )
         .await
