@@ -199,7 +199,7 @@ impl HttpClient {
                 Endpoint::Inventory,
                 json!({
                     "where_mine": {
-                        "status": [2, 3, 4, 0, 5, 1, -1, -4]
+                        "status": [2, 3, 4, 0, 5, 1, -1, -4] // not sure which of these we want
                     }
                 })
             )
