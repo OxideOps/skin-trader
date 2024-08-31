@@ -91,7 +91,7 @@ pub struct MarketItem {
     pub stickers: Option<Vec<Sticker>>,
     pub suggested_price: Option<i32>,
     pub tradehold: i32,
-    pub type_id: i32,
+    pub type_id: i8,
     pub typesub_id: Option<i32>,
 }
 
@@ -197,11 +197,22 @@ impl HttpClient {
         self.request(builder, endpoint).await
     }
 
-    pub async fn delist_item(&self, app_id: i32, item_id: &str) -> Result<()> {
+    pub async fn fetch_inventory(&self) -> Result<Value> {
+        let request_body = json!({
+            "where_mine": {
+                "status": [2, 3, 4, 0, 5, 1, -1, -4] //absolutely no documentation on these
+            },
+            "limit": MAX_LIMIT,
+            "offset": 0
+        });
+
+        self.post::<Value>(Endpoint::Inventory, request_body).await
+    }
+
+    pub async fn delist_item(&self, item_id: &str) -> Result<bool> {
         self.post(
             Endpoint::DelistSingle,
             json!({
-                "app_id": app_id,
                 "id": item_id,
             }),
         )
@@ -220,7 +231,7 @@ impl HttpClient {
         .await
     }
 
-    pub async fn list_item(&self, item_id: &str, price: f64) -> Result<()> {
+    pub async fn list_item(&self, item_id: &str, price: f64) -> Result<bool> {
         self.post(
             Endpoint::RelistSingle,
             json!({

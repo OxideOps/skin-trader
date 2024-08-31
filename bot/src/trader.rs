@@ -2,6 +2,8 @@ use anyhow::{bail, Result};
 use bitskins::{Channel, Database, Error, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
+use std::time::Duration;
+use tokio::time::sleep;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
 const BUY_THRESHOLD: f64 = 0.8;
@@ -97,11 +99,9 @@ impl Trader {
             bail!("Price stats are not reliable for skin_id: {}", item.skin_id);
         }
 
-        let ws_deal = MarketDeal::new(item.id, ws_price);
-
         let best_deal = match self.find_best_market_deal(item.skin_id).await? {
-            Some(market_deal) if market_deal.price < ws_deal.price => market_deal,
-            _ => ws_deal,
+            Some(market_deal) if market_deal.price < ws_price => market_deal,
+            _ => MarketDeal::new(item.id, ws_price),
         };
 
         let balance = self.http.fetch_balance().await?;
@@ -141,7 +141,10 @@ impl Trader {
         }
 
         info!("Listing {} for {}", deal.id, mean_price);
-        self.http.list_item(&deal.id, mean_price).await?;
+        while let Err(Error::InternalService(_)) = self.http.list_item(&deal.id, mean_price).await {
+            warn!("Bought item, but is not yet in our inventory. Retrying in 1 second..");
+            sleep(Duration::from_secs(1)).await;
+        }
 
         Ok(())
     }
