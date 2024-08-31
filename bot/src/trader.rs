@@ -141,8 +141,8 @@ impl Trader {
         }
 
         info!("Listing {} for {}", deal.id, mean_price);
-        while let Ok(false) = self.http.list_item(&deal.id, mean_price).await {
-            warn!("Bought item, but couldn't list it. Retrying in 1 second..");
+        while let Err(Error::InternalService(_)) = self.http.list_item(&deal.id, mean_price).await {
+            warn!("Bought item, but is not yet in our inventory. Retrying in 1 second..");
             sleep(Duration::from_secs(1)).await;
         }
 
