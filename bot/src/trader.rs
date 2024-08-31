@@ -1,13 +1,11 @@
 use anyhow::{bail, Result};
-use bitskins::{Channel, Database, Error, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
+use bitskins::{Channel, Database, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
-use std::time::Duration;
-use tokio::time::sleep;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
 const BUY_THRESHOLD: f64 = 0.8;
-const MIN_SALE_COUNT: i32 = 100;
+const MIN_SALE_COUNT: i32 = 200;
 const MIN_SLOPE: f64 = 0.0;
 
 pub(crate) struct Trader {
@@ -132,19 +130,10 @@ impl Trader {
 
     async fn execute_purchase(&self, deal: MarketDeal, mean_price: f64) -> Result<()> {
         info!("Buying {} for {}", deal.id, deal.price);
-        match self.http.buy_item(&deal.id, deal.price).await {
-            Ok(_) => (),
-            Err(Error::InternalService(_)) => {
-                bail!("Internal Service Error: Could not buy item {deal:?}")
-            }
-            Err(e) => bail!(e),
-        }
+        self.http.buy_item(&deal.id, deal.price).await?;
 
         info!("Listing {} for {}", deal.id, mean_price);
-        while let Err(Error::InternalService(_)) = self.http.list_item(&deal.id, mean_price).await {
-            warn!("Bought item, but is not yet in our inventory. Retrying in 1 second..");
-            sleep(Duration::from_secs(1)).await;
-        }
+        self.http.list_item(&deal.id, mean_price).await?;
 
         Ok(())
     }
