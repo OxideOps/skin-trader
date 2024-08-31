@@ -139,7 +139,9 @@ impl Trader {
         }
 
         info!("Listing {} for {}", deal.id, mean_price);
-        self.http.list_item(&deal.id, mean_price).await?;
+        while let Ok(false) = self.http.list_item(&deal.id, mean_price).await {
+            info!("Bought item, but couldn't list it. Retrying...")
+        }
 
         Ok(())
     }
