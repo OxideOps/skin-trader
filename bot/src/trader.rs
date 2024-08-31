@@ -2,6 +2,8 @@ use anyhow::{bail, Result};
 use bitskins::{Channel, Database, Error, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
+use std::time::Duration;
+use tokio::time::sleep;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
 const BUY_THRESHOLD: f64 = 0.8;
@@ -140,7 +142,8 @@ impl Trader {
 
         info!("Listing {} for {}", deal.id, mean_price);
         while let Ok(false) = self.http.list_item(&deal.id, mean_price).await {
-            info!("Bought item, but couldn't list it. Retrying...")
+            info!("Bought item, but couldn't list it. Retrying in 1 second..");
+            sleep(Duration::from_secs(1)).await;
         }
 
         Ok(())
