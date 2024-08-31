@@ -142,7 +142,7 @@ impl Trader {
 
         info!("Listing {} for {}", deal.id, mean_price);
         while let Ok(false) = self.http.list_item(&deal.id, mean_price).await {
-            info!("Bought item, but couldn't list it. Retrying in 1 second..");
+            warn!("Bought item, but couldn't list it. Retrying in 1 second..");
             sleep(Duration::from_secs(1)).await;
         }
 
