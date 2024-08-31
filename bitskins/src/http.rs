@@ -241,7 +241,7 @@ impl HttpClient {
             json!({
                 "app_id": CS2_APP_ID,
                 "id": item_id,
-                "price": price,
+                "price": price.round() as u32,
             }),
         )
         .await
@@ -260,7 +260,7 @@ impl HttpClient {
             json!({
                 "app_id": CS2_APP_ID,
                 "id": item_id,
-                "max_price": price
+                "max_price": price.round() as u32,
             }),
         )
         .await
