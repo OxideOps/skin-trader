@@ -6,6 +6,7 @@ use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::cmp::max;
 use std::env;
+use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -197,16 +198,19 @@ impl HttpClient {
         self.request(builder, endpoint).await
     }
 
-    pub async fn fetch_inventory(&self) -> Result<Value> {
-        let request_body = json!({
-            "where_mine": {
-                "status": [2, 3, 4, 0, 5, 1, -1, -4] //absolutely no documentation on these
-            },
-            "limit": MAX_LIMIT,
-            "offset": 0
-        });
+    pub async fn fetch_inventory(&self) -> Result<Vec<MarketItem>> {
+        self.fetch_market_data_generic(|offset| async move {
+            let request_body = json!({
+                "where_mine": {
+                    "status": [2, 3, 4, 0, 5, 1, -1, -4] //absolutely no documentation on these
+                },
+                "limit": MAX_LIMIT,
+                "offset": offset
+            });
 
-        self.post::<Value>(Endpoint::Inventory, request_body).await
+            self.post(Endpoint::Inventory, request_body).await
+        })
+        .await
     }
 
     pub async fn delist_item(&self, item_id: &str) -> Result<bool> {
@@ -282,6 +286,28 @@ impl HttpClient {
         self.post(Endpoint::SearchGet, json!({"id": id})).await
     }
 
+    async fn fetch_market_data_generic<R, F>(&self, request: R) -> Result<Vec<MarketItem>>
+    where
+        R: Fn(usize) -> F,
+        F: Future<Output = Result<MarketData>>,
+    {
+        let mut offset = 0;
+
+        // Initial request to get the total count
+        let initial_response = request(offset).await?;
+
+        let total = initial_response.counter.filtered;
+        let mut all_market_items = initial_response.list;
+        offset += MAX_LIMIT;
+
+        while offset < total && offset <= MAX_OFFSET {
+            all_market_items.extend(request(offset).await?.list);
+            offset += MAX_LIMIT;
+        }
+
+        Ok(all_market_items)
+    }
+
     async fn fetch_market_data_response_by_skin(
         &self,
         skin_id: i32,
@@ -302,27 +328,10 @@ impl HttpClient {
     }
 
     pub async fn fetch_market_items_for_skin(&self, skin_id: i32) -> Result<Vec<MarketItem>> {
-        let mut offset = 0;
-
-        // Initial request to get the total count
-        let initial_response = self
-            .fetch_market_data_response_by_skin(skin_id, offset)
-            .await?;
-
-        let total = initial_response.counter.filtered;
-        let mut all_market_items = initial_response.list;
-        offset += MAX_LIMIT;
-
-        while offset < total && offset <= MAX_OFFSET {
-            let response = self
-                .fetch_market_data_response_by_skin(skin_id, offset)
-                .await?;
-
-            all_market_items.extend(response.list);
-            offset += MAX_LIMIT;
-        }
-
-        Ok(all_market_items)
+        self.fetch_market_data_generic(|offset| {
+            self.fetch_market_data_response_by_skin(skin_id, offset)
+        })
+        .await
     }
 
     // This might be useful if it ever starts working

@@ -135,7 +135,7 @@ impl Trader {
         match self.http.buy_item(&deal.id, deal.price).await {
             Ok(_) => (),
             Err(Error::InternalService(_)) => {
-                bail!("Internal Service Error: Could not buy item {}", deal.id)
+                bail!("Internal Service Error: Could not buy item {deal:?}")
             }
             Err(e) => bail!(e),
         }
@@ -150,6 +150,7 @@ impl Trader {
     }
 }
 
+#[derive(Debug)]
 struct MarketDeal {
     id: String,
     price: f64,
