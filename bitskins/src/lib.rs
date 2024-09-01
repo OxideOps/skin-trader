@@ -9,7 +9,7 @@ mod update;
 mod ws;
 
 pub use date::DateTime;
-pub use db::{Database, MarketItem, PriceStatistics, Skin};
+pub use db::{Database, MarketItem, Skin, Stats};
 pub use error::Error;
 pub use http::{HttpClient, CS2_APP_ID};
 pub use update::sync_data;
