@@ -25,4 +25,7 @@ pub enum Error {
 
     #[error("HTTP client error: {0}")]
     Request(#[from] reqwest::Error),
+
+    #[error("Parse error: {0}")]
+    Parse(#[from] url::ParseError),
 }

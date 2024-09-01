@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::sign::Signature;
+use crate::sign::Signer;
 use crate::Result;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -9,14 +9,14 @@ const BASE_URL: &str = "https://api.dmarket.com";
 
 pub struct Client {
     client: reqwest::Client,
-    signature: Signature,
+    Signer: Signer,
 }
 
 impl Client {
     pub fn new() -> Result<Self> {
         Ok(Self {
             client: reqwest::Client::new(),
-            signature: Signature::new()?,
+            Signer: Signer::new()?,
         })
     }
 
@@ -38,7 +38,7 @@ impl Client {
 
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
         let headers = self
-            .signature
+            .Signer
             .generate_headers(method.as_str(), &url, &body_str)?;
 
         let mut request = self.client.request(method, &url);

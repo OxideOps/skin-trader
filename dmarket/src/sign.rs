@@ -1,17 +1,17 @@
 use crate::error::Error;
 use crate::Result;
 use dotenvy::dotenv;
-use ed25519_dalek::{Signer, SigningKey};
+use ed25519_dalek::{Signer as _, SigningKey};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
 
-pub struct Signature {
+pub struct Signer {
     signing_key: SigningKey,
     api_key: String,
 }
 
-impl Signature {
+impl Signer {
     pub fn new() -> Result<Self> {
         dotenv().ok();
 
