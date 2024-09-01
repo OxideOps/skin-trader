@@ -32,15 +32,14 @@ impl Signer {
     pub fn generate_headers(
         &self,
         method: &str,
-        url: &str,
+        url: &Url,
         body: &str,
     ) -> Result<Vec<(String, String)>> {
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-        let parsed_url = Url::parse(url)?;
-        let path_and_query = parsed_url.path().to_string() + parsed_url.query().unwrap_or("");
+        let path_and_query = url.path().to_string() + url.query().unwrap_or_default();
 
         // Step 1: Build non-signed string
-        let unsigned_string = format!("{}{}{}{}", method, path_and_query, body, timestamp);
+        let unsigned_string = format!("{method}{path_and_query}{body}{timestamp}");
 
         // Step 2: Sign the string
         let signature = self.signing_key.sign(unsigned_string.as_bytes());
