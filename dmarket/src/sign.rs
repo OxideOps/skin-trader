@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::Result;
 use dotenvy::dotenv;
-use ed25519_dalek::{Signer as _, SigningKey};
+use ed25519_dalek::{Signer as _, SigningKey, SECRET_KEY_LENGTH};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
@@ -59,7 +59,7 @@ impl Signer {
 
 fn create_signing_key(secret_key: &str) -> Result<SigningKey> {
     let secret_key_bytes = hex::decode(secret_key)?;
-    if secret_key_bytes.len() != 32 {
+    if secret_key_bytes.len() != SECRET_KEY_LENGTH {
         return Err(Error::SigningKey("Invalid secret key length".into()));
     }
     let key_array: [u8; 32] = secret_key_bytes
