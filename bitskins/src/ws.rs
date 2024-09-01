@@ -103,28 +103,28 @@ where
     /// Parses the incoming message and logs its content. If the message
     /// indicates successful API key authentication, it sets up the default channels.
     async fn handle_message(&mut self, text: String) -> Result<()> {
-        if let Ok(Value::Array(array)) = serde_json::from_str(&text) {
-            if array.len() < 2 {
-                log::warn!("Received malformed message: {}", text);
-                return Ok(());
+        match serde_json::from_str(&text) {
+            Ok(Value::Array(array)) => {
+                if array.len() < 2 {
+                    log::warn!("Received malformed message: {}", text);
+                    return Ok(());
+                }
+
+                let action = &array[0];
+                let data = &array[1];
+
+                log::debug!("Received message: {}, {}", action, data);
+
+                if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
+                    self.setup_channels().await?
+                } else if let Ok(channel) = Channel::deserialize(action) {
+                    let ws_data = WsData::deserialize(data)
+                        .map_err(|_| Error::Deserialize(data.to_string()))?;
+                    (self.handler)(channel, ws_data).await;
+                }
             }
-
-            let action = &array[0];
-            let data = &array[1];
-
-            log::debug!("Received message: {}, {}", action, data);
-
-            if let Ok(WsAction::WsAuthApikey) = WsAction::deserialize(action) {
-                self.setup_channels().await?
-            } else if let Ok(channel) = Channel::deserialize(action) {
-                let ws_data =
-                    WsData::deserialize(data).map_err(|_| Error::Deserialize(data.to_string()))?;
-                (self.handler)(channel, ws_data).await;
-            }
-        } else {
-            log::warn!("Invalid message format: {}", text);
+            _ => log::warn!("Invalid message format: {}", text),
         }
-
         Ok(())
     }
 

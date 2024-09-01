@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use bitskins::{Channel, Database, HttpClient, PriceStatistics, Skin, WsData, CS2_APP_ID};
+use bitskins::{Channel, Database, HttpClient, Skin, Stats, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
 
@@ -115,7 +115,7 @@ impl Trader {
         self.execute_purchase(best_deal, mean).await
     }
 
-    fn are_stats_reliable(stats: &PriceStatistics) -> bool {
+    fn are_stats_reliable(stats: &Stats) -> bool {
         stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 

@@ -48,7 +48,7 @@ pub struct Sticker {
 }
 
 #[derive(Debug)]
-pub struct PriceStatistics {
+pub struct Stats {
     pub skin_id: i32,
     pub mean_price: Option<f64>,
     pub std_dev_price: Option<f64>,
@@ -94,9 +94,9 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn calculate_price_statistics(&self, float_min: f64) -> Result<Vec<PriceStatistics>> {
+    pub async fn calculate_price_statistics(&self, float_min: f64) -> Result<Vec<Stats>> {
         let stats = sqlx::query_as!(
-            PriceStatistics,
+            Stats,
             r#"
         WITH filtered_sales AS (
             SELECT
@@ -150,7 +150,7 @@ impl Database {
         Ok(stats)
     }
 
-    pub async fn update_price_statistics(&self, stats: &[PriceStatistics]) -> Result<()> {
+    pub async fn update_price_statistics(&self, stats: &[Stats]) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         for stat in stats {
@@ -190,9 +190,9 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_price_statistics(&self, skin_id: Id) -> Result<PriceStatistics> {
+    pub async fn get_price_statistics(&self, skin_id: Id) -> Result<Stats> {
         sqlx::query_as!(
-            PriceStatistics,
+            Stats,
             "SELECT * FROM price_statistics WHERE skin_id = $1",
             skin_id
         )
@@ -201,7 +201,7 @@ impl Database {
         .ok_or(Error::PriceStatisticsFetchFailed(skin_id))
     }
 
-    pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<PriceStatistics>> {
+    pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<Stats>> {
         let stats = self.calculate_price_statistics(0.15).await?;
         self.update_price_statistics(&stats).await?;
         Ok(stats)
