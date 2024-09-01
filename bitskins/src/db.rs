@@ -98,28 +98,49 @@ impl Database {
         let stats = sqlx::query_as!(
             PriceStatistics,
             r#"
-            WITH filtered_sales AS (
-                SELECT 
-                    skin_id,
-                    price,
-                    float_value,
-                    EXTRACT(EPOCH FROM created_at) as time
-                FROM Sale
-                WHERE float_value >= $1
-            )
-            SELECT 
+        WITH filtered_sales AS (
+            SELECT
                 skin_id,
-                AVG(price) as mean_price,
-                STDDEV(price) as std_dev_price,
-                COUNT(*)::INTEGER as sale_count,
-                MIN(float_value) as min_float,
-                MAX(float_value) as max_float,
-                CORR(time, price) as time_correlation,
-                REGR_SLOPE(price, time) as price_slope,
-                $2::TIMESTAMPTZ as last_update
+                price,
+                float_value,
+                EXTRACT(EPOCH FROM created_at) as time
+            FROM Sale
+            WHERE float_value >= $1
+        ),
+        price_quartiles AS (
+            SELECT
+                skin_id,
+                percentile_cont(0.25) WITHIN GROUP (ORDER BY price) AS q1,
+                percentile_cont(0.75) WITHIN GROUP (ORDER BY price) AS q3
             FROM filtered_sales
             GROUP BY skin_id
-            "#,
+        ),
+        outlier_bounds AS (
+            SELECT
+                skin_id,
+                q1 - 1.5 * (q3 - q1) AS lower_bound,
+                q3 + 1.5 * (q3 - q1) AS upper_bound
+            FROM price_quartiles
+        ),
+        sales_without_outliers AS (
+            SELECT fs.*
+            FROM filtered_sales fs
+            JOIN outlier_bounds ob ON fs.skin_id = ob.skin_id
+            WHERE fs.price BETWEEN ob.lower_bound AND ob.upper_bound
+        )
+        SELECT
+            skin_id,
+            AVG(price) as mean_price,
+            STDDEV(price) as std_dev_price,
+            COUNT(*)::INTEGER as sale_count,
+            MIN(float_value) as min_float,
+            MAX(float_value) as max_float,
+            CORR(time, price) as time_correlation,
+            REGR_SLOPE(price, time) as price_slope,
+            $2::TIMESTAMPTZ as last_update
+        FROM sales_without_outliers
+        GROUP BY skin_id
+        "#,
             float_min,
             OffsetDateTime::now_utc(),
         )
