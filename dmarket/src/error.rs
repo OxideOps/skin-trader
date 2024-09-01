@@ -1,3 +1,4 @@
+use reqwest::StatusCode;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -23,8 +24,11 @@ pub enum Error {
     #[error("Config error: {0}")]
     Config(String),
 
-    #[error("HTTP client error: {0}")]
+    #[error("Request error: {0}")]
     Request(#[from] reqwest::Error),
+
+    #[error("Response error: {0}")]
+    Response(StatusCode, String),
 
     #[error("Parse error: {0}")]
     Parse(#[from] url::ParseError),

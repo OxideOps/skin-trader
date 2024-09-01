@@ -9,14 +9,14 @@ const BASE_URL: &str = "https://api.dmarket.com";
 
 pub struct Client {
     client: reqwest::Client,
-    Signer: Signer,
+    signer: Signer,
 }
 
 impl Client {
     pub fn new() -> Result<Self> {
         Ok(Self {
             client: reqwest::Client::new(),
-            Signer: Signer::new()?,
+            signer: Signer::new()?,
         })
     }
 
@@ -38,7 +38,7 @@ impl Client {
 
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
         let headers = self
-            .Signer
+            .signer
             .generate_headers(method.as_str(), &url, &body_str)?;
 
         let mut request = self.client.request(method, &url);
@@ -56,7 +56,7 @@ impl Client {
         if response.status().is_success() {
             Ok(response.json().await?)
         } else {
-            Err(Error::Api(response.status(), response.text().await?))
+            Err(Error::Response(response.status(), response.text().await?))
         }
     }
 }
