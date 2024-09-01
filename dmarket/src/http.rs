@@ -36,7 +36,6 @@ impl Client {
         body: Option<Value>,
     ) -> Result<T> {
         let url = Url::parse(&format!("{}{}", BASE_URL, path))?;
-
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
         let headers = self
             .signer
