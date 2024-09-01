@@ -252,7 +252,7 @@ impl Database {
             VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (id) DO NOTHING
             "#,
-            item.created_at.0,
+            *item.created_at,
             item.id,
             item.skin_id,
             item.price,
@@ -514,5 +514,21 @@ impl Database {
         .fetch_optional(&self.pool)
         .await?
         .is_some())
+    }
+
+    pub async fn get_all_market_items(&self) -> Result<Vec<MarketItem>> {
+        Ok(sqlx::query_as!(MarketItem, "SELECT * FROM MarketItem")
+            .fetch_all(&self.pool)
+            .await?)
+    }
+
+    pub async fn get_market_items(&self, skin_id: i32) -> Result<Vec<MarketItem>> {
+        Ok(sqlx::query_as!(
+            MarketItem,
+            "SELECT * FROM MarketItem WHERE skin_id = $1",
+            skin_id
+        )
+        .fetch_all(&self.pool)
+        .await?)
     }
 }
