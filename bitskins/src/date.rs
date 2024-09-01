@@ -1,8 +1,9 @@
+use derive_more::{Deref, From};
 use serde::{de, Deserialize, Deserializer};
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Deref, From, Clone)]
 pub struct DateTime(pub OffsetDateTime);
 
 impl DateTime {

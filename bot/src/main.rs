@@ -10,6 +10,9 @@ async fn main() -> Result<()> {
     let trader = Trader::new().await?;
     let ws = WsClient::connect(|channel, ws_data| trader.process_data(channel, ws_data)).await?;
 
+    trader.purchase_best_items().await?;
+
     ws.start().await?;
+
     Ok(())
 }

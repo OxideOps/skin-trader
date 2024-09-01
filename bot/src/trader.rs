@@ -83,36 +83,33 @@ impl Trader {
     }
 
     async fn attempt_purchase(&self, item: WsData) -> Result<()> {
-        let stats = self.db.get_price_statistics(item.skin_id).await?;
-
-        let (mean, ws_price) = match (stats.mean_price, item.price) {
-            (Some(mean), Some(price)) => (mean, price),
-            _ => bail!(
-                "Missing mean price or item price for skin_id: {}",
-                item.skin_id
-            ),
+        let price = match item.price {
+            Some(price) => price,
+            _ => bail!("Missing item price for skin_id: {}", item.skin_id),
         };
+        self.attempt_purchase_generic(MarketDeal::new(item.id, price), item.skin_id)
+            .await
+    }
+
+    async fn attempt_purchase_generic(&self, deal: MarketDeal, skin_id: i32) -> Result<()> {
+        let stats = self.db.get_price_statistics(skin_id).await?;
+        let mean = stats.mean_price.unwrap_or(0.0);
 
         if !Self::are_stats_reliable(&stats) {
-            bail!("Price stats are not reliable for skin_id: {}", item.skin_id);
+            bail!("Price stats are not reliable for skin_id: {}", skin_id);
         }
-
-        let best_deal = match self.find_best_market_deal(item.skin_id).await? {
-            Some(market_deal) if market_deal.price < ws_price => market_deal,
-            _ => MarketDeal::new(item.id, ws_price),
-        };
 
         let balance = self.http.fetch_balance().await?;
 
-        if !best_deal.is_affordable(balance) {
+        if !deal.is_affordable(balance) {
             bail!("Price for best deal exceeds our max price for our current balance")
         }
 
-        if !best_deal.is_profitable(mean) {
-            bail!("Item is not profitable: {}", item.skin_id)
+        if !deal.is_profitable(mean) {
+            bail!("Item is not profitable: {}", skin_id)
         }
 
-        self.execute_purchase(best_deal, mean).await
+        self.execute_purchase(deal, mean).await
     }
 
     fn are_stats_reliable(stats: &Stats) -> bool {
@@ -120,11 +117,11 @@ impl Trader {
     }
 
     async fn find_best_market_deal(&self, skin_id: i32) -> Result<Option<MarketDeal>> {
-        let market_list = self.http.fetch_market_items_for_skin(skin_id).await?;
+        let market_list = self.db.get_market_items(skin_id).await?;
 
         Ok(market_list
             .into_iter()
-            .map(|data| MarketDeal::new(data.id, data.price))
+            .map(|data| MarketDeal::new(data.id.to_string(), data.price))
             .min_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(Ordering::Equal)))
     }
 
@@ -135,6 +132,19 @@ impl Trader {
         info!("Listing {} for {}", deal.id, mean_price);
         self.http.list_item(&deal.id, mean_price).await?;
 
+        Ok(())
+    }
+
+    pub(crate) async fn purchase_best_items(&self) -> Result<()> {
+        let skin_ids = self
+            .db
+            .get_skins_by_sale_count(MIN_SALE_COUNT as i64)
+            .await?;
+        for skin_id in skin_ids {
+            if let Some(deal) = self.find_best_market_deal(skin_id).await? {
+                self.attempt_purchase_generic(deal, skin_id).await.ok();
+            }
+        }
         Ok(())
     }
 }
