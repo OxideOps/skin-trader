@@ -95,7 +95,7 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn calculate_price_statistics(&self, float_min: f64) -> Result<Vec<Stats>> {
+    pub async fn calculate_price_statistics(&self) -> Result<Vec<Stats>> {
         let stats = sqlx::query_as!(
             Stats,
             r#"
@@ -106,7 +106,6 @@ impl Database {
                 float_value,
                 EXTRACT(EPOCH FROM created_at) as time
             FROM Sale
-            WHERE float_value >= $1
         ),
         price_quartiles AS (
             SELECT
@@ -138,11 +137,10 @@ impl Database {
             MAX(float_value) as max_float,
             CORR(time, price) as time_correlation,
             REGR_SLOPE(price, time) as price_slope,
-            $2::TIMESTAMPTZ as last_update
+            $1::TIMESTAMPTZ as last_update
         FROM sales_without_outliers
         GROUP BY skin_id
         "#,
-            float_min,
             OffsetDateTime::now_utc(),
         )
         .fetch_all(&self.pool)
@@ -203,7 +201,7 @@ impl Database {
     }
 
     pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<Stats>> {
-        let stats = self.calculate_price_statistics(0.15).await?;
+        let stats = self.calculate_price_statistics().await?;
         self.update_price_statistics(&stats).await?;
         Ok(stats)
     }
