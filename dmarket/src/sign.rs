@@ -51,13 +51,15 @@ impl Signer {
         let mut headers = HeaderMap::new();
         headers.insert(
             HEADER_API_KEY,
-            HeaderValue::from_str(&self.api_key)
-                .map_err(|e| Error::InvalidHeader(e.to_string()))?,
+            self.api_key
+                .parse()
+                .map_err(|_| Error::InvalidHeader(HEADER_API_KEY.into()))?,
         );
         headers.insert(
             HEADER_REQUEST_SIGN,
-            HeaderValue::from_str(&signature_hex)
-                .map_err(|e| Error::InvalidHeader(e.to_string()))?,
+            signature_hex
+                .parse()
+                .map_err(|_| Error::InvalidHeader(HEADER_REQUEST_SIGN.into()))?,
         );
         headers.insert(HEADER_SIGN_DATE, HeaderValue::from(timestamp));
 
