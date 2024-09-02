@@ -571,6 +571,7 @@ dependencies = [
 name = "dmarket"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "dotenvy",
  "ed25519-dalek",
  "hex",

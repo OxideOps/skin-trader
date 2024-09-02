@@ -1,4 +1,3 @@
-use reqwest::StatusCode;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -28,11 +27,11 @@ pub enum Error {
     Request(#[from] reqwest::Error),
 
     #[error("Response error: {0}")]
-    Response(StatusCode, String),
+    Response(reqwest::StatusCode, String),
 
     #[error("Parse error: {0}")]
     Parse(#[from] url::ParseError),
 
     #[error("Invalid header: {0}")]
-    InvalidHeader(String),
+    InvalidHeader(#[from] reqwest::header::InvalidHeaderValue),
 }
