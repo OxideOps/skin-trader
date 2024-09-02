@@ -1,10 +1,15 @@
 use crate::error::Error;
 use crate::Result;
 use dotenvy::dotenv;
-use ed25519_dalek::{Signer as _, SigningKey, SECRET_KEY_LENGTH};
+use ed25519_dalek::{SecretKey, Signer as _, SigningKey};
+use reqwest::header::{HeaderMap, HeaderValue};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
+
+pub const HEADER_API_KEY: &str = "X-Api-Key";
+pub const HEADER_REQUEST_SIGN: &str = "X-Request-Sign";
+pub const HEADER_SIGN_DATE: &str = "X-Sign-Date";
 
 pub struct Signer {
     signing_key: SigningKey,
@@ -29,12 +34,7 @@ impl Signer {
         })
     }
 
-    pub fn generate_headers(
-        &self,
-        method: &str,
-        url: &Url,
-        body: &str,
-    ) -> Result<Vec<(String, String)>> {
+    pub fn generate_headers(&self, method: &str, url: &Url, body: &str) -> Result<HeaderMap> {
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         let path_and_query = url.path().to_string() + url.query().unwrap_or_default();
 
@@ -45,25 +45,32 @@ impl Signer {
         let signature = self.signing_key.sign(unsigned_string.as_bytes());
 
         // Step 3: Encode the result string with hex
-        let signature_hex = hex::encode(signature.to_bytes());
+        let signature_hex = "dmar ed25519 ".to_string() + &hex::encode(signature.to_bytes());
 
         // Step 4: Prepare headers
-        Ok(vec![
-            ("X-Api-Key".to_string(), self.api_key.clone()),
-            ("X-Request-Sign".to_string(), signature_hex),
-            ("X-Sign-Date".to_string(), timestamp.to_string()),
-        ])
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            HEADER_API_KEY,
+            self.api_key
+                .parse()
+                .map_err(|_| Error::InvalidHeader(HEADER_API_KEY.into()))?,
+        );
+        headers.insert(
+            HEADER_REQUEST_SIGN,
+            signature_hex
+                .parse()
+                .map_err(|_| Error::InvalidHeader(HEADER_REQUEST_SIGN.into()))?,
+        );
+        headers.insert(HEADER_SIGN_DATE, HeaderValue::from(timestamp));
+
+        Ok(headers)
     }
 }
 
 fn create_signing_key(secret_key: &str) -> Result<SigningKey> {
-    let secret_key_bytes = hex::decode(secret_key)?;
-    if secret_key_bytes.len() != SECRET_KEY_LENGTH {
-        return Err(Error::SigningKey("Invalid secret key length".into()));
-    }
-    let key_array: [u8; 32] = secret_key_bytes
+    let bytes: SecretKey = hex::decode(secret_key)?
         .try_into()
-        .map_err(|_| Error::SigningKey("Failed to convert secret key to array".into()))?;
+        .map_err(|_| Error::SigningKey("Couldn't turn secret key str into a SecretKey".into()))?;
 
-    Ok(SigningKey::from_bytes(&key_array))
+    Ok(SigningKey::from_bytes(&bytes))
 }

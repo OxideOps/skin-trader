@@ -32,4 +32,7 @@ pub enum Error {
 
     #[error("Parse error: {0}")]
     Parse(#[from] url::ParseError),
+
+    #[error("Invalid header: {0}")]
+    InvalidHeader(String),
 }

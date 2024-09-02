@@ -35,17 +35,13 @@ impl Client {
         path: &str,
         body: Option<Value>,
     ) -> Result<T> {
-        let url = Url::parse(&format!("{}{}", BASE_URL, path))?;
+        let url = Url::parse(&format!("{BASE_URL}{path}"))?;
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
         let headers = self
             .signer
             .generate_headers(method.as_str(), &url, &body_str)?;
 
-        let mut request = self.client.request(method, url);
-
-        for (key, value) in headers {
-            request = request.header(&key, value);
-        }
+        let mut request = self.client.request(method, url).headers(headers);
 
         if let Some(body) = body {
             request = request.json(&body);
