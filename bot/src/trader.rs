@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use bitskins::{Channel, Database, HttpClient, Skin, Stats, WsData, CS2_APP_ID};
+use bitskins::{sync_new_sales, Channel, Database, HttpClient, Skin, Stats, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
 
@@ -146,6 +146,10 @@ impl Trader {
             }
         }
         Ok(())
+    }
+
+    pub(crate) async fn sync_new_sales(&self) -> bitskins::Result<()> {
+        sync_new_sales(&self.db, &self.http).await
     }
 }
 
