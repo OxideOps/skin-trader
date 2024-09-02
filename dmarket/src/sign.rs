@@ -10,6 +10,7 @@ use url::Url;
 pub const HEADER_API_KEY: &str = "X-Api-Key";
 pub const HEADER_REQUEST_SIGN: &str = "X-Request-Sign";
 pub const HEADER_SIGN_DATE: &str = "X-Sign-Date";
+pub const SIGNATURE_PREFIX: &str = "dmar ed25519 ";
 
 pub struct Signer {
     signing_key: SigningKey,
@@ -45,7 +46,7 @@ impl Signer {
         let signature = self.signing_key.sign(unsigned_string.as_bytes());
 
         // Step 3: Specify signature type and encode the signature with hex
-        let signature_hex = "dmar ed25519 ".to_string() + &hex::encode(signature.to_bytes());
+        let signature_hex = SIGNATURE_PREFIX.to_string() + &hex::encode(signature.to_bytes());
 
         // Step 4: Prepare headers
         let mut headers = HeaderMap::new();
