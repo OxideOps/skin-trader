@@ -79,6 +79,15 @@ impl db::Sale {
     }
 }
 
+async fn fetch_skins(client: &HttpClient) -> Result<Vec<db::Skin>> {
+    Ok(client
+        .fetch_skins()
+        .await?
+        .into_iter()
+        .map(|skin| skin.into())
+        .collect())
+}
+
 async fn handle_sticker(
     db: &Database,
     sticker: http::Sticker,
@@ -151,12 +160,7 @@ async fn handle_skin(db: &Database, client: &HttpClient, skin: &db::Skin) -> Res
 }
 
 pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
-    let skins: Vec<db::Skin> = client
-        .fetch_skins()
-        .await?
-        .into_iter()
-        .map(|skin| skin.into())
-        .collect();
+    let skins = fetch_skins(client).await?;
     let i = &AtomicUsize::new(1);
     let mut filtered_skins = Vec::new();
 
@@ -181,6 +185,43 @@ pub async fn sync_data(db: &Database, client: &HttpClient) -> Result<()> {
             }
         };
     }))
+    .await;
+
+    log::info!("Updating price statistics");
+    db.calculate_and_update_price_statistics().await?;
+
+    Ok(())
+}
+
+pub async fn sync_new_sales(db: &Database, client: &HttpClient) -> Result<()> {
+    let skins = fetch_skins(client).await?;
+
+    db.insert_skins(&skins).await?;
+
+    let skin_ids: Vec<i32> = skins.iter().map(|s| s.id).collect();
+    let latest_dates = db.get_latest_sale_dates(&skin_ids).await?;
+
+    join_all(skins.into_iter().zip(latest_dates.into_iter()).map(
+        |(skin, latest_date)| async move {
+            let sales = client
+                .fetch_sales(skin.id)
+                .await
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(move |sale| Some(sale).filter(|s| s.created_at > latest_date));
+
+            for sale in sales {
+                log::info!(
+                    "Syncing new sale for skin {} created at {}",
+                    skin.id,
+                    sale.created_at
+                );
+                if let Err(e) = handle_sale(db, &skin, sale).await {
+                    log::error!("Error handling sale: {}", e);
+                }
+            }
+        },
+    ))
     .await;
 
     log::info!("Updating price statistics");
