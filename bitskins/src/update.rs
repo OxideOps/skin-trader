@@ -224,5 +224,8 @@ pub async fn sync_new_sales(db: &Database, client: &HttpClient) -> Result<()> {
     ))
     .await;
 
+    log::info!("Updating price statistics");
+    db.calculate_and_update_price_statistics().await?;
+
     Ok(())
 }
