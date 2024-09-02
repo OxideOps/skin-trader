@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::Result;
 use dotenvy::dotenv;
-use ed25519_dalek::{Signer as _, SigningKey};
+use ed25519_dalek::{SecretKey, Signer as _, SigningKey};
 use reqwest::header::{HeaderMap, HeaderValue};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -68,9 +68,9 @@ impl Signer {
 }
 
 fn create_signing_key(secret_key: &str) -> Result<SigningKey> {
-    Ok(SigningKey::from_bytes(
-        &hex::decode(secret_key)?
-            .try_into()
-            .map_err(|_| Error::SigningKey("Failed to convert secret key to array".into()))?,
-    ))
+    let bytes: SecretKey = hex::decode(secret_key)?
+        .try_into()
+        .map_err(|_| Error::SigningKey("Couldn't turn secret key str into a SecretKey".into()))?;
+
+    Ok(SigningKey::from_bytes(&bytes))
 }
