@@ -45,7 +45,7 @@ impl Signer {
         let signature = self.signing_key.sign(unsigned_string.as_bytes());
 
         // Step 3: Encode the result string with hex
-        let signature_hex = hex::encode(signature.to_bytes());
+        let signature_hex = "dmar ed25519 ".to_string() + &hex::encode(signature.to_bytes());
 
         // Step 4: Prepare headers
         let mut headers = HeaderMap::new();
