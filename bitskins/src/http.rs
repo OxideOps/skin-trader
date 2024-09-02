@@ -16,7 +16,7 @@ const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 pub const CS2_APP_ID: i32 = 730;
-const SPEED: f64 = 0.8; // Fraction of the default rate limit
+const SPEED: f64 = 0.75; // Fraction of the default rate limit
 
 #[derive(Deserialize)]
 pub struct Balance {
