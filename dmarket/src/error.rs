@@ -35,7 +35,4 @@ pub enum Error {
 
     #[error("Invalid header: {0}")]
     InvalidHeader(String),
-
-    #[error("Verification error: ")]
-    Verification(String),
 }
