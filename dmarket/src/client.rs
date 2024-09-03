@@ -5,8 +5,10 @@ use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use url::Url;
-
 const BASE_URL: &str = "https://api.dmarket.com";
+
+const CURRENCY_USD: &str = "USD";
+const CSGO_GAME_ID: &str = "a8db";
 
 #[derive(Deserialize, Debug)]
 pub struct Item {
@@ -77,8 +79,8 @@ impl Client {
     pub async fn get_market_items(&self) -> Result<Vec<Item>> {
         let path = "/exchange/v1/market/items";
         let query = json!({
-            "gameId": "a8db",
-            "currency": "USD",
+            "gameId": CSGO_GAME_ID,
+            "currency": CURRENCY_USD,
             "limit": 100,
         });
 
