@@ -12,5 +12,6 @@ async fn main() -> Result<()> {
     let ws = WsClient::connect(|channel, ws_data| trader.process_data(channel, ws_data)).await?;
 
     try_join!(trader.sync_new_sales(), ws.start())?;
+
     Ok(())
 }
