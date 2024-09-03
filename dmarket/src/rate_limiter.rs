@@ -7,6 +7,8 @@ const LAST_SALES: usize = 6;
 const MARKET_ITEMS: usize = 10;
 const OTHER: usize = 20;
 
+const ONE_SECOND: Duration = Duration::from_secs(1);
+
 pub(crate) struct RateLimiter {
     times: AllocRingBuffer<Instant>,
     limit: usize,
@@ -44,7 +46,7 @@ impl RateLimiter {
         }
 
         let oldest = *self.times.get(0).unwrap();
-        let next_slot = oldest + Duration::from_secs(1);
+        let next_slot = oldest + ONE_SECOND;
 
         if now >= next_slot {
             self.times.dequeue();
