@@ -16,7 +16,6 @@ pub struct Item {
 
 #[derive(Deserialize, Debug)]
 pub struct ItemResponse {
-    cursor: String,
     objects: Vec<Item>,
 }
 
