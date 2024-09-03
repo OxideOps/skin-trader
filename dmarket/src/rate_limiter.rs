@@ -10,7 +10,6 @@ pub(crate) struct RateLimiter {
 
 #[derive(Clone, Copy)]
 pub(crate) enum RateLimiterType {
-    SignIn,
     Fee,
     LastSales,
     MarketItems,
