@@ -1,6 +1,7 @@
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
+use tokio::time::sleep;
 
 const FEE: usize = 110;
 const LAST_SALES: usize = 6;
@@ -13,7 +14,6 @@ pub(crate) type RateLimiters = [Mutex<RateLimiter>; 4];
 
 pub(crate) struct RateLimiter {
     times: AllocRingBuffer<Instant>,
-    limit: usize,
 }
 
 #[derive(Clone, Copy)]
@@ -37,25 +37,13 @@ impl RateLimiter {
     pub(crate) fn new(limit: usize) -> Self {
         Self {
             times: AllocRingBuffer::new(limit),
-            limit,
         }
     }
 
-    pub(crate) fn check_and_update(&mut self, now: Instant) -> Option<Duration> {
-        if self.times.len() < self.limit {
-            self.times.push(now);
-            return None;
+    pub(crate) async fn wait(&mut self) {
+        if self.times.is_full() {
+            sleep(*self.times.front().unwrap() + ONE_SECOND - Instant::now()).await;
         }
-
-        let oldest = *self.times.get(0).unwrap();
-        let next_slot = oldest + ONE_SECOND;
-
-        if now >= next_slot {
-            self.times.dequeue();
-            self.times.push(now);
-            None
-        } else {
-            Some(next_slot - now)
-        }
+        self.times.push(Instant::now());
     }
 }

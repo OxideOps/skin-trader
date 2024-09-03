@@ -5,8 +5,6 @@ use crate::Result;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
-use std::time::Instant;
-use tokio::time::sleep;
 use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
@@ -95,16 +93,8 @@ impl Client {
     }
 
     async fn wait_for_rate_limit(&self, limiter_type: RateLimiterType) {
-        loop {
-            let mut limiter = self.request_limiters[limiter_type as usize].lock().await;
-
-            if let Some(wait_time) = limiter.check_and_update(Instant::now()) {
-                drop(limiter);
-                sleep(wait_time).await;
-            } else {
-                return;
-            }
-        }
+        let mut limiter = self.request_limiters[limiter_type as usize].lock().await;
+        limiter.wait().await;
     }
 
     pub async fn get_market_items(&self) -> Result<Vec<Item>> {
