@@ -5,7 +5,7 @@ use crate::Result;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 use url::Url;
