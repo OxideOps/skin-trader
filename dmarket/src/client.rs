@@ -2,11 +2,23 @@ use crate::error::Error;
 use crate::sign::Signer;
 use crate::Result;
 use reqwest::Method;
-use serde::de::DeserializeOwned;
-use serde_json::Value;
+use serde::{de::DeserializeOwned, Deserialize};
+use serde_json::{json, Value};
 use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
+
+#[derive(Deserialize, Debug)]
+pub struct Item {
+    itemId: String,
+    amount: i64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ItemResponse {
+    cursor: String,
+    objects: Vec<Item>,
+}
 
 pub struct Client {
     client: reqwest::Client,
@@ -21,21 +33,28 @@ impl Client {
         })
     }
 
-    pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T> {
-        self.request(Method::GET, path, None).await
+    pub async fn get<T: DeserializeOwned>(&self, path: &str, query: Value) -> Result<T> {
+        self.request(Method::GET, path, query, None).await
     }
 
-    pub async fn post<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
-        self.request(Method::POST, path, Some(body)).await
+    pub async fn post<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: Value,
+        body: Value,
+    ) -> Result<T> {
+        self.request(Method::POST, path, query, Some(body)).await
     }
 
     async fn request<T: DeserializeOwned>(
         &self,
         method: Method,
         path: &str,
+        query: Value,
         body: Option<Value>,
     ) -> Result<T> {
-        let url = Url::parse(&format!("{BASE_URL}{path}"))?;
+        let query = serde_qs::to_string(&query).unwrap();
+        let url = Url::parse(&format!("{BASE_URL}{path}?{query}"))?;
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
         let headers = self
             .signer
@@ -54,5 +73,15 @@ impl Client {
         } else {
             Err(Error::Response(response.status(), response.text().await?))
         }
+    }
+
+    pub async fn get_market_items(&self) -> Result<Value> {
+        let path = "/exchange/v1/market/items";
+        let query = json!({
+            "gameId": "a8db",
+            "currency": "USD",
+            "limit": 100,
+        });
+        self.get(path, query).await
     }
 }
