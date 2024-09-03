@@ -1,5 +1,6 @@
 mod client;
 mod error;
+mod rate_limiter;
 mod sign;
 
 pub use client::Client;

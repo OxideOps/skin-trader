@@ -1,9 +1,13 @@
 use crate::error::Error;
+use crate::rate_limiter::RateLimiter;
 use crate::sign::Signer;
 use crate::Result;
+use dashmap::DashMap;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
+use std::time::{Duration, Instant};
+use tokio::time::sleep;
 use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
@@ -14,7 +18,8 @@ const MARKET_LIMIT: usize = 100;
 
 #[derive(Deserialize, Debug)]
 pub struct Item {
-    itemId: String,
+    #[serde(rename = "itemId")]
+    item_id: String,
     amount: i64,
 }
 
@@ -26,13 +31,37 @@ pub struct ItemResponse {
 pub struct Client {
     client: reqwest::Client,
     signer: Signer,
+    rate_limiters: DashMap<String, RateLimiter>,
 }
 
 impl Client {
     pub fn new() -> Result<Self> {
+        let rate_limiters = DashMap::new();
+        rate_limiters.insert(
+            "sign-in".to_string(),
+            RateLimiter::new(20, Duration::from_secs(60)),
+        );
+        rate_limiters.insert(
+            "fee".to_string(),
+            RateLimiter::new(110, Duration::from_secs(1)),
+        );
+        rate_limiters.insert(
+            "last-sales".to_string(),
+            RateLimiter::new(6, Duration::from_secs(1)),
+        );
+        rate_limiters.insert(
+            "market-items".to_string(),
+            RateLimiter::new(10, Duration::from_secs(1)),
+        );
+        rate_limiters.insert(
+            "other".to_string(),
+            RateLimiter::new(20, Duration::from_secs(1)),
+        );
+
         Ok(Self {
             client: reqwest::Client::new(),
             signer: Signer::new()?,
+            rate_limiters,
         })
     }
 
@@ -52,6 +81,9 @@ impl Client {
         path: &str,
         body: Option<Value>,
     ) -> Result<T> {
+        let limiter_key = self.get_limiter_key(path);
+        self.wait_for_rate_limit(&limiter_key).await;
+
         let url = Url::parse(&format!("{BASE_URL}{path}"))?;
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
         let headers = self
@@ -70,6 +102,32 @@ impl Client {
             Ok(response.json().await?)
         } else {
             Err(Error::Response(response.status(), response.text().await?))
+        }
+    }
+
+    fn get_limiter_key(&self, path: &str) -> String {
+        if path.contains("sign-in") {
+            "sign-in".to_string()
+        } else if path.contains("fee") {
+            "fee".to_string()
+        } else if path.contains("last-sales") {
+            "last-sales".to_string()
+        } else if path.contains("market-items") {
+            "market-items".to_string()
+        } else {
+            "other".to_string()
+        }
+    }
+
+    async fn wait_for_rate_limit(&self, key: &str) {
+        loop {
+            let now = Instant::now();
+            let mut limiter = self.rate_limiters.get_mut(key).unwrap();
+            if limiter.check_and_update(now) {
+                break;
+            }
+            drop(limiter);
+            sleep(Duration::from_millis(10)).await;
         }
     }
 
