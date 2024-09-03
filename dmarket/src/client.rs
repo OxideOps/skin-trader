@@ -2,11 +2,26 @@ use crate::error::Error;
 use crate::sign::Signer;
 use crate::Result;
 use reqwest::Method;
-use serde::de::DeserializeOwned;
-use serde_json::Value;
+use serde::{de::DeserializeOwned, Deserialize};
+use serde_json::{json, Value};
 use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
+
+const CURRENCY_USD: &str = "USD";
+const CSGO_GAME_ID: &str = "a8db";
+const MARKET_LIMIT: usize = 100;
+
+#[derive(Deserialize, Debug)]
+pub struct Item {
+    itemId: String,
+    amount: i64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ItemResponse {
+    objects: Vec<Item>,
+}
 
 pub struct Client {
     client: reqwest::Client,
@@ -21,8 +36,10 @@ impl Client {
         })
     }
 
-    pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T> {
-        self.request(Method::GET, path, None).await
+    pub async fn get<T: DeserializeOwned>(&self, path: &str, query: Value) -> Result<T> {
+        let query = serde_qs::to_string(&query).unwrap();
+        self.request(Method::GET, &format!("{path}?{query}"), None)
+            .await
     }
 
     pub async fn post<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
@@ -54,5 +71,17 @@ impl Client {
         } else {
             Err(Error::Response(response.status(), response.text().await?))
         }
+    }
+
+    pub async fn get_market_items(&self) -> Result<Vec<Item>> {
+        let path = "/exchange/v1/market/items";
+        let query = json!({
+            "gameId": CSGO_GAME_ID,
+            "currency": CURRENCY_USD,
+            "limit": MARKET_LIMIT,
+        });
+
+        let response = self.get::<ItemResponse>(path, query).await?;
+        Ok(response.objects)
     }
 }

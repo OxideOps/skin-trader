@@ -26,7 +26,7 @@ pub enum Error {
     #[error("Request error: {0}")]
     Request(#[from] reqwest::Error),
 
-    #[error("Response error: {0}")]
+    #[error("Response error:\nStatusCode: {0}\nText: {1}")]
     Response(reqwest::StatusCode, String),
 
     #[error("Parse error: {0}")]
