@@ -1,15 +1,16 @@
 use crate::error::Error;
 use crate::Result;
+use chrono::Utc;
 use dotenvy::dotenv;
 use ed25519_dalek::{SecretKey, Signer as _, SigningKey};
 use reqwest::header::{HeaderMap, HeaderValue};
 use std::env;
-use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
 
 pub const HEADER_API_KEY: &str = "X-Api-Key";
 pub const HEADER_REQUEST_SIGN: &str = "X-Request-Sign";
 pub const HEADER_SIGN_DATE: &str = "X-Sign-Date";
+pub const SIGNATURE_PREFIX: &str = "dmar ed25519 ";
 
 pub struct Signer {
     signing_key: SigningKey,
@@ -35,7 +36,7 @@ impl Signer {
     }
 
     pub fn generate_headers(&self, method: &str, url: &Url, body: &str) -> Result<HeaderMap> {
-        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+        let timestamp = Utc::now().timestamp().to_string();
         let path_and_query = url.path().to_string() + url.query().unwrap_or_default();
 
         // Step 1: Build non-signed string
@@ -44,24 +45,14 @@ impl Signer {
         // Step 2: Sign the string
         let signature = self.signing_key.sign(unsigned_string.as_bytes());
 
-        // Step 3: Encode the result string with hex
-        let signature_hex = "dmar ed25519 ".to_string() + &hex::encode(signature.to_bytes());
+        // Step 3: Specify signature type and encode the signature with hex
+        let signature_hex = SIGNATURE_PREFIX.to_string() + &hex::encode(signature.to_bytes());
 
         // Step 4: Prepare headers
         let mut headers = HeaderMap::new();
-        headers.insert(
-            HEADER_API_KEY,
-            self.api_key
-                .parse()
-                .map_err(|_| Error::InvalidHeader(HEADER_API_KEY.into()))?,
-        );
-        headers.insert(
-            HEADER_REQUEST_SIGN,
-            signature_hex
-                .parse()
-                .map_err(|_| Error::InvalidHeader(HEADER_REQUEST_SIGN.into()))?,
-        );
-        headers.insert(HEADER_SIGN_DATE, HeaderValue::from(timestamp));
+        headers.insert(HEADER_API_KEY, HeaderValue::from_str(&self.api_key)?);
+        headers.insert(HEADER_REQUEST_SIGN, HeaderValue::from_str(&signature_hex)?);
+        headers.insert(HEADER_SIGN_DATE, HeaderValue::from_str(&timestamp)?);
 
         Ok(headers)
     }
