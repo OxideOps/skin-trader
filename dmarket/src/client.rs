@@ -5,6 +5,7 @@ use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use url::Url;
+
 const BASE_URL: &str = "https://api.dmarket.com";
 
 const CURRENCY_USD: &str = "USD";
@@ -36,27 +37,22 @@ impl Client {
     }
 
     pub async fn get<T: DeserializeOwned>(&self, path: &str, query: Value) -> Result<T> {
-        self.request(Method::GET, path, query, None).await
+        let query = serde_qs::to_string(&query).unwrap();
+        self.request(Method::GET, &format!("{path}?{query}"), None)
+            .await
     }
 
-    pub async fn post<T: DeserializeOwned>(
-        &self,
-        path: &str,
-        query: Value,
-        body: Value,
-    ) -> Result<T> {
-        self.request(Method::POST, path, query, Some(body)).await
+    pub async fn post<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
+        self.request(Method::POST, path, Some(body)).await
     }
 
     async fn request<T: DeserializeOwned>(
         &self,
         method: Method,
         path: &str,
-        query: Value,
         body: Option<Value>,
     ) -> Result<T> {
-        let query = serde_qs::to_string(&query).unwrap();
-        let url = Url::parse(&format!("{BASE_URL}{path}?{query}"))?;
+        let url = Url::parse(&format!("{BASE_URL}{path}"))?;
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
         let headers = self
             .signer
