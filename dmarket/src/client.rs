@@ -97,13 +97,14 @@ impl Client {
 
     async fn wait_for_rate_limit(&self, limiter_type: RateLimiterType) {
         loop {
-            let now = Instant::now();
             let mut limiter = self.rate_limiters[limiter_type as usize].lock().await;
-            if limiter.check_and_update(now) {
-                break;
+
+            if let Some(wait_time) = limiter.check_and_update(Instant::now()) {
+                drop(limiter);
+                sleep(wait_time).await;
+            } else {
+                return;
             }
-            drop(limiter);
-            sleep(Duration::from_millis(10)).await;
         }
     }
 

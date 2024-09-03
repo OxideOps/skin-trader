@@ -34,20 +34,21 @@ impl RateLimiter {
         }
     }
 
-    pub(crate) fn check_and_update(&mut self, now: Instant) -> bool {
+    pub(crate) fn check_and_update(&mut self, now: Instant) -> Option<Duration> {
         if self.request_times.len() < self.request_limit {
             self.request_times.push(now);
-            return true;
+            return None;
         }
 
-        if let Some(oldest) = self.request_times.get(0) {
-            if now.duration_since(*oldest) >= self.time_frame {
-                self.request_times.dequeue();
-                self.request_times.push(now);
-                return true;
-            }
-        }
+        let oldest = *self.request_times.get(0).unwrap();
+        let next_slot = oldest + self.time_frame;
 
-        false
+        if now >= next_slot {
+            self.request_times.dequeue();
+            self.request_times.push(now);
+            None
+        } else {
+            Some(next_slot - now)
+        }
     }
 }
