@@ -31,7 +31,7 @@ pub struct ItemResponse {
 pub struct Client {
     client: reqwest::Client,
     signer: Signer,
-    rate_limiters: [Mutex<RateLimiter>; 5],
+    rate_limiters: [Mutex<RateLimiter>; 4],
 }
 
 impl Client {
@@ -40,7 +40,6 @@ impl Client {
             client: reqwest::Client::new(),
             signer: Signer::new()?,
             rate_limiters: [
-                Mutex::new(RateLimiter::new(20, Duration::from_secs(60))), // SignIn
                 Mutex::new(RateLimiter::new(110, Duration::from_secs(1))), // Fee
                 Mutex::new(RateLimiter::new(6, Duration::from_secs(1))),   // LastSales
                 Mutex::new(RateLimiter::new(10, Duration::from_secs(1))),  // MarketItems
