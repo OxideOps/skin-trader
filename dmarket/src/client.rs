@@ -30,7 +30,7 @@ pub struct ItemResponse {
 pub struct Client {
     client: reqwest::Client,
     signer: Signer,
-    rate_limiters: RateLimiters,
+    request_limiters: RateLimiters,
 }
 
 impl Client {
@@ -38,7 +38,7 @@ impl Client {
         Ok(Self {
             client: reqwest::Client::new(),
             signer: Signer::new()?,
-            rate_limiters: RateLimiter::limiters(),
+            request_limiters: RateLimiter::request_limiters(),
         })
     }
 
@@ -96,7 +96,7 @@ impl Client {
 
     async fn wait_for_rate_limit(&self, limiter_type: RateLimiterType) {
         loop {
-            let mut limiter = self.rate_limiters[limiter_type as usize].lock().await;
+            let mut limiter = self.request_limiters[limiter_type as usize].lock().await;
 
             if let Some(wait_time) = limiter.check_and_update(Instant::now()) {
                 drop(limiter);

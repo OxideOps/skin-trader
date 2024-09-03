@@ -25,7 +25,7 @@ pub(crate) enum RateLimiterType {
 }
 
 impl RateLimiter {
-    pub(crate) fn limiters() ->  RateLimiters {
+    pub(crate) fn request_limiters() -> RateLimiters {
         [
             Mutex::new(RateLimiter::new(FEE)),
             Mutex::new(RateLimiter::new(LAST_SALES)),
