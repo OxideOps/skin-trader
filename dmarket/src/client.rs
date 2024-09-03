@@ -1,12 +1,11 @@
 use crate::error::Error;
-use crate::rate_limiter::{RateLimiter, RateLimiterType};
+use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::sign::Signer;
 use crate::Result;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::time::Instant;
-use tokio::sync::Mutex;
 use tokio::time::sleep;
 use url::Url;
 
@@ -31,7 +30,7 @@ pub struct ItemResponse {
 pub struct Client {
     client: reqwest::Client,
     signer: Signer,
-    rate_limiters: [Mutex<RateLimiter>; 4],
+    rate_limiters: RateLimiters,
 }
 
 impl Client {

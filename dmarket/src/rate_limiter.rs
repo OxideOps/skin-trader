@@ -9,6 +9,8 @@ const OTHER: usize = 20;
 
 const ONE_SECOND: Duration = Duration::from_secs(1);
 
+pub(crate) type RateLimiters = [Mutex<RateLimiter>; 4];
+
 pub(crate) struct RateLimiter {
     times: AllocRingBuffer<Instant>,
     limit: usize,
@@ -23,7 +25,7 @@ pub(crate) enum RateLimiterType {
 }
 
 impl RateLimiter {
-    pub(crate) fn limiters() -> [Mutex<RateLimiter>; 4] {
+    pub(crate) fn limiters() ->  RateLimiters {
         [
             Mutex::new(RateLimiter::new(FEE)),
             Mutex::new(RateLimiter::new(LAST_SALES)),
