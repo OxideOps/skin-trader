@@ -1,12 +1,12 @@
 use crate::error::Error;
-use crate::rate_limiter::RateLimiter;
+use crate::rate_limiter::{RateLimiter, RateLimiterType};
 use crate::sign::Signer;
 use crate::Result;
-use dashmap::DashMap;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_json::{json, Value};
 use std::time::{Duration, Instant};
+use tokio::sync::Mutex;
 use tokio::time::sleep;
 use url::Url;
 
@@ -31,37 +31,21 @@ pub struct ItemResponse {
 pub struct Client {
     client: reqwest::Client,
     signer: Signer,
-    rate_limiters: DashMap<String, RateLimiter>,
+    rate_limiters: [Mutex<RateLimiter>; 5],
 }
 
 impl Client {
     pub fn new() -> Result<Self> {
-        let rate_limiters = DashMap::new();
-        rate_limiters.insert(
-            "sign-in".to_string(),
-            RateLimiter::new(20, Duration::from_secs(60)),
-        );
-        rate_limiters.insert(
-            "fee".to_string(),
-            RateLimiter::new(110, Duration::from_secs(1)),
-        );
-        rate_limiters.insert(
-            "last-sales".to_string(),
-            RateLimiter::new(6, Duration::from_secs(1)),
-        );
-        rate_limiters.insert(
-            "market-items".to_string(),
-            RateLimiter::new(10, Duration::from_secs(1)),
-        );
-        rate_limiters.insert(
-            "other".to_string(),
-            RateLimiter::new(20, Duration::from_secs(1)),
-        );
-
         Ok(Self {
             client: reqwest::Client::new(),
             signer: Signer::new()?,
-            rate_limiters,
+            rate_limiters: [
+                Mutex::new(RateLimiter::new(20, Duration::from_secs(60))), // SignIn
+                Mutex::new(RateLimiter::new(110, Duration::from_secs(1))), // Fee
+                Mutex::new(RateLimiter::new(6, Duration::from_secs(1))),   // LastSales
+                Mutex::new(RateLimiter::new(10, Duration::from_secs(1))),  // MarketItems
+                Mutex::new(RateLimiter::new(20, Duration::from_secs(1))),  // Other
+            ],
         })
     }
 
@@ -81,8 +65,8 @@ impl Client {
         path: &str,
         body: Option<Value>,
     ) -> Result<T> {
-        let limiter_key = self.get_limiter_key(path);
-        self.wait_for_rate_limit(&limiter_key).await;
+        let limiter_type = self.get_limiter_type(path);
+        self.wait_for_rate_limit(limiter_type).await;
 
         let url = Url::parse(&format!("{BASE_URL}{path}"))?;
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
@@ -105,24 +89,24 @@ impl Client {
         }
     }
 
-    fn get_limiter_key(&self, path: &str) -> String {
+    fn get_limiter_type(&self, path: &str) -> RateLimiterType {
         if path.contains("sign-in") {
-            "sign-in".to_string()
+            RateLimiterType::SignIn
         } else if path.contains("fee") {
-            "fee".to_string()
+            RateLimiterType::Fee
         } else if path.contains("last-sales") {
-            "last-sales".to_string()
+            RateLimiterType::LastSales
         } else if path.contains("market-items") {
-            "market-items".to_string()
+            RateLimiterType::MarketItems
         } else {
-            "other".to_string()
+            RateLimiterType::Other
         }
     }
 
-    async fn wait_for_rate_limit(&self, key: &str) {
+    async fn wait_for_rate_limit(&self, limiter_type: RateLimiterType) {
         loop {
             let now = Instant::now();
-            let mut limiter = self.rate_limiters.get_mut(key).unwrap();
+            let mut limiter = self.rate_limiters[limiter_type as usize].lock().await;
             if limiter.check_and_update(now) {
                 break;
             }
