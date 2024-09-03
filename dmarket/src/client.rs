@@ -39,12 +39,7 @@ impl Client {
         Ok(Self {
             client: reqwest::Client::new(),
             signer: Signer::new()?,
-            rate_limiters: [
-                Mutex::new(RateLimiter::new(110, Duration::from_secs(1))), // Fee
-                Mutex::new(RateLimiter::new(6, Duration::from_secs(1))),   // LastSales
-                Mutex::new(RateLimiter::new(10, Duration::from_secs(1))),  // MarketItems
-                Mutex::new(RateLimiter::new(20, Duration::from_secs(1))),  // Other
-            ],
+            rate_limiters: RateLimiter::limiters(),
         })
     }
 

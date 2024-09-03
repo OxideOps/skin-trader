@@ -1,5 +1,6 @@
 use ringbuffer::{AllocRingBuffer, RingBuffer};
 use std::time::{Duration, Instant};
+use tokio::sync::Mutex;
 
 pub(crate) struct RateLimiter {
     request_times: AllocRingBuffer<Instant>,
@@ -17,6 +18,15 @@ pub(crate) enum RateLimiterType {
 }
 
 impl RateLimiter {
+    pub(crate) fn limiters() -> [Mutex<RateLimiter>; 4] {
+        [
+            Mutex::new(RateLimiter::new(110, Duration::from_secs(1))), // Fee
+            Mutex::new(RateLimiter::new(6, Duration::from_secs(1))),   // LastSales
+            Mutex::new(RateLimiter::new(10, Duration::from_secs(1))),  // MarketItems
+            Mutex::new(RateLimiter::new(20, Duration::from_secs(1))),  // Other
+        ]
+    }
+
     pub(crate) fn new(request_limit: usize, time_frame: Duration) -> Self {
         Self {
             request_times: AllocRingBuffer::new(request_limit),
