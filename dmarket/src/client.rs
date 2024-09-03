@@ -9,6 +9,7 @@ const BASE_URL: &str = "https://api.dmarket.com";
 
 const CURRENCY_USD: &str = "USD";
 const CSGO_GAME_ID: &str = "a8db";
+const MARKET_LIMIT: usize = 100;
 
 #[derive(Deserialize, Debug)]
 pub struct Item {
@@ -81,7 +82,7 @@ impl Client {
         let query = json!({
             "gameId": CSGO_GAME_ID,
             "currency": CURRENCY_USD,
-            "limit": 100,
+            "limit": MARKET_LIMIT,
         });
 
         let response = self.get::<ItemResponse>(path, query).await?;
