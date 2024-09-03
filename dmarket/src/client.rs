@@ -75,13 +75,15 @@ impl Client {
         }
     }
 
-    pub async fn get_market_items(&self) -> Result<Value> {
+    pub async fn get_market_items(&self) -> Result<Vec<Item>> {
         let path = "/exchange/v1/market/items";
         let query = json!({
             "gameId": "a8db",
             "currency": "USD",
             "limit": 100,
         });
-        self.get(path, query).await
+
+        let response = self.get::<ItemResponse>(path, query).await?;
+        Ok(response.objects)
     }
 }
