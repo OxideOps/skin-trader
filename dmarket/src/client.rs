@@ -84,9 +84,7 @@ impl Client {
     }
 
     fn get_limiter_type(&self, path: &str) -> RateLimiterType {
-        if path.contains("sign-in") {
-            RateLimiterType::SignIn
-        } else if path.contains("fee") {
+        if path.contains("fee") {
             RateLimiterType::Fee
         } else if path.contains("last-sales") {
             RateLimiterType::LastSales
