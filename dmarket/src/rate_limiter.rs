@@ -10,14 +10,14 @@ const OTHER: usize = 20;
 
 const ONE_SECOND: Duration = Duration::from_secs(1);
 
-pub(crate) type RateLimiters = [Mutex<RateLimiter>; 4];
+pub type RateLimiters = [Mutex<RateLimiter>; 4];
 
-pub(crate) struct RateLimiter {
+pub struct RateLimiter {
     times: AllocRingBuffer<Instant>,
 }
 
 #[derive(Clone, Copy)]
-pub(crate) enum RateLimiterType {
+pub enum RateLimiterType {
     Fee,
     LastSales,
     MarketItems,
@@ -25,7 +25,7 @@ pub(crate) enum RateLimiterType {
 }
 
 impl RateLimiter {
-    pub(crate) fn request_limiters() -> RateLimiters {
+    pub fn request_limiters() -> RateLimiters {
         [
             Mutex::new(RateLimiter::new(FEE)),
             Mutex::new(RateLimiter::new(LAST_SALES)),
@@ -34,13 +34,13 @@ impl RateLimiter {
         ]
     }
 
-    pub(crate) fn new(limit: usize) -> Self {
+    pub fn new(limit: usize) -> Self {
         Self {
             times: AllocRingBuffer::new(limit),
         }
     }
 
-    pub(crate) async fn wait(&mut self) {
+    pub async fn wait(&mut self) {
         if self.times.is_full() {
             sleep(*self.times.front().unwrap() + ONE_SECOND - Instant::now()).await;
         }
