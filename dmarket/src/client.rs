@@ -81,11 +81,11 @@ impl Client {
     }
 
     fn get_limiter_type(&self, path: &str) -> RateLimiterType {
-        if path.contains("fee") {
+        if path.contains("fees") {
             RateLimiterType::Fee
         } else if path.contains("last-sales") {
             RateLimiterType::LastSales
-        } else if path.contains("market-items") {
+        } else if path.contains("market/items") {
             RateLimiterType::MarketItems
         } else {
             RateLimiterType::Other
