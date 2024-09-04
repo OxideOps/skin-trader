@@ -2,12 +2,16 @@ use anyhow::{bail, Result};
 use bitskins::{sync_new_sales, Channel, Database, HttpClient, Skin, Stats, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
+use std::time::Duration;
+use tokio::spawn;
+use tokio::time::sleep;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
 const BUY_THRESHOLD: f64 = 0.8;
 const MIN_SALE_COUNT: i32 = 200;
 const MIN_SLOPE: f64 = 0.0;
 
+#[derive(Clone)]
 pub(crate) struct Trader {
     db: Database,
     http: HttpClient,
@@ -129,8 +133,14 @@ impl Trader {
         info!("Buying {} for {}", deal.id, deal.price);
         self.http.buy_item(&deal.id, deal.price).await?;
 
-        info!("Listing {} for {}", deal.id, mean_price);
-        self.http.list_item(&deal.id, mean_price).await?;
+        let trader = self.clone();
+        spawn(async move {
+            sleep(Duration::from_secs(1)).await;
+            info!("Listing {} for {}", deal.id, mean_price);
+            if let Err(e) = trader.http.list_item(&deal.id, mean_price).await {
+                error!("Failed to list item: {e}");
+            }
+        });
 
         Ok(())
     }
