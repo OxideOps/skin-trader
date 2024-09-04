@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::sign::Signer;
 use crate::Result;
 use reqwest::Method;
@@ -14,7 +15,8 @@ const MARKET_LIMIT: usize = 100;
 
 #[derive(Deserialize, Debug)]
 pub struct Item {
-    itemId: String,
+    #[serde(rename = "itemId")]
+    item_id: String,
     amount: i64,
 }
 
@@ -26,6 +28,7 @@ pub struct ItemResponse {
 pub struct Client {
     client: reqwest::Client,
     signer: Signer,
+    request_limiters: RateLimiters,
 }
 
 impl Client {
@@ -33,6 +36,7 @@ impl Client {
         Ok(Self {
             client: reqwest::Client::new(),
             signer: Signer::new()?,
+            request_limiters: RateLimiter::request_limiters(),
         })
     }
 
@@ -52,6 +56,9 @@ impl Client {
         path: &str,
         body: Option<Value>,
     ) -> Result<T> {
+        let limiter_type = self.get_limiter_type(path);
+        self.wait_for_rate_limit(limiter_type).await;
+
         let url = Url::parse(&format!("{BASE_URL}{path}"))?;
         let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
         let headers = self
@@ -71,6 +78,23 @@ impl Client {
         } else {
             Err(Error::Response(response.status(), response.text().await?))
         }
+    }
+
+    fn get_limiter_type(&self, path: &str) -> RateLimiterType {
+        if path.contains("fee") {
+            RateLimiterType::Fee
+        } else if path.contains("last-sales") {
+            RateLimiterType::LastSales
+        } else if path.contains("market-items") {
+            RateLimiterType::MarketItems
+        } else {
+            RateLimiterType::Other
+        }
+    }
+
+    async fn wait_for_rate_limit(&self, limiter_type: RateLimiterType) {
+        let mut limiter = self.request_limiters[limiter_type as usize].lock().await;
+        limiter.wait().await;
     }
 
     pub async fn get_market_items(&self) -> Result<Vec<Item>> {
