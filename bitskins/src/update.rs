@@ -1,8 +1,7 @@
 use crate::http::ItemPrice;
+use crate::Result;
 use crate::{db, http, Database, HttpClient};
-use crate::{Result, Stats};
 use futures_util::future::{join_all, try_join};
-use std::future::Future;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 impl From<http::Skin> for db::Skin {
