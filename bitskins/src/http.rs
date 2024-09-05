@@ -283,7 +283,7 @@ impl HttpClient {
 
     pub async fn list_items(&self, items: &[ItemPrice]) -> Result<bool> {
         self.post(
-            Endpoint::RelistSingle,
+            Endpoint::RelistMany,
             json!({
                 "items": [items]
             }),
