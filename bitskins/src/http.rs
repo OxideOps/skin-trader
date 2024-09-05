@@ -243,8 +243,7 @@ impl HttpClient {
                 "items": [updates]
             }),
         )
-        .await?;
-        Ok(())
+        .await
     }
 
     pub async fn delist_item(&self, item_id: &str) -> Result<bool> {
