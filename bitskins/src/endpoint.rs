@@ -4,6 +4,8 @@ use strum_macros::{Display, EnumString};
 pub enum Endpoint {
     #[strum(serialize = "/market/delist/single")]
     DelistSingle,
+    #[strum(serialize = "/market/delist/many")]
+    DelistMultiple,
     #[strum(serialize = "/market/update_price/single")]
     UpdatePriceSingle,
     #[strum(serialize = "/market/relist/single")]
@@ -24,4 +26,6 @@ pub enum Endpoint {
     HistoryList,
     #[strum(serialize = "/market/search/mine/730")]
     Inventory,
+    #[strum(serialize = "/market/update_price/many")]
+    UpdateOfferPrices,
 }

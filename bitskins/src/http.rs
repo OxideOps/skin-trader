@@ -2,7 +2,7 @@ use crate::date::DateTime;
 use crate::endpoint::Endpoint;
 use crate::{Error, Result};
 use reqwest::{RequestBuilder, Response};
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::cmp::max;
 use std::env;
@@ -17,6 +17,9 @@ const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 pub const CS2_APP_ID: i32 = 730;
 const SPEED: f64 = 0.7; // Fraction of the default rate limit
+
+const STATUS_SELLING: usize = 2;
+const STATUS_INVENTORY: usize = 4;
 
 #[derive(Deserialize)]
 pub struct Balance {
@@ -105,6 +108,12 @@ pub struct MarketData {
 #[derive(Deserialize, Debug)]
 pub struct MarketDataCounter {
     filtered: usize,
+}
+
+#[derive(Serialize)]
+pub struct UpdateItemPrice {
+    pub id: String,
+    pub new_price: u64,
 }
 
 impl Default for HttpClient {
@@ -198,11 +207,11 @@ impl HttpClient {
         self.request(builder, endpoint).await
     }
 
-    pub async fn fetch_inventory(&self) -> Result<Vec<MarketItem>> {
+    pub async fn fetch_owned_items(&self, status: usize) -> Result<Vec<MarketItem>> {
         self.fetch_market_data_generic(|offset| async move {
             let request_body = json!({
                 "where_mine": {
-                    "status": [2, 3, 4, 0, 5, 1, -1, -4] //absolutely no documentation on these
+                    "status": [status]
                 },
                 "limit": MAX_LIMIT,
                 "offset": offset
@@ -213,11 +222,40 @@ impl HttpClient {
         .await
     }
 
+    pub async fn fetch_offers(&self) -> Result<Vec<MarketItem>> {
+        self.fetch_owned_items(STATUS_SELLING).await
+    }
+
+    pub async fn fetch_inventory(&self) -> Result<Vec<MarketItem>> {
+        self.fetch_owned_items(STATUS_INVENTORY).await
+    }
+
+    pub async fn update_market_offers(&self, updates: &[UpdateItemPrice]) -> Result<()> {
+        self.post(
+            Endpoint::UpdateOfferPrices,
+            json!({
+                "items": [updates]
+            }),
+        )
+        .await?;
+        Ok(())
+    }
+
     pub async fn delist_item(&self, item_id: &str) -> Result<bool> {
         self.post(
             Endpoint::DelistSingle,
             json!({
                 "id": item_id,
+            }),
+        )
+        .await
+    }
+
+    pub async fn delist_items(&self, items: &[&str]) -> Result<()> {
+        self.post(
+            Endpoint::DelistMultiple,
+            json!({
+                "items": [items],
             }),
         )
         .await

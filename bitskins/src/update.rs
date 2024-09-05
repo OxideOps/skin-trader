@@ -1,5 +1,6 @@
-use crate::Result;
+use crate::http::UpdateItemPrice;
 use crate::{db, http, Database, HttpClient};
+use crate::{Result, Stats};
 use futures_util::future::{join_all, try_join};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -226,6 +227,35 @@ pub async fn sync_new_sales(db: &Database, client: &HttpClient) -> Result<()> {
 
     log::info!("Updating price statistics");
     db.calculate_and_update_price_statistics().await?;
+
+    Ok(())
+}
+
+pub async fn update_offer_prices(db: &Database, client: &HttpClient) -> Result<()> {
+    let offers = client
+        .fetch_offers()
+        .await?
+        .into_iter()
+        .map(|i| i.into())
+        .collect::<Vec<db::MarketItem>>();
+
+    let mut stats = Vec::<(String, Stats)>::new();
+
+    for offer in offers {
+        let stat = db.get_price_statistics(offer.id).await?;
+        stats.push((offer.id.to_string(), stat));
+    }
+
+    let mut updates = Vec::<UpdateItemPrice>::new();
+
+    for stat in stats {
+        updates.push(UpdateItemPrice {
+            id: stat.0,
+            new_price: stat.1.mean_price.unwrap() as u64,
+        })
+    }
+
+    client.update_market_offers(&updates).await?;
 
     Ok(())
 }
