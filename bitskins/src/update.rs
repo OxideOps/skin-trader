@@ -251,8 +251,7 @@ async fn process_items<T: Into<db::MarketItem>>(
 pub async fn list_inventory_items(db: &Database, client: &HttpClient) -> Result<()> {
     let inventory = client.fetch_inventory().await?;
     let items = process_items(db, inventory).await?;
-    client.list_items(&items).await?;
-    Ok(())
+    client.list_items(&items).await
 }
 
 pub async fn update_offer_prices(db: &Database, client: &HttpClient) -> Result<()> {
