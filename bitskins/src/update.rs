@@ -252,7 +252,7 @@ pub async fn update_offer_prices(db: &Database, client: &HttpClient) -> Result<(
     let updates = stats
         .into_iter()
         .map(|s| UpdateItemPrice::new(s.0, s.1))
-        .collect::<Vec<UpdateItemPrice>>();
+        .collect::<Vec<_>>();
 
     client.update_market_offers(&updates).await?;
 
