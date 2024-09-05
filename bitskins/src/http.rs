@@ -251,16 +251,6 @@ impl HttpClient {
         .await
     }
 
-    pub async fn delist_items(&self, items: &[&str]) -> Result<()> {
-        self.post(
-            Endpoint::DelistMultiple,
-            json!({
-                "items": [items],
-            }),
-        )
-        .await
-    }
-
     pub async fn update_price(&self, app_id: i32, item_id: &str, price: i32) -> Result<()> {
         self.post(
             Endpoint::UpdatePriceSingle,
