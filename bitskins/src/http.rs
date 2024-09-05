@@ -113,7 +113,7 @@ pub struct MarketDataCounter {
 #[derive(Serialize)]
 pub struct UpdateItemPrice {
     pub id: String,
-    pub new_price: u64,
+    pub new_price: u32,
 }
 
 impl Default for HttpClient {

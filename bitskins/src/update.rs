@@ -251,7 +251,7 @@ pub async fn update_offer_prices(db: &Database, client: &HttpClient) -> Result<(
     for stat in stats {
         updates.push(UpdateItemPrice {
             id: stat.0,
-            new_price: stat.1.mean_price.unwrap() as u64,
+            new_price: stat.1.mean_price.unwrap().round() as u32,
         })
     }
 
