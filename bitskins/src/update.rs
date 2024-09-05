@@ -246,14 +246,10 @@ pub async fn update_offer_prices(db: &Database, client: &HttpClient) -> Result<(
         stats.push((offer.id.to_string(), stat));
     }
 
-    let mut updates = Vec::<UpdateItemPrice>::new();
-
-    for stat in stats {
-        updates.push(UpdateItemPrice {
-            id: stat.0,
-            new_price: stat.1.mean_price.unwrap().round() as u32,
-        })
-    }
+    let updates = stats
+        .into_iter()
+        .map(|(id, stat)| UpdateItemPrice::new(id, stat.mean_price.unwrap().round() as u32))
+        .collect::<Vec<UpdateItemPrice>>();
 
     client.update_market_offers(&updates).await?;
 

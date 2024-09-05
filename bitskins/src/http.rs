@@ -116,6 +116,12 @@ pub struct UpdateItemPrice {
     pub new_price: u32,
 }
 
+impl UpdateItemPrice {
+    pub fn new(id: String, new_price: u32) -> Self {
+        Self { id, new_price }
+    }
+}
+
 impl Default for HttpClient {
     fn default() -> Self {
         Self::new()
