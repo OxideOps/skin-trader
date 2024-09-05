@@ -111,12 +111,12 @@ pub struct MarketDataCounter {
 }
 
 #[derive(Serialize)]
-pub struct UpdateItemPrice {
+pub struct ItemPrice {
     pub id: String,
     pub new_price: u32,
 }
 
-impl UpdateItemPrice {
+impl ItemPrice {
     pub fn new(id: String, new_price: u32) -> Self {
         Self { id, new_price }
     }
@@ -236,7 +236,7 @@ impl HttpClient {
         self.fetch_owned_items(STATUS_INVENTORY).await
     }
 
-    pub async fn update_market_offers(&self, updates: &[UpdateItemPrice]) -> Result<()> {
+    pub async fn update_market_offers(&self, updates: &[ItemPrice]) -> Result<()> {
         self.post(
             Endpoint::UpdateOfferPrices,
             json!({
@@ -276,6 +276,16 @@ impl HttpClient {
                 "app_id": CS2_APP_ID,
                 "id": item_id,
                 "price": price.round() as u32,
+            }),
+        )
+        .await
+    }
+
+    pub async fn list_items(&self, items: &[ItemPrice]) -> Result<bool> {
+        self.post(
+            Endpoint::RelistSingle,
+            json!({
+                "items": [items]
             }),
         )
         .await

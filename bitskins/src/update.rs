@@ -1,7 +1,8 @@
-use crate::http::UpdateItemPrice;
+use crate::http::ItemPrice;
 use crate::{db, http, Database, HttpClient};
 use crate::{Result, Stats};
 use futures_util::future::{join_all, try_join};
+use std::future::Future;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 impl From<http::Skin> for db::Skin {
@@ -231,30 +232,31 @@ pub async fn sync_new_sales(db: &Database, client: &HttpClient) -> Result<()> {
     Ok(())
 }
 
-pub async fn update_offer_prices(db: &Database, client: &HttpClient) -> Result<()> {
-    let offers = client
-        .fetch_offers()
-        .await?
-        .into_iter()
-        .map(|i| i.into())
-        .collect::<Vec<db::MarketItem>>();
+async fn process_items<T: Into<db::MarketItem>>(
+    db: &Database,
+    items: Vec<T>,
+) -> Result<Vec<ItemPrice>> {
+    let mut result = Vec::new();
 
-    let mut stats = Vec::<(String, u32)>::new();
-
-    for offer in offers {
-        let stat = db.get_price_statistics(offer.id).await?;
-        stats.push((
-            offer.id.to_string(),
-            stat.mean_price.unwrap().round() as u32,
-        ));
+    for item in items {
+        let market_item: db::MarketItem = item.into();
+        let stat = db.get_price_statistics(market_item.id).await?;
+        let price = stat.mean_price.unwrap().round() as u32;
+        result.push(ItemPrice::new(market_item.id.to_string(), price));
     }
 
-    let updates = stats
-        .into_iter()
-        .map(|s| UpdateItemPrice::new(s.0, s.1))
-        .collect::<Vec<_>>();
+    Ok(result)
+}
 
-    client.update_market_offers(&updates).await?;
-
+pub async fn list_inventory_items(db: &Database, client: &HttpClient) -> Result<()> {
+    let inventory = client.fetch_inventory().await?;
+    let items = process_items(db, inventory).await?;
+    client.list_items(&items).await?;
     Ok(())
+}
+
+pub async fn update_offer_prices(db: &Database, client: &HttpClient) -> Result<()> {
+    let offers = client.fetch_offers().await?;
+    let updates = process_items(db, offers).await?;
+    client.update_market_offers(&updates).await
 }
