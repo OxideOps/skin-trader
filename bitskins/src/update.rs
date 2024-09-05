@@ -239,16 +239,19 @@ pub async fn update_offer_prices(db: &Database, client: &HttpClient) -> Result<(
         .map(|i| i.into())
         .collect::<Vec<db::MarketItem>>();
 
-    let mut stats = Vec::<(String, Stats)>::new();
+    let mut stats = Vec::<(String, u32)>::new();
 
     for offer in offers {
         let stat = db.get_price_statistics(offer.id).await?;
-        stats.push((offer.id.to_string(), stat));
+        stats.push((
+            offer.id.to_string(),
+            stat.mean_price.unwrap().round() as u32,
+        ));
     }
 
     let updates = stats
         .into_iter()
-        .map(|(id, stat)| UpdateItemPrice::new(id, stat.mean_price.unwrap().round() as u32))
+        .map(|s| UpdateItemPrice::new(s.0, s.1))
         .collect::<Vec<UpdateItemPrice>>();
 
     client.update_market_offers(&updates).await?;
