@@ -8,6 +8,8 @@ pub enum Endpoint {
     UpdatePriceSingle,
     #[strum(serialize = "/market/relist/single")]
     RelistSingle,
+    #[strum(serialize = "/market/relist/many")]
+    RelistMany,
     #[strum(serialize = "/account/profile/balance")]
     ProfileBalance,
     #[strum(serialize = "/market/buy/single")]
@@ -24,4 +26,6 @@ pub enum Endpoint {
     HistoryList,
     #[strum(serialize = "/market/search/mine/730")]
     Inventory,
+    #[strum(serialize = "/market/update_price/many")]
+    UpdateOfferPrices,
 }
