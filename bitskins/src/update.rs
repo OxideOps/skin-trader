@@ -165,9 +165,10 @@ impl Updater {
 
         for item in items {
             let market_item: db::MarketItem = item.into();
-            let stat = self.db.get_price_statistics(market_item.id).await?;
-            let price = stat.mean_price.unwrap().round() as u32;
-            result.push(ItemPrice::new(market_item.id.to_string(), price));
+            if let Ok(stat) = self.db.get_price_statistics(market_item.id).await {
+                let price = stat.mean_price.unwrap().round() as u32;
+                result.push(ItemPrice::new(market_item.id.to_string(), price));
+            }
         }
 
         Ok(result)
