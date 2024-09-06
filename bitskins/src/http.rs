@@ -113,12 +113,12 @@ pub struct MarketDataCounter {
 #[derive(Serialize, Debug)]
 pub struct ItemPrice {
     pub id: String,
-    pub new_price: u32,
+    pub price: u32,
 }
 
 impl ItemPrice {
-    pub fn new(id: String, new_price: u32) -> Self {
-        Self { id, new_price }
+    pub fn new(id: String, price: u32) -> Self {
+        Self { id, price }
     }
 }
 
