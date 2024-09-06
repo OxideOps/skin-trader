@@ -110,7 +110,7 @@ pub struct MarketDataCounter {
     filtered: usize,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct ItemPrice {
     pub id: String,
     pub new_price: u32,
