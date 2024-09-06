@@ -128,6 +128,12 @@ impl Default for HttpClient {
     }
 }
 
+#[derive(Deserialize, Debug)]
+pub struct UpdateResponse {
+    pub id: String,
+    pub success: bool,
+}
+
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,
@@ -236,11 +242,11 @@ impl HttpClient {
         self.fetch_owned_items(STATUS_INVENTORY).await
     }
 
-    pub async fn update_market_offers(&self, updates: &[ItemPrice]) -> Result<()> {
+    pub async fn update_market_offers(&self, updates: &[ItemPrice]) -> Result<Vec<UpdateResponse>> {
         self.post(
             Endpoint::UpdateOfferPrices,
             json!({
-                "items": [updates]
+                "items": updates
             }),
         )
         .await

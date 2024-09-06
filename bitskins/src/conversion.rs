@@ -61,7 +61,7 @@ impl db::Sticker {
 }
 
 impl db::Sale {
-    pub fn new(sale: &http::Sale, skin_id: i32) -> Self {
+    pub(crate) fn new(sale: &http::Sale, skin_id: i32) -> Self {
         Self {
             id: 0,
             skin_id,

@@ -1,4 +1,4 @@
-use crate::http::ItemPrice;
+use crate::http::{ItemPrice, UpdateResponse};
 use crate::Result;
 use crate::{db, http, Database, HttpClient};
 use futures_util::future::{join_all, try_join};
@@ -165,7 +165,7 @@ impl Updater {
 
         for item in items {
             let market_item: db::MarketItem = item.into();
-            if let Ok(stat) = self.db.get_price_statistics(market_item.id).await {
+            if let Ok(stat) = self.db.get_price_statistics(market_item.skin_id).await {
                 let price = stat.mean_price.unwrap().round() as u32;
                 result.push(ItemPrice::new(market_item.id.to_string(), price));
             }
@@ -181,7 +181,7 @@ impl Updater {
         self.client.list_items(&items).await
     }
 
-    pub async fn update_offer_prices(&self) -> Result<()> {
+    pub async fn update_offer_prices(&self) -> Result<Vec<UpdateResponse>> {
         let offers = self.client.fetch_offers().await?;
         let updates = self.process_items(offers).await?;
         log::info!("Updating prices: {updates:?}");
