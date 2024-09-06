@@ -154,6 +154,9 @@ impl Updater {
         log::info!("Updating price statistics");
         self.db.calculate_and_update_price_statistics().await?;
 
+        self.list_inventory_items().await?;
+        self.update_offer_prices().await?;
+
         Ok(())
     }
 
