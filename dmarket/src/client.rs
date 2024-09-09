@@ -29,7 +29,6 @@ pub struct ItemResponse {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct SaleResponse {
     sales: Vec<Sale>,
 }
