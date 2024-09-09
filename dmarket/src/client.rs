@@ -155,7 +155,7 @@ impl Client {
     }
 
     pub async fn get_discounts(&self, game_id: &str) -> Result<Vec<DiscountItem>> {
-        let path = "/trade-aggregator/v1/last-sales";
+        let path = "/exchange/v1/customized-fees";
         let query = json!({
             "gameID": game_id,
             "limit": DISCOUNT_LIMIT,
