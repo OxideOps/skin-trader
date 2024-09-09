@@ -58,14 +58,6 @@ pub struct DiscountItem {
     title: String,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Fee {
-    price: String,
-    date: String,
-    tx_operation_type: String,
-}
-
 pub struct Client {
     client: reqwest::Client,
     signer: Signer,
