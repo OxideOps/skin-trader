@@ -12,17 +12,58 @@ const BASE_URL: &str = "https://api.dmarket.com";
 const CURRENCY_USD: &str = "USD";
 const CSGO_GAME_ID: &str = "a8db";
 const MARKET_LIMIT: usize = 100;
+const SALES_LIMIT: usize = 500;
+const DISCOUNT_LIMIT: usize = 500; // not sure on this one
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Item {
-    #[serde(rename = "itemId")]
     item_id: String,
+    title: String,
     amount: i64,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct ItemResponse {
     objects: Vec<Item>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SaleResponse {
+    sales: Vec<Sale>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Sale {
+    price: String,
+    date: String,
+    tx_operation_type: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscountItemResponse {
+    reduced_fees: Vec<DiscountItem>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscountItem {
+    expires_at: i64,
+    fraction: String,
+    max_price: i64,
+    min_price: i64,
+    title: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Fee {
+    price: String,
+    date: String,
+    tx_operation_type: String,
 }
 
 pub struct Client {
@@ -97,15 +138,38 @@ impl Client {
         limiter.wait().await;
     }
 
-    pub async fn get_market_items(&self) -> Result<Vec<Item>> {
+    pub async fn get_market_items(&self, game_id: &str) -> Result<Vec<Item>> {
         let path = "/exchange/v1/market/items";
         let query = json!({
-            "gameId": CSGO_GAME_ID,
+            "gameId": game_id,
             "currency": CURRENCY_USD,
             "limit": MARKET_LIMIT,
         });
 
         let response = self.get::<ItemResponse>(path, query).await?;
         Ok(response.objects)
+    }
+
+    pub async fn get_sales(&self, game_id: &str, title: &str) -> Result<Vec<Sale>> {
+        let path = "/trade-aggregator/v1/last-sales";
+        let query = json!({
+            "gameID": game_id,
+            "title": title,
+            "limit": SALES_LIMIT,
+        });
+
+        let response = self.get::<SaleResponse>(path, query).await?;
+        Ok(response.sales)
+    }
+
+    pub async fn get_discounts(&self, game_id: &str) -> Result<Vec<DiscountItem>> {
+        let path = "/trade-aggregator/v1/last-sales";
+        let query = json!({
+            "gameID": game_id,
+            "limit": DISCOUNT_LIMIT,
+        });
+
+        let response = self.get::<DiscountItemResponse>(path, query).await?;
+        Ok(response.reduced_fees)
     }
 }
