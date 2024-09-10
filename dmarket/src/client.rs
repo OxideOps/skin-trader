@@ -126,7 +126,7 @@ impl Client {
     }
 
     pub async fn get<T: DeserializeOwned>(&self, path: &str, query: Value) -> Result<T> {
-        let query = serde_qs::to_string(&query).unwrap();
+        let query = serde_qs::to_string(&query)?;
         self.request(Method::GET, &format!("{path}?{query}"), None)
             .await
     }
