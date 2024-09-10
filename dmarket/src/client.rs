@@ -46,7 +46,7 @@ enum ItemType {
 #[serde(rename_all = "camelCase")]
 pub struct Extra {
     category: String,
-    float_value: f64,
+    float_value: Option<f64>,
     is_new: bool,
     tradable: bool,
 }
@@ -59,9 +59,7 @@ pub struct Price {
 
 #[derive(Deserialize, Debug)]
 pub struct ItemResponse {
-    cursor: String,
     objects: Vec<Item>,
-    total: usize,
 }
 
 #[derive(Deserialize, Debug)]
