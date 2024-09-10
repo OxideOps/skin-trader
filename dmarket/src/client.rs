@@ -29,15 +29,15 @@ pub struct Item {
     created_at: i64,
     discount: i64,
     extra: Extra,
-    status: ItemStatus,
-    price: Price,
-    instant_price: Price,
+    status: Status,
+    price: Option<Price>,
+    instant_price: Option<Price>,
     r#type: ItemType,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
-enum ItemStatus {
+enum Status {
     Default,
     Active,
     Inactive,
@@ -63,7 +63,7 @@ enum ItemType {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Extra {
-    category: String,
+    category: Option<String>,
     float_value: Option<f64>,
     is_new: bool,
     tradable: bool,
