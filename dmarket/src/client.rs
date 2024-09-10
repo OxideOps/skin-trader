@@ -21,11 +21,47 @@ pub struct Item {
     item_id: String,
     title: String,
     amount: i64,
+    created_at: i64,
+    discount: i64,
+    extra: Extra,
+    status: String,
+    price: Price,
+    instant_price: Price,
+    r#type: ItemType,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum ItemType {
+    Item,
+    Offer,
+    Target,
+    Class,
+    Airdrop,
+    Sale,
+    Product,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Extra {
+    category: String,
+    float_value: f64,
+    is_new: bool,
+    tradable: bool,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Price {
+    #[serde(rename = "USD")]
+    usd: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct ItemResponse {
+    cursor: String,
     objects: Vec<Item>,
+    total: usize,
 }
 
 #[derive(Deserialize, Debug)]

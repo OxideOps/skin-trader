@@ -1,3 +1,4 @@
+use std::env;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -34,4 +35,10 @@ pub enum Error {
 
     #[error("Invalid header: {0}")]
     InvalidHeader(#[from] reqwest::header::InvalidHeaderValue),
+
+    #[error("EnvVar error: {0}")]
+    EnvVar(#[from] env::VarError),
+
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
 }
