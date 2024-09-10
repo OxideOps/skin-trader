@@ -30,7 +30,7 @@ pub struct Item {
     r#type: ItemType,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
 enum ItemType {
     Item,

@@ -41,4 +41,7 @@ pub enum Error {
 
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
+
+    #[error("DotEnvy error: {0}")]
+    EnvFile(#[from] dotenvy::Error),
 }
