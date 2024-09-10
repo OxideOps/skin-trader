@@ -42,9 +42,6 @@ pub enum Error {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
-    #[error("DotEnvy error: {0}")]
-    EnvFile(#[from] dotenvy::Error),
-
     #[error("Couldn't convert query to string: {0}")]
     HttpQuery(#[from] serde_qs::Error),
 }

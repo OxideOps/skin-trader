@@ -18,7 +18,7 @@ pub struct Signer {
 
 impl Signer {
     pub fn new() -> Result<Self> {
-        dotenvy::dotenv()?;
+        dotenvy::dotenv().ok();
 
         let secret_key = env::var("DMARKET_SECRET_KEY")
             .map_err(|_| Error::Config("DMARKET_SECRET_KEY not found in environment".into()))?;
