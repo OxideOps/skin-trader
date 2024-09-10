@@ -29,10 +29,23 @@ pub struct Item {
     created_at: i64,
     discount: i64,
     extra: Extra,
-    status: String,
+    status: ItemStatus,
     price: Price,
     instant_price: Price,
     r#type: ItemType,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum ItemStatus {
+    Default,
+    Active,
+    Inactive,
+    InTransfer,
+    Sold,
+    Recalled,
+    Unavailable,
+    Locked,
 }
 
 #[derive(Deserialize, Debug)]
