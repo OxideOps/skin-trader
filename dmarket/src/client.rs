@@ -9,8 +9,13 @@ use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
 
-const CURRENCY_USD: &str = "USD";
 const CSGO_GAME_ID: &str = "a8db";
+const TF2_GAME_ID: &str = "tf2";
+const DOTA2_GAME_ID: &str = "9a92";
+const RUST_GAME_ID: &str = "rust";
+
+const CURRENCY_USD: &str = "USD";
+
 const MARKET_LIMIT: usize = 100;
 const SALES_LIMIT: usize = 500;
 const DISCOUNT_LIMIT: usize = 500; // not sure on this one
