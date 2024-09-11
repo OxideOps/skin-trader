@@ -22,6 +22,45 @@ impl Database {
         Ok(Self { pool })
     }
 
+    pub async fn get_item(&self, item_id: Uuid) -> Result<Option<Item>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT 
+                item_id, title, amount, created_at, discount,
+                category, float_value, is_new, tradable,
+                status,
+                price_usd,
+                instant_price_usd,
+                suggested_price_usd,
+                type
+            FROM dmarket_items 
+            WHERE item_id = $1
+            "#,
+            item_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(|row| Item {
+            item_id: row.item_id,
+            title: row.title,
+            amount: row.amount,
+            created_at: row.created_at,
+            discount: row.discount,
+            extra: Extra {
+                category: row.category,
+                float_value: row.float_value,
+                is_new: row.is_new,
+                tradable: row.tradable,
+            },
+            status: serde_json::from_str(&row.status).unwrap_or(ItemStatus::Default),
+            price: row.price_usd.map(|usd| Price { usd }),
+            instant_price: row.instant_price_usd.map(|usd| Price { usd }),
+            suggested_price: row.suggested_price_usd.map(|usd| Price { usd }),
+            r#type: serde_json::from_str(&row.r#type).unwrap_or(ItemType::Item),
+        }))
+    }
+
     pub async fn store_item(&self, item: &Item) -> Result<()> {
         sqlx::query!(
             r#"
