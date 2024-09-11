@@ -67,12 +67,12 @@ pub struct Price {
 
 #[derive(Deserialize, Debug)]
 pub struct ItemResponse {
-    objects: Vec<Item>,
+    pub objects: Vec<Item>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct SaleResponse {
-    sales: Vec<Sale>,
+    pub sales: Vec<Sale>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -86,7 +86,7 @@ pub struct Sale {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscountItemResponse {
-    reduced_fees: Vec<DiscountItem>,
+    pub reduced_fees: Vec<DiscountItem>,
 }
 
 #[derive(Deserialize, Debug)]
