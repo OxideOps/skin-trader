@@ -10,10 +10,10 @@ use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
 
-const CSGO_GAME_ID: &str = "a8db";
-const TF2_GAME_ID: &str = "tf2";
-const DOTA2_GAME_ID: &str = "9a92";
-const RUST_GAME_ID: &str = "rust";
+pub const CSGO_GAME_ID: &str = "a8db";
+pub const TF2_GAME_ID: &str = "tf2";
+pub const DOTA2_GAME_ID: &str = "9a92";
+pub const RUST_GAME_ID: &str = "rust";
 
 const CURRENCY_USD: &str = "USD";
 

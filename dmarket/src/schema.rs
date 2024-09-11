@@ -19,7 +19,6 @@ pub struct Item {
     pub instant_price: Option<Price>,
     #[sqlx(flatten)]
     pub suggested_price: Option<Price>,
-    #[sqlx(rename = "type")]
     pub r#type: ItemType,
 }
 
