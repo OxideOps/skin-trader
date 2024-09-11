@@ -62,7 +62,7 @@ pub struct Extra {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Price {
     #[serde(rename = "USD")]
-    usd: String,
+    pub usd: String,
 }
 
 #[derive(Deserialize, Debug)]

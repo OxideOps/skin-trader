@@ -44,4 +44,7 @@ pub enum Error {
 
     #[error("Couldn't convert query to string: {0}")]
     HttpQuery(#[from] serde_qs::Error),
+
+    #[error("Serde json error: {0}")]
+    Json(#[from] serde_json::Error),
 }
