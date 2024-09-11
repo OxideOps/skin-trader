@@ -12,8 +12,6 @@ pub struct Database {
 
 impl Database {
     pub async fn new() -> Result<Self> {
-        dotenvy::dotenv().ok();
-
         let pool = PgPoolOptions::new()
             .max_connections(MAX_CONNECTIONS)
             .connect(&env::var("DATABASE_URL")?)

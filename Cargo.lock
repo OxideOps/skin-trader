@@ -189,7 +189,6 @@ version = "0.1.0"
 dependencies = [
  "dashmap",
  "derive_more",
- "dotenvy",
  "env_logger",
  "futures-util",
  "log",
@@ -221,6 +220,8 @@ dependencies = [
  "anyhow",
  "bitskins",
  "dmarket",
+ "dotenvy",
+ "env_logger",
  "log",
  "serde_json",
  "tokio",
@@ -573,7 +574,6 @@ name = "dmarket"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "dotenvy",
  "ed25519-dalek",
  "hex",
  "log",
