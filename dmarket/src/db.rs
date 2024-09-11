@@ -74,11 +74,11 @@ impl Database {
                 item.extra.float_value,
                 item.extra.is_new,
                 item.extra.tradable,
-                item.status.to_string(),
+                serde_json::to_string(&item.status)?,
                 item.price.as_ref().map(|p| &p.usd),
                 item.instant_price.as_ref().map(|p| &p.usd),
                 item.suggested_price.as_ref().map(|p| &p.usd),
-                item.r#type.to_string()
+                serde_json::to_string(&item.r#type)?
             )
             .execute(&mut *tx)
             .await?;

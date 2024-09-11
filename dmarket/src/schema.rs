@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use std::fmt;
 use uuid::Uuid;
 
 #[derive(FromRow, Deserialize, Serialize, Debug)]
@@ -36,12 +35,6 @@ pub enum ItemStatus {
     Locked,
 }
 
-impl fmt::Display for ItemStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", serde_json::to_string(self).unwrap())
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum ItemType {
@@ -52,12 +45,6 @@ pub enum ItemType {
     Airdrop,
     Sale,
     Product,
-}
-
-impl fmt::Display for ItemType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", serde_json::to_string(self).unwrap())
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
