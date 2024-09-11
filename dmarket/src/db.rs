@@ -25,16 +25,7 @@ impl Database {
     pub async fn get_item(&self, item_id: Uuid) -> Result<Option<Item>> {
         let row = sqlx::query!(
             r#"
-            SELECT 
-                item_id, title, amount, created_at, discount,
-                category, float_value, is_new, tradable,
-                status,
-                price_usd,
-                instant_price_usd,
-                suggested_price_usd,
-                type
-            FROM dmarket_items 
-            WHERE item_id = $1
+            SELECT * FROM dmarket_items WHERE item_id = $1
             "#,
             item_id
         )
