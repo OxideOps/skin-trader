@@ -1,61 +1,25 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
+use crate::schema::{DiscountItem, DiscountItemResponse, Item, ItemResponse, Sale, SaleResponse};
 use crate::sign::Signer;
 use crate::Result;
 use reqwest::Method;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
 
-const CURRENCY_USD: &str = "USD";
 const CSGO_GAME_ID: &str = "a8db";
+const TF2_GAME_ID: &str = "tf2";
+const DOTA2_GAME_ID: &str = "9a92";
+const RUST_GAME_ID: &str = "rust";
+
+const CURRENCY_USD: &str = "USD";
+
 const MARKET_LIMIT: usize = 100;
 const SALES_LIMIT: usize = 500;
 const DISCOUNT_LIMIT: usize = 500; // not sure on this one
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Item {
-    item_id: String,
-    title: String,
-    amount: i64,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ItemResponse {
-    objects: Vec<Item>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct SaleResponse {
-    sales: Vec<Sale>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Sale {
-    price: String,
-    date: String,
-    tx_operation_type: String,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct DiscountItemResponse {
-    reduced_fees: Vec<DiscountItem>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct DiscountItem {
-    expires_at: i64,
-    fraction: String,
-    max_price: i64,
-    min_price: i64,
-    title: String,
-}
 
 pub struct Client {
     client: reqwest::Client,
@@ -73,7 +37,7 @@ impl Client {
     }
 
     pub async fn get<T: DeserializeOwned>(&self, path: &str, query: Value) -> Result<T> {
-        let query = serde_qs::to_string(&query).unwrap();
+        let query = serde_qs::to_string(&query)?;
         self.request(Method::GET, &format!("{path}?{query}"), None)
             .await
     }

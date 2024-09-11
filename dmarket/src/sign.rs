@@ -1,7 +1,6 @@
 use crate::error::Error;
 use crate::Result;
 use chrono::Utc;
-use dotenvy::dotenv;
 use ed25519_dalek::{SecretKey, Signer as _, SigningKey};
 use reqwest::header::{HeaderMap, HeaderValue};
 use std::env;
@@ -19,8 +18,6 @@ pub struct Signer {
 
 impl Signer {
     pub fn new() -> Result<Self> {
-        dotenv().ok();
-
         let secret_key = env::var("DMARKET_SECRET_KEY")
             .map_err(|_| Error::Config("DMARKET_SECRET_KEY not found in environment".into()))?;
 

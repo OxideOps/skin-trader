@@ -189,7 +189,6 @@ version = "0.1.0"
 dependencies = [
  "dashmap",
  "derive_more",
- "dotenvy",
  "env_logger",
  "futures-util",
  "log",
@@ -221,8 +220,11 @@ dependencies = [
  "anyhow",
  "bitskins",
  "dmarket",
+ "dotenvy",
+ "env_logger",
  "log",
  "serde_json",
+ "sqlx",
  "tokio",
  "tokio-cron-scheduler",
 ]
@@ -573,18 +575,20 @@ name = "dmarket"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "dotenvy",
  "ed25519-dalek",
  "hex",
+ "log",
  "rand",
  "reqwest",
  "ringbuffer",
  "serde",
  "serde_json",
  "serde_qs",
+ "sqlx",
  "thiserror",
  "tokio",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -2289,6 +2293,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -2370,6 +2375,7 @@ dependencies = [
  "thiserror",
  "time",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -2409,6 +2415,7 @@ dependencies = [
  "thiserror",
  "time",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -2434,6 +2441,7 @@ dependencies = [
  "time",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -2865,6 +2873,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81dfa00651efa65069b0b6b651f4aaa31ba9e3c3ce0137aaad053604ee7e0314"
 dependencies = [
  "getrandom",
+ "serde",
 ]
 
 [[package]]

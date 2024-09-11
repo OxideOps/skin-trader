@@ -11,3 +11,6 @@ tokio-cron-scheduler = "0.11.0"
 tokio = { version = "1.38.1", features = ["macros", "rt-multi-thread", "signal"] }
 log = "0.4.22"
 serde_json = "1.0.122"
+env_logger = "0.11.5"
+dotenvy = "0.15.7"
+sqlx = { version = "0.8.2", features = ["uuid"] }
