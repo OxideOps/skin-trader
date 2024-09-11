@@ -2,6 +2,7 @@ mod client;
 mod db;
 mod error;
 mod rate_limiter;
+mod schema;
 mod sign;
 
 pub use client::Client;
