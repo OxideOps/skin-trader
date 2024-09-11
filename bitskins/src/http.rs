@@ -128,12 +128,6 @@ impl Default for HttpClient {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct UpdateResponse {
-    pub id: String,
-    pub success: bool,
-}
-
 #[derive(Clone)]
 pub struct HttpClient {
     client: reqwest::Client,

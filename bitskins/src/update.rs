@@ -1,4 +1,4 @@
-use crate::http::{ItemPrice, UpdateResponse};
+use crate::http::ItemPrice;
 use crate::Result;
 use crate::{db, http, Database, HttpClient};
 use futures_util::future::{join_all, try_join};
