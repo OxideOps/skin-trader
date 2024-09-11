@@ -180,14 +180,20 @@ impl Updater {
     pub async fn list_inventory_items(&self) -> Result<()> {
         let inventory = self.client.fetch_inventory().await?;
         let items = self.process_items(inventory).await?;
-        log::info!("Listing items: {items:?}");
-        self.client.list_items(&items).await
+        if !items.is_empty() {
+            log::info!("Listing items: {items:?}");
+            self.client.list_items(&items).await?;
+        }
+        Ok(())
     }
 
-    pub async fn update_offer_prices(&self) -> Result<Vec<UpdateResponse>> {
+    pub async fn update_offer_prices(&self) -> Result<()> {
         let offers = self.client.fetch_offers().await?;
         let updates = self.process_items(offers).await?;
-        log::info!("Updating prices: {updates:?}");
-        self.client.update_market_offers(&updates).await
+        if !updates.is_empty() {
+            log::info!("Updating prices: {updates:?}");
+            self.client.update_market_offers(&updates).await?;
+        }
+        Ok(())
     }
 }
