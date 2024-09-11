@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
-use crate::schema;
+use crate::schema::{DiscountItem, DiscountItemResponse, Item, ItemResponse, Sale, SaleResponse};
 use crate::sign::Signer;
 use crate::Result;
 use reqwest::Method;
@@ -93,7 +93,7 @@ impl Client {
         limiter.wait().await;
     }
 
-    pub async fn get_market_items(&self, game_id: &str) -> Result<Vec<schema::Item>> {
+    pub async fn get_market_items(&self, game_id: &str) -> Result<Vec<Item>> {
         let path = "/exchange/v1/market/items";
         let query = json!({
             "gameId": game_id,
@@ -101,11 +101,11 @@ impl Client {
             "limit": MARKET_LIMIT,
         });
 
-        let response = self.get::<schema::ItemResponse>(path, query).await?;
+        let response = self.get::<ItemResponse>(path, query).await?;
         Ok(response.objects)
     }
 
-    pub async fn get_sales(&self, game_id: &str, title: &str) -> Result<Vec<schema::Sale>> {
+    pub async fn get_sales(&self, game_id: &str, title: &str) -> Result<Vec<Sale>> {
         let path = "/trade-aggregator/v1/last-sales";
         let query = json!({
             "gameID": game_id,
@@ -113,20 +113,18 @@ impl Client {
             "limit": SALES_LIMIT,
         });
 
-        let response = self.get::<schema::SaleResponse>(path, query).await?;
+        let response = self.get::<SaleResponse>(path, query).await?;
         Ok(response.sales)
     }
 
-    pub async fn get_discounts(&self, game_id: &str) -> Result<Vec<schema::DiscountItem>> {
+    pub async fn get_discounts(&self, game_id: &str) -> Result<Vec<DiscountItem>> {
         let path = "/exchange/v1/customized-fees";
         let query = json!({
             "gameID": game_id,
             "limit": DISCOUNT_LIMIT,
         });
 
-        let response = self
-            .get::<schema::DiscountItemResponse>(path, query)
-            .await?;
+        let response = self.get::<DiscountItemResponse>(path, query).await?;
         Ok(response.reduced_fees)
     }
 }

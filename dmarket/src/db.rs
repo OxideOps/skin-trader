@@ -1,7 +1,9 @@
+use crate::schema::Item;
 use crate::Result;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::env;
+use uuid::Uuid;
 
 const MAX_CONNECTIONS: u32 = 50;
 
@@ -18,5 +20,19 @@ impl Database {
             .await?;
 
         Ok(Self { pool })
+    }
+
+    pub async fn get_item(&self, item_id: Uuid) -> Result<Option<Item>> {
+        let item = sqlx::query_as!(
+            Item,
+            r#"
+            SELECT * FROM dmarket_items WHERE item_id = $1
+            "#,
+            item_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(item)
     }
 }

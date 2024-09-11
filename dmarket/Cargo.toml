@@ -16,6 +16,6 @@ chrono = "0.4.38"
 serde_qs = "0.13.0"
 tokio = "1.40.0"
 ringbuffer = "0.15.0"
-sqlx = { version = "0.8.2", features = ["postgres"] }
+sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio-native-tls"] }
 log = "0.4.22"
 uuid = { version = "1.10.0", features = ["serde"] }
