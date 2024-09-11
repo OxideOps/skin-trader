@@ -242,7 +242,7 @@ impl HttpClient {
         self.fetch_owned_items(STATUS_INVENTORY).await
     }
 
-    pub async fn update_market_offers(&self, updates: &[ItemPrice]) -> Result<Vec<UpdateResponse>> {
+    pub async fn update_market_offers(&self, updates: &[ItemPrice]) -> Result<()> {
         self.post(
             Endpoint::UpdateOfferPrices,
             json!({
