@@ -50,7 +50,7 @@ pub enum ItemType {
     Product,
 }
 
-#[derive(FromRow, Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Extra {
     pub category: Option<String>,
