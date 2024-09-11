@@ -23,8 +23,7 @@ pub struct Item {
     pub r#type: ItemType,
 }
 
-#[derive(Serialize, Deserialize, Debug, sqlx::Type)]
-#[sqlx(type_name = "TEXT")]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum ItemStatus {
     Default,
@@ -37,8 +36,7 @@ pub enum ItemStatus {
     Locked,
 }
 
-#[derive(Serialize, Deserialize, Debug, sqlx::Type)]
-#[sqlx(type_name = "TEXT")]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum ItemType {
     Item,
