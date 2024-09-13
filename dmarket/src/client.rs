@@ -3,6 +3,7 @@ use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{DiscountItem, DiscountItemResponse, Item, ItemResponse, Sale, SaleResponse};
 use crate::sign::Signer;
 use crate::Result;
+use async_stream::try_stream;
 use futures::Stream;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
@@ -98,7 +99,7 @@ impl Client {
         &'a self,
         game_id: &'a str,
     ) -> impl Stream<Item = Result<Vec<Item>>> + 'a {
-        async_stream::try_stream! {
+        try_stream! {
             let mut cursor = None;
             loop {
                 let query = json!({
