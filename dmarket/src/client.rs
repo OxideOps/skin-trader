@@ -115,11 +115,9 @@ impl Client {
 
             cursor = response.cursor;
             if cursor.is_none() {
-                break;
+                return Ok(items);
             }
         }
-
-        Ok(items)
     }
 
     pub async fn get_sales(&self, game_id: &str, title: &str) -> Result<Vec<Sale>> {
