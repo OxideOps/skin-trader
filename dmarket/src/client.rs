@@ -117,7 +117,6 @@ impl Client {
             if cursor.is_none() {
                 break;
             }
-            log::info!("Processed 100 items..");
         }
 
         Ok(items)
