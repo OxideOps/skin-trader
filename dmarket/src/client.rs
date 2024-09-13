@@ -93,22 +93,18 @@ impl Client {
         limiter.wait().await;
     }
 
-    fn get_market_items_query(game_id: &str, cursor: &Option<String>) -> Value {
-        json!({
-            "gameId": game_id,
-            "currency": CURRENCY_USD,
-            "limit": MARKET_LIMIT,
-            "cursor": cursor,
-        })
-    }
-
     pub async fn get_market_items(&self, game_id: &str) -> Result<Vec<Item>> {
         let path = "/exchange/v1/market/items";
         let mut items = Vec::new();
         let mut cursor = None;
 
         loop {
-            let query = Self::get_market_items_query(game_id, &cursor);
+            let query = json!({
+                "gameId": game_id,
+                "currency": CURRENCY_USD,
+                "limit": MARKET_LIMIT,
+                "cursor": cursor,
+            });
             let response = self.get::<ItemResponse>(path, query).await?;
 
             items.extend(response.objects);
