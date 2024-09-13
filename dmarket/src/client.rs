@@ -3,7 +3,6 @@ use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{DiscountItem, DiscountItemResponse, Item, ItemResponse, Sale, SaleResponse};
 use crate::sign::Signer;
 use crate::Result;
-use futures::future::try_join_all;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -94,36 +93,31 @@ impl Client {
         limiter.wait().await;
     }
 
-    fn get_market_items_query(game_id: &str, offset: usize) -> Value {
+    fn get_market_items_query(game_id: &str, cursor: &Option<String>) -> Value {
         json!({
             "gameId": game_id,
             "currency": CURRENCY_USD,
             "limit": MARKET_LIMIT,
-            "offset": offset,
+            "cursor": cursor,
         })
     }
 
     pub async fn get_market_items(&self, game_id: &str) -> Result<Vec<Item>> {
         let path = "/exchange/v1/market/items";
+        let mut all_items = Vec::new();
+        let mut cursor = None;
 
-        let initial_query = Self::get_market_items_query(game_id, 0);
-        let initial_response = self.get::<ItemResponse>(path, initial_query).await?;
+        loop {
+            let query = Self::get_market_items_query(game_id, &cursor);
+            let response = self.get::<ItemResponse>(path, query).await?;
 
-        let total_items = initial_response.total.items;
-        let mut all_items = initial_response.objects;
+            all_items.extend(response.objects);
 
-        let remaining_pages = (total_items + MARKET_LIMIT - 1) / MARKET_LIMIT - 1;
-        let remaining_queries = (1..=remaining_pages).map(|page| {
-            let query = Self::get_market_items_query(game_id, page * MARKET_LIMIT);
-            self.get::<ItemResponse>(path, query)
-        });
-
-        let additional_responses = try_join_all(remaining_queries).await?;
-        all_items.extend(
-            additional_responses
-                .into_iter()
-                .flat_map(|resp| resp.objects),
-        );
+            cursor = response.cursor;
+            if cursor.is_none() {
+                break;
+            }
+        }
 
         Ok(all_items)
     }

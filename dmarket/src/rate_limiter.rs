@@ -5,7 +5,7 @@ use tokio::time::sleep;
 
 const FEE: usize = 110;
 const LAST_SALES: usize = 6;
-const MARKET_ITEMS: usize = 10;
+const MARKET_ITEMS: usize = 5;
 const OTHER: usize = 20;
 
 const ONE_SECOND: Duration = Duration::from_secs(1);
