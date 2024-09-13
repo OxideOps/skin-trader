@@ -3,9 +3,8 @@ mod trader;
 use anyhow::Result;
 use bitskins::Updater;
 use bitskins::WsClient;
-use env_logger::Builder;
-
 use dmarket::CSGO_GAME_ID;
+use env_logger::Builder;
 use log::LevelFilter;
 use tokio::try_join;
 use trader::Trader;
