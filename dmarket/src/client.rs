@@ -104,22 +104,23 @@ impl Client {
 
     pub async fn get_market_items(&self, game_id: &str) -> Result<Vec<Item>> {
         let path = "/exchange/v1/market/items";
-        let mut all_items = Vec::new();
+        let mut items = Vec::new();
         let mut cursor = None;
 
         loop {
             let query = Self::get_market_items_query(game_id, &cursor);
             let response = self.get::<ItemResponse>(path, query).await?;
 
-            all_items.extend(response.objects);
+            items.extend(response.objects);
 
             cursor = response.cursor;
             if cursor.is_none() {
                 break;
             }
+            log::info!("Processed 100 items..");
         }
 
-        Ok(all_items)
+        Ok(items)
     }
 
     pub async fn get_sales(&self, game_id: &str, title: &str) -> Result<Vec<Sale>> {
