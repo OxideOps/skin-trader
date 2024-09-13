@@ -4,8 +4,9 @@ use anyhow::Result;
 use bitskins::Updater;
 use bitskins::WsClient;
 use env_logger::Builder;
+
+use dmarket::CSGO_GAME_ID;
 use log::LevelFilter;
-use sqlx::types::Uuid;
 use tokio::try_join;
 use trader::Trader;
 
@@ -13,18 +14,21 @@ use trader::Trader;
 async fn main() -> Result<()> {
     setup_env();
     // start_bitskins().await?;
-    start_dmarket().await?;
-
+    // start_dmarket().await?;
+    sync_dmarket_items().await?;
     Ok(())
 }
 
 async fn start_dmarket() -> Result<()> {
     let client = dmarket::Client::new()?;
     let db = dmarket::Database::new().await?;
-    let items = client.get_market_items(dmarket::CSGO_GAME_ID).await?;
-    // db.store_items(&items).await?;
-    dbg!(items.len());
 
+    Ok(())
+}
+
+async fn sync_dmarket_items() -> Result<()> {
+    let updater = dmarket::Updater::new().await?;
+    updater.sync_market_items(CSGO_GAME_ID).await?;
     Ok(())
 }
 

@@ -1,7 +1,8 @@
 use crate::Client;
 use crate::Database;
 use crate::Result;
-use crate::CSGO_GAME_ID;
+use futures::StreamExt;
+use tokio::pin;
 
 pub struct Updater {
     db: Database,
@@ -14,5 +15,24 @@ impl Updater {
             db: Database::new().await?,
             client: Client::new()?,
         })
+    }
+
+    pub async fn sync_market_items(&self, game_id: &str) -> Result<()> {
+        let market_items = self.client.get_market_items(game_id).await;
+
+        pin!(market_items);
+
+        while let Some(items_result) = market_items.next().await {
+            match items_result {
+                Ok(items) => {
+                    self.db.store_items(&items).await?;
+                }
+                Err(e) => {
+                    log::error!("Error fetching items: {:?}", e);
+                }
+            }
+        }
+
+        Ok(())
     }
 }

@@ -3,6 +3,7 @@ use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{DiscountItem, DiscountItemResponse, Item, ItemResponse, Sale, SaleResponse};
 use crate::sign::Signer;
 use crate::Result;
+use futures::Stream;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -93,25 +94,26 @@ impl Client {
         limiter.wait().await;
     }
 
-    pub async fn get_market_items(&self, game_id: &str) -> Result<Vec<Item>> {
-        let path = "/exchange/v1/market/items";
-        let mut items = Vec::new();
-        let mut cursor = None;
+    pub async fn get_market_items<'a>(
+        &'a self,
+        game_id: &'a str,
+    ) -> impl Stream<Item = Result<Vec<Item>>> + 'a {
+        async_stream::try_stream! {
+            let mut cursor = None;
+            loop {
+                let query = json!({
+                    "gameId": game_id,
+                    "currency": CURRENCY_USD,
+                    "limit": MARKET_LIMIT,
+                    "cursor": cursor,
+                });
+                let response: ItemResponse = self.get("/exchange/v1/market/items", query).await?;
+                yield response.objects;
 
-        loop {
-            let query = json!({
-                "gameId": game_id,
-                "currency": CURRENCY_USD,
-                "limit": MARKET_LIMIT,
-                "cursor": cursor,
-            });
-            let response = self.get::<ItemResponse>(path, query).await?;
-
-            items.extend(response.objects);
-
-            cursor = response.cursor;
-            if cursor.is_none() {
-                return Ok(items);
+                cursor = response.cursor;
+                if cursor.is_none() {
+                    break;
+                }
             }
         }
     }
