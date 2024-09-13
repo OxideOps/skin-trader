@@ -65,6 +65,16 @@ pub struct Price {
 #[derive(Deserialize, Debug)]
 pub struct ItemResponse {
     pub objects: Vec<Item>,
+    pub total: Total,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Total {
+    pub closed_targets: Option<usize>,
+    pub completed_offers: Option<usize>,
+    pub items: usize,
+    pub offers: usize,
+    pub targets: usize,
 }
 
 #[derive(Deserialize, Debug)]

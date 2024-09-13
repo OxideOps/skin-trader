@@ -19,3 +19,4 @@ ringbuffer = "0.15.0"
 sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio-native-tls", "uuid"] }
 log = "0.4.22"
 uuid = { version = "1.10.0", features = ["serde"] }
+futures = "0.3.30"
