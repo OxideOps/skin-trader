@@ -25,16 +25,7 @@ impl Database {
     pub async fn get_item(&self, item_id: Uuid) -> Result<Option<Item>> {
         let row = sqlx::query!(
             r#"
-            SELECT 
-                item_id, title, amount, created_at, discount,
-                category, float_value, is_new, tradable,
-                status,
-                price_usd,
-                instant_price_usd,
-                suggested_price_usd,
-                type
-            FROM dmarket_items 
-            WHERE item_id = $1
+            SELECT * FROM dmarket_items WHERE item_id = $1
             "#,
             item_id
         )
@@ -61,33 +52,39 @@ impl Database {
         }))
     }
 
-    pub async fn store_item(&self, item: &Item) -> Result<()> {
-        sqlx::query!(
-            r#"
-            INSERT INTO dmarket_items (
-                item_id, title, amount, created_at, discount,
-                category, float_value, is_new, tradable,
-                status, price_usd, instant_price_usd, suggested_price_usd, type
+    pub async fn store_items(&self, items: &[Item]) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        for item in items {
+            sqlx::query!(
+                r#"
+                INSERT INTO dmarket_items (
+                    item_id, title, amount, created_at, discount,
+                    category, float_value, is_new, tradable,
+                    status, price_usd, instant_price_usd, suggested_price_usd, type
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                "#,
+                item.item_id,
+                item.title,
+                item.amount,
+                item.created_at,
+                item.discount,
+                item.extra.category,
+                item.extra.float_value,
+                item.extra.is_new,
+                item.extra.tradable,
+                serde_json::to_string(&item.status)?,
+                item.price.as_ref().map(|p| &p.usd),
+                item.instant_price.as_ref().map(|p| &p.usd),
+                item.suggested_price.as_ref().map(|p| &p.usd),
+                serde_json::to_string(&item.r#type)?
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-            "#,
-            item.item_id,
-            item.title,
-            item.amount,
-            item.created_at,
-            item.discount,
-            item.extra.category,
-            item.extra.float_value,
-            item.extra.is_new,
-            item.extra.tradable,
-            serde_json::to_string(&item.status)?,
-            item.price.as_ref().map(|p| &p.usd),
-            item.instant_price.as_ref().map(|p| &p.usd),
-            item.suggested_price.as_ref().map(|p| &p.usd),
-            serde_json::to_string(&item.r#type)?
-        )
-        .execute(&self.pool)
-        .await?;
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
 
         Ok(())
     }

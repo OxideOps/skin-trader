@@ -19,7 +19,6 @@ pub struct Item {
     pub instant_price: Option<Price>,
     #[sqlx(flatten)]
     pub suggested_price: Option<Price>,
-    #[sqlx(rename = "type")]
     pub r#type: ItemType,
 }
 
@@ -65,7 +64,18 @@ pub struct Price {
 
 #[derive(Deserialize, Debug)]
 pub struct ItemResponse {
+    pub cursor: Option<String>,
     pub objects: Vec<Item>,
+    pub total: Total,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Total {
+    pub closed_targets: Option<usize>,
+    pub completed_offers: Option<usize>,
+    pub items: usize,
+    pub offers: usize,
+    pub targets: usize,
 }
 
 #[derive(Deserialize, Debug)]

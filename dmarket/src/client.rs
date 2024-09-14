@@ -3,6 +3,8 @@ use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{DiscountItem, DiscountItemResponse, Item, ItemResponse, Sale, SaleResponse};
 use crate::sign::Signer;
 use crate::Result;
+use async_stream::try_stream;
+use futures::Stream;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -10,10 +12,12 @@ use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
 
-const CSGO_GAME_ID: &str = "a8db";
-const TF2_GAME_ID: &str = "tf2";
-const DOTA2_GAME_ID: &str = "9a92";
-const RUST_GAME_ID: &str = "rust";
+pub const CSGO_GAME_ID: &str = "a8db";
+pub const TF2_GAME_ID: &str = "tf2";
+pub const DOTA2_GAME_ID: &str = "9a92";
+pub const RUST_GAME_ID: &str = "rust";
+
+pub const GAME_IDS: [&str; 4] = [CSGO_GAME_ID, TF2_GAME_ID, DOTA2_GAME_ID, RUST_GAME_ID];
 
 const CURRENCY_USD: &str = "USD";
 
@@ -93,16 +97,28 @@ impl Client {
         limiter.wait().await;
     }
 
-    pub async fn get_market_items(&self, game_id: &str) -> Result<Vec<Item>> {
-        let path = "/exchange/v1/market/items";
-        let query = json!({
-            "gameId": game_id,
-            "currency": CURRENCY_USD,
-            "limit": MARKET_LIMIT,
-        });
+    pub async fn get_market_items<'a>(
+        &'a self,
+        game_id: &'a str,
+    ) -> impl Stream<Item = Result<Vec<Item>>> + 'a {
+        try_stream! {
+            let mut cursor = None;
+            loop {
+                let query = json!({
+                    "gameId": game_id,
+                    "currency": CURRENCY_USD,
+                    "limit": MARKET_LIMIT,
+                    "cursor": cursor,
+                });
+                let response: ItemResponse = self.get("/exchange/v1/market/items", query).await?;
+                yield response.objects;
 
-        let response = self.get::<ItemResponse>(path, query).await?;
-        Ok(response.objects)
+                cursor = response.cursor;
+                if cursor.is_none() {
+                    break;
+                }
+            }
+        }
     }
 
     pub async fn get_sales(&self, game_id: &str, title: &str) -> Result<Vec<Sale>> {
