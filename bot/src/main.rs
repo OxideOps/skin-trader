@@ -3,7 +3,6 @@ mod trader;
 use anyhow::Result;
 use bitskins::Updater;
 use bitskins::WsClient;
-use dmarket::CSGO_GAME_ID;
 use env_logger::Builder;
 use log::LevelFilter;
 use tokio::try_join;
@@ -13,6 +12,7 @@ use trader::Trader;
 async fn main() -> Result<()> {
     setup_env();
     start_bitskins().await?;
+    // sync_dmarket_items().await?;
     Ok(())
 }
 
@@ -25,7 +25,7 @@ async fn start_dmarket() -> Result<()> {
 
 async fn sync_dmarket_items() -> Result<()> {
     let updater = dmarket::Updater::new().await?;
-    updater.sync_market_items(CSGO_GAME_ID).await?;
+    updater.sync_all_market_items().await?;
     Ok(())
 }
 

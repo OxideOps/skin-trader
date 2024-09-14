@@ -6,7 +6,7 @@ mod schema;
 mod sign;
 mod updater;
 
-pub use client::{Client, CSGO_GAME_ID};
+pub use client::{Client, GAME_IDS};
 pub use db::Database;
 pub use updater::Updater;
 

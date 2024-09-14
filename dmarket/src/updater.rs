@@ -1,7 +1,8 @@
 use crate::Client;
 use crate::Database;
 use crate::Result;
-use futures::{pin_mut, StreamExt};
+use crate::GAME_IDS;
+use futures::{future::try_join_all, pin_mut, StreamExt};
 
 pub struct Updater {
     db: Database,
@@ -32,6 +33,11 @@ impl Updater {
             }
         }
 
+        Ok(())
+    }
+
+    pub async fn sync_all_market_items(&self) -> Result<()> {
+        try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id))).await?;
         Ok(())
     }
 }

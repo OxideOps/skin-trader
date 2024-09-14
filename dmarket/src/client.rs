@@ -17,6 +17,8 @@ pub const TF2_GAME_ID: &str = "tf2";
 pub const DOTA2_GAME_ID: &str = "9a92";
 pub const RUST_GAME_ID: &str = "rust";
 
+pub const GAME_IDS: [&str; 4] = [CSGO_GAME_ID, TF2_GAME_ID, DOTA2_GAME_ID, RUST_GAME_ID];
+
 const CURRENCY_USD: &str = "USD";
 
 const MARKET_LIMIT: usize = 100;
