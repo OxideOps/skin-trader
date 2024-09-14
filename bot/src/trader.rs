@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
-use bitskins::{Channel, Database, HttpClient, Skin, Stats, WsData, CS2_APP_ID};
+use bitskins::Error::InternalService;
+use bitskins::{Channel, Database, HttpClient, Skin, Stats, Updater, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
 use std::time::Duration;
@@ -15,13 +16,18 @@ const MIN_SLOPE: f64 = 0.0;
 pub(crate) struct Trader {
     db: Database,
     http: HttpClient,
+    updater: Updater,
 }
 
 impl Trader {
     pub async fn new() -> Result<Self> {
+        let db = Database::new().await?;
+        let http = HttpClient::new();
+
         Ok(Self {
-            db: Database::new().await?,
-            http: HttpClient::new(),
+            db: db.clone(),
+            http: http.clone(),
+            updater: Updater::from_db_and_client(db, http),
         })
     }
 
@@ -113,14 +119,25 @@ impl Trader {
             bail!("Item is not profitable: {}", skin_id)
         }
 
-        self.execute_purchase(deal, mean).await
+        match self.execute_purchase(deal.clone(), mean).await {
+            Err(InternalService(endpoint)) => {
+                warn!(
+                    "Failed to execute purchase for item {}. Updating database for {}...",
+                    deal.id, skin_id
+                );
+                self.db.delete_market_item(deal.id.parse()?).await?;
+                self.updater.sync_market_items_for_skin(skin_id).await?;
+                Err(InternalService(endpoint))?
+            }
+            other => Ok(other?),
+        }
     }
 
     fn are_stats_reliable(stats: &Stats) -> bool {
         stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 
-    async fn find_best_market_deal(&self, skin_id: i32) -> Result<Option<MarketDeal>> {
+    async fn find_best_market_deal(&self, skin_id: i32) -> bitskins::Result<Option<MarketDeal>> {
         let market_list = self.db.get_market_items(skin_id).await?;
 
         Ok(market_list
@@ -129,7 +146,7 @@ impl Trader {
             .min_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(Ordering::Equal)))
     }
 
-    async fn execute_purchase(&self, deal: MarketDeal, mean_price: f64) -> Result<()> {
+    async fn execute_purchase(&self, deal: MarketDeal, mean_price: f64) -> bitskins::Result<()> {
         info!("Buying {} for {}", deal.id, deal.price);
         self.http.buy_item(&deal.id, deal.price).await?;
 
@@ -145,7 +162,7 @@ impl Trader {
         Ok(())
     }
 
-    pub(crate) async fn purchase_best_items(&self) -> Result<()> {
+    pub(crate) async fn purchase_best_items(&self) -> bitskins::Result<()> {
         let skin_ids = self
             .db
             .get_skins_by_sale_count(MIN_SALE_COUNT as i64)
@@ -159,7 +176,7 @@ impl Trader {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct MarketDeal {
     id: String,
     price: f64,

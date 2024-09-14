@@ -4,6 +4,7 @@ use crate::{db, http, Database, HttpClient};
 use futures_util::future::{join_all, try_join};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[derive(Clone)]
 pub struct Updater {
     db: Database,
     client: HttpClient,
@@ -15,6 +16,10 @@ impl Updater {
             db: Database::new().await?,
             client: HttpClient::new(),
         })
+    }
+
+    pub fn from_db_and_client(db: Database, client: HttpClient) -> Self {
+        Self { db, client }
     }
 
     async fn fetch_skins(&self) -> Result<Vec<db::Skin>> {
@@ -55,6 +60,7 @@ impl Updater {
     }
 
     async fn handle_market_item(&self, item: http::MarketItem) -> Result<()> {
+        self.db.delete_market_item(item.id.parse()?).await.ok();
         self.db.insert_market_item(item.clone().into()).await?;
         for sticker in item.stickers.into_iter().flatten() {
             self.handle_sticker(
@@ -156,7 +162,7 @@ impl Updater {
         self.update_listings().await
     }
 
-    async fn update_listings(&self) -> Result<()> {
+    pub async fn update_listings(&self) -> Result<()> {
         log::info!("Updating price statistics");
         self.db.calculate_and_update_price_statistics().await?;
         self.list_inventory_items().await?;
@@ -198,5 +204,10 @@ impl Updater {
             self.client.update_market_offers(&updates).await?;
         }
         Ok(())
+    }
+
+    pub async fn sync_market_items_for_skin(&self, skin_id: i32) -> Result<()> {
+        let skin = self.db.get_skin(skin_id).await?;
+        self.handle_market_items(&skin).await
     }
 }

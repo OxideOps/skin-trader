@@ -281,6 +281,10 @@ impl Database {
             return Err(Error::MarketItemDeleteFailed(item_id));
         }
 
+        sqlx::query!(r#"DELETE FROM Sticker WHERE market_item_id = $1"#, item_id)
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
@@ -321,13 +325,14 @@ impl Database {
     pub async fn insert_sticker(&self, sticker: &Sticker) -> Result<i32> {
         let row = sqlx::query!(
             r#"
-            INSERT INTO Sticker (sale_id, skin_id, image, slot, wear, suggested_price, offset_x, offset_y, skin_status, rotation)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            INSERT INTO Sticker (sale_id, skin_id, image, market_item_id, slot, wear, suggested_price, offset_x, offset_y, skin_status, rotation)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING id
             "#,
             sticker.sale_id,
             sticker.skin_id,
             sticker.image,
+            sticker.market_item_id,
             sticker.slot,
             sticker.wear,
             sticker.suggested_price,
@@ -560,5 +565,13 @@ impl Database {
             .iter()
             .map(|id| *date_map.get(id).unwrap_or(&DateTime::min()))
             .collect())
+    }
+
+    pub async fn get_skin(&self, id: i32) -> Result<Skin> {
+        Ok(
+            sqlx::query_as!(Skin, "SELECT * FROM Skin WHERE id = $1", id)
+                .fetch_one(&self.pool)
+                .await?,
+        )
     }
 }
