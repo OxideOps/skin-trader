@@ -122,6 +122,12 @@ impl ItemPrice {
     }
 }
 
+#[derive(Deserialize, Debug)]
+pub struct ListResponse {
+    pub id: String,
+    pub success: bool,
+}
+
 impl Default for HttpClient {
     fn default() -> Self {
         Self::new()
@@ -236,7 +242,7 @@ impl HttpClient {
         self.fetch_owned_items(STATUS_INVENTORY).await
     }
 
-    pub async fn update_market_offers(&self, updates: &[ItemPrice]) -> Result<()> {
+    pub async fn update_market_offers(&self, updates: &[ItemPrice]) -> Result<Vec<ListResponse>> {
         self.post(
             Endpoint::UpdateOfferPrices,
             json!({
@@ -280,11 +286,11 @@ impl HttpClient {
         .await
     }
 
-    pub async fn list_items(&self, items: &[ItemPrice]) -> Result<()> {
+    pub async fn list_items(&self, items: &[ItemPrice]) -> Result<Vec<ListResponse>> {
         self.post(
             Endpoint::RelistMany,
             json!({
-                "items": [items]
+                "items": items
             }),
         )
         .await
