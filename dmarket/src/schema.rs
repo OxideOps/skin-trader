@@ -5,6 +5,7 @@ use uuid::Uuid;
 #[derive(FromRow, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Item {
+    pub game_id: String,
     pub item_id: Uuid,
     pub title: String,
     pub amount: i64,

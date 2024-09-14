@@ -28,7 +28,7 @@ impl Updater {
                     self.db.store_items(&items).await?;
                 }
                 Err(e) => {
-                    log::error!("Error fetching items: {:?}", e);
+                    log::error!("Error fetching items: {e}");
                 }
             }
         }
