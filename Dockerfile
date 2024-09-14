@@ -22,7 +22,9 @@ RUN cargo build --release --bin bot
 # We do not need the Rust toolchain to run the binary!
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS runtime
 ARG BITSKIN_API_KEY
-ENV BITSKIN_API_KEY=$BITSKIN_API_KEY
+ARG DMARKET_API_KEY
+ARG DMARKET_SECRET_KEY
+ENV BITSKIN_API_KEY=$BITSKIN_API_KEY DMARKET_API_KEY=$DMARKET_API_KEY DMARKET_SECRET_KEY=$DMARKET_SECRET_KEY
 WORKDIR /app
 COPY --from=builder /app/target/release/bot /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/bot"]
