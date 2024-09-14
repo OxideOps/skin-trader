@@ -37,4 +37,7 @@ pub enum Error {
 
     #[error("Internal Service Error for endpoint: {0}")]
     InternalService(Endpoint),
+
+    #[error("Parsing Error: {0}")]
+    Parsing(#[from] std::num::ParseIntError),
 }
