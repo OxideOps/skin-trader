@@ -1,13 +1,15 @@
 #[allow(dead_code)]
 mod plotter;
 
-use bitskins::Database;
+use bitskins::Updater;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let db = Database::new().await?;
+    dotenvy::dotenv().ok();
 
-    db.calculate_and_update_price_statistics().await?;
+    let updater = Updater::new().await?;
+
+    updater.update_listings().await?;
 
     Ok(())
 }
