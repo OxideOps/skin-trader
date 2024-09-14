@@ -57,7 +57,7 @@ impl Database {
         let mut tx = self.pool.begin().await?;
 
         for item in items {
-            let result = sqlx::query!(
+            sqlx::query!(
                 r#"
                 INSERT INTO dmarket_items (
                     game_id, item_id, title, amount, created_at, discount,
@@ -84,11 +84,7 @@ impl Database {
                 serde_json::to_string(&item.r#type)?
             )
             .execute(&mut *tx)
-            .await;
-
-            if let Err(e) = result {
-                log::error!("Error inserting item: {e}\nItem: {item:?}")
-            }
+            .await?;
         }
 
         tx.commit().await?;
