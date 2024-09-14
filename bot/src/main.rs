@@ -31,7 +31,11 @@ async fn start_bitskins() -> Result<()> {
     let updater = Updater::new().await?;
     let ws = WsClient::connect(|channel, ws_data| trader.process_data(channel, ws_data)).await?;
 
-    try_join!(updater.sync_new_sales(), ws.start())?;
+    try_join!(
+        updater.sync_new_sales(),
+        ws.start(),
+        trader.purchase_best_items()
+    )?;
 
     Ok(())
 }

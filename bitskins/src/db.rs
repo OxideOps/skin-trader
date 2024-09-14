@@ -561,4 +561,12 @@ impl Database {
             .map(|id| *date_map.get(id).unwrap_or(&DateTime::min()))
             .collect())
     }
+
+    pub async fn get_skin(&self, id: i32) -> Result<Skin> {
+        Ok(
+            sqlx::query_as!(Skin, "SELECT * FROM Skin WHERE id = $1", id)
+                .fetch_one(&self.pool)
+                .await?,
+        )
+    }
 }
