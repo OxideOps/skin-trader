@@ -33,6 +33,7 @@ impl Database {
         .await?;
 
         Ok(row.map(|row| Item {
+            game_id: row.game_id,
             item_id: row.item_id,
             title: row.title,
             amount: row.amount,
@@ -59,12 +60,13 @@ impl Database {
             sqlx::query!(
                 r#"
                 INSERT INTO dmarket_items (
-                    item_id, title, amount, created_at, discount,
+                    game_id, item_id, title, amount, created_at, discount,
                     category, float_value, is_new, tradable,
                     status, price_usd, instant_price_usd, suggested_price_usd, type
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 "#,
+                item.game_id,
                 item.item_id,
                 item.title,
                 item.amount,
