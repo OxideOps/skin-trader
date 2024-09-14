@@ -65,6 +65,7 @@ impl Database {
                     status, price_usd, instant_price_usd, suggested_price_usd, type
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                ON CONFLICT (game_id, item_id) DO NOTHING
                 "#,
                 item.game_id,
                 item.item_id,
