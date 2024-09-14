@@ -11,15 +11,12 @@ use trader::Trader;
 #[tokio::main]
 async fn main() -> Result<()> {
     setup_env();
-    start_bitskins().await?;
-    // sync_dmarket_items().await?;
+    try_join!(start_bitskins(), start_dmarket())?;
     Ok(())
 }
 
 async fn start_dmarket() -> Result<()> {
-    let client = dmarket::Client::new()?;
-    let db = dmarket::Database::new().await?;
-
+    sync_dmarket_items().await?;
     Ok(())
 }
 
