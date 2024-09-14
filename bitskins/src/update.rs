@@ -120,6 +120,8 @@ impl Updater {
     }
 
     pub async fn sync_new_sales(&self) -> Result<()> {
+        self.update_listings().await?;
+
         let skins = self.fetch_skins().await?;
 
         self.db.insert_skins(&skins).await?;
@@ -151,13 +153,14 @@ impl Updater {
         ))
         .await;
 
+        self.update_listings().await
+    }
+
+    async fn update_listings(&self) -> Result<()> {
         log::info!("Updating price statistics");
         self.db.calculate_and_update_price_statistics().await?;
-
         self.list_inventory_items().await?;
-        self.update_offer_prices().await?;
-
-        Ok(())
+        self.update_offer_prices().await
     }
 
     async fn process_items<T: Into<db::MarketItem>>(
