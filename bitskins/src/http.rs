@@ -16,7 +16,7 @@ const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 pub const CS2_APP_ID: i32 = 730;
-const SPEED: f64 = 0.7; // Fraction of the default rate limit
+const SPEED: f64 = 0.6; // Fraction of the default rate limit
 
 const STATUS_SELLING: usize = 2;
 const STATUS_INVENTORY: usize = 4;
