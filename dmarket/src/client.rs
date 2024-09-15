@@ -131,10 +131,9 @@ impl Client {
             "limit": SALES_LIMIT,
         });
 
-        let response = self.get::<Value>(path, query).await?;
-        dbg!(response);
-        todo!();
-        // Ok(response.sales)
+        let response = self.get::<SaleResponse>(path, query).await?;
+
+        Ok(response.sales)
     }
 
     pub async fn get_discounts(&self, game_id: &str) -> Result<Vec<DiscountItem>> {

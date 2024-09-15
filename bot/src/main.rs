@@ -22,8 +22,7 @@ async fn start_dmarket() -> Result<()> {
     let client = dmarket::Client::new()?;
 
     let titles = db.get_distinct_titles().await?;
-    let x = titles[0].clone();
-    dbg!(client.get_sales(x).await?);
+    dbg!(client.get_sales(titles[0].clone()).await?);
 
     Ok(())
 }
