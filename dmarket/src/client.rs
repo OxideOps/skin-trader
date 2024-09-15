@@ -100,12 +100,14 @@ impl Client {
     pub async fn get_market_items<'a>(
         &'a self,
         game_id: &'a str,
+        title: Option<&'a str>,
     ) -> impl Stream<Item = Result<Vec<Item>>> + 'a {
         try_stream! {
             let mut cursor = None;
             loop {
                 let query = json!({
                     "gameId": game_id,
+                    "title": title,
                     "currency": CURRENCY_USD,
                     "limit": MARKET_LIMIT,
                     "cursor": cursor,
@@ -142,5 +144,9 @@ impl Client {
 
         let response = self.get::<DiscountItemResponse>(path, query).await?;
         Ok(response.reduced_fees)
+    }
+
+    pub async fn get_offers(&self, title: &str) -> Result<()> {
+        Ok(())
     }
 }
