@@ -145,8 +145,4 @@ impl Client {
         let response = self.get::<DiscountItemResponse>(path, query).await?;
         Ok(response.reduced_fees)
     }
-
-    pub async fn get_offers(&self, title: &str) -> Result<()> {
-        Ok(())
-    }
 }
