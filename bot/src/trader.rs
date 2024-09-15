@@ -152,7 +152,7 @@ impl Trader {
 
         let trader = self.clone();
         spawn(async move {
-            sleep(Duration::from_secs(1)).await;
+            sleep(Duration::from_secs(10)).await;
             info!("Listing {} for {}", deal.id, mean_price);
             if let Err(e) = trader.http.list_item(&deal.id, mean_price).await {
                 error!("Failed to list item: {e}");
