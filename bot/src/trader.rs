@@ -9,7 +9,7 @@ use tokio::time::sleep;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
 const BUY_THRESHOLD: f64 = 0.8;
-const MIN_SALE_COUNT: i32 = 200;
+const MIN_SALE_COUNT: i32 = 100;
 const MIN_SLOPE: f64 = 0.0;
 
 #[derive(Clone)]
