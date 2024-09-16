@@ -12,7 +12,7 @@ env_logger = "0.11.3"
 time = "0.3.36"
 serde = "1.0.204"
 futures-util = "0.3.30"
-tokio-tungstenite = { version = "0.23.1", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.24.0", features = ["native-tls"] }
 tokio = { version = "1.39.2", features = ["macros"] }
 thiserror = "1.0.63"
 dashmap = "6.0.1"
