@@ -1,6 +1,8 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
-use crate::schema::{DiscountItem, DiscountItemResponse, Item, ItemResponse, Sale, SaleResponse};
+use crate::schema::{
+    DiscountItem, DiscountItemResponse, Item, ItemResponse, Sale, SaleResponse, Title,
+};
 use crate::sign::Signer;
 use crate::Result;
 use async_stream::try_stream;
@@ -121,15 +123,16 @@ impl Client {
         }
     }
 
-    pub async fn get_sales(&self, game_id: &str, title: &str) -> Result<Vec<Sale>> {
+    pub async fn get_sales(&self, title: Title) -> Result<Vec<Sale>> {
         let path = "/trade-aggregator/v1/last-sales";
         let query = json!({
-            "gameID": game_id,
-            "title": title,
+            "gameID": title.game_id,
+            "title": title.title,
             "limit": SALES_LIMIT,
         });
 
         let response = self.get::<SaleResponse>(path, query).await?;
+
         Ok(response.sales)
     }
 

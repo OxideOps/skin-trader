@@ -22,6 +22,14 @@ impl Database {
         Ok(Self { pool })
     }
 
+    pub async fn get_distinct_titles(&self) -> Result<Vec<Title>> {
+        let titles = sqlx::query_as!(Title, "SELECT DISTINCT title, game_id FROM dmarket_items")
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(titles)
+    }
+
     pub async fn get_item(&self, item_id: Uuid) -> Result<Option<Item>> {
         let row = sqlx::query!(
             r#"

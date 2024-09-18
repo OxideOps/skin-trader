@@ -2,6 +2,12 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+#[derive(Clone)]
+pub struct Title {
+    pub title: String,
+    pub game_id: String,
+}
+
 #[derive(FromRow, Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Item {

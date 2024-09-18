@@ -11,12 +11,19 @@ use trader::Trader;
 #[tokio::main]
 async fn main() -> Result<()> {
     setup_env();
-    try_join!(start_bitskins(), start_dmarket())?;
+    // try_join!(start_bitskins(), start_dmarket())?;
+    start_dmarket().await?;
     Ok(())
 }
 
 async fn start_dmarket() -> Result<()> {
-    sync_dmarket_items().await?;
+    // sync_dmarket_items().await?;
+    let db = dmarket::Database::new().await?;
+    let client = dmarket::Client::new()?;
+
+    let titles = db.get_distinct_titles().await?;
+    dbg!(client.get_sales(titles[0].clone()).await?);
+
     Ok(())
 }
 
