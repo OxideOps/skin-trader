@@ -8,7 +8,7 @@ use tokio::spawn;
 use tokio::time::sleep;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
-const BUY_THRESHOLD: f64 = 0.8;
+const BUY_THRESHOLD: f64 = 0.85;
 const MIN_SALE_COUNT: i32 = 100;
 const MIN_SLOPE: f64 = 0.0;
 
@@ -16,7 +16,7 @@ const MIN_SLOPE: f64 = 0.0;
 pub(crate) struct Trader {
     db: Database,
     http: HttpClient,
-    updater: Updater,
+    pub updater: Updater,
 }
 
 impl Trader {
