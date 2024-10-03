@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use bitskins::Error::InternalService;
+use bitskins::Error::{InternalService, MarketItemUpdateFailed};
 use bitskins::{Channel, Database, HttpClient, Skin, Stats, Updater, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
@@ -7,9 +7,10 @@ use std::time::Duration;
 use tokio::spawn;
 use tokio::time::sleep;
 
-const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
-const BUY_THRESHOLD: f64 = 0.85;
-const MIN_SALE_COUNT: i32 = 100;
+const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.20;
+const SALES_FEE: f64 = 0.1;
+const MIN_PROFIT_MARGIN: f64 = 0.05;
+const MIN_SALE_COUNT: i32 = 150;
 const MIN_SLOPE: f64 = 0.0;
 
 #[derive(Clone)]
@@ -40,7 +41,7 @@ impl Trader {
         }
 
         if let Err(e) = self.process_data_fallible(channel, item).await {
-            error!("Failed to process data: {e}");
+            warn!("{e}");
         }
     }
 
@@ -65,7 +66,7 @@ impl Trader {
         let price = item.price.unwrap();
         let id = item.id.parse()?;
 
-        if self.db.update_market_item_price(id, price).await.is_err() {
+        if let Err(MarketItemUpdateFailed(_)) = self.db.update_market_item_price(id, price).await {
             self.insert_item(&item).await?;
         }
 
@@ -191,6 +192,7 @@ impl MarketDeal {
     }
 
     fn is_profitable(&self, mean_price: f64) -> bool {
-        self.price < (BUY_THRESHOLD * mean_price)
+        let fee = (SALES_FEE * mean_price).max(10.0); // Fee is always at least 1 cent
+        self.price < (mean_price - fee) * (1.0 - MIN_PROFIT_MARGIN)
     }
 }

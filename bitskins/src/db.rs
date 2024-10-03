@@ -203,7 +203,7 @@ impl Database {
     }
 
     pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<Stats>> {
-        let stats = self.calculate_price_statistics(0.15).await?;
+        let stats = self.calculate_price_statistics(0.0).await?;
         self.update_price_statistics(&stats).await?;
         Ok(stats)
     }
@@ -267,6 +267,10 @@ impl Database {
     }
 
     pub async fn delete_market_item(&self, item_id: i32) -> Result<()> {
+        sqlx::query!(r#"DELETE FROM Sticker WHERE market_item_id = $1"#, item_id)
+            .execute(&self.pool)
+            .await?;
+
         let result = sqlx::query!(
             r#"
             DELETE FROM MarketItem
@@ -280,10 +284,6 @@ impl Database {
         if result.rows_affected() == 0 {
             return Err(Error::MarketItemDeleteFailed(item_id));
         }
-
-        sqlx::query!(r#"DELETE FROM Sticker WHERE market_item_id = $1"#, item_id)
-            .execute(&self.pool)
-            .await?;
 
         Ok(())
     }
