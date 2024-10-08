@@ -61,6 +61,7 @@ pub struct Stats {
     pub last_update: Option<OffsetDateTime>,
 }
 
+#[derive(Debug)]
 pub struct MarketItem {
     pub created_at: DateTime,
     pub id: i32,
@@ -573,5 +574,38 @@ impl Database {
                 .fetch_one(&self.pool)
                 .await?,
         )
+    }
+
+    pub async fn get_market_item(&self, id: i32) -> Result<Option<MarketItem>> {
+        Ok(
+            sqlx::query_as!(MarketItem, "SELECT * FROM MarketItem WHERE id = $1", id)
+                .fetch_optional(&self.pool)
+                .await?,
+        )
+    }
+
+    pub async fn delete_market_items_for_skin(&self, skin_id: i32) -> Result<()> {
+        sqlx::query!(
+            r#"
+            DELETE FROM Sticker
+            WHERE market_item_id IN (
+                SELECT id FROM MarketItem WHERE skin_id = $1
+            )
+            "#,
+            skin_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            DELETE FROM MarketItem WHERE skin_id = $1
+            "#,
+            skin_id
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 }

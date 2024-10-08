@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use bitskins::Error::{InternalService, MarketItemUpdateFailed};
+use bitskins::Error::{InternalService, MarketItemDeleteFailed, MarketItemUpdateFailed};
 use bitskins::{Channel, Database, HttpClient, Skin, Stats, Updater, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
@@ -67,14 +67,22 @@ impl Trader {
         let id = item.id.parse()?;
 
         if let Err(MarketItemUpdateFailed(_)) = self.db.update_market_item_price(id, price).await {
-            self.insert_item(&item).await?;
+            warn!("Failed to update price for item {id}");
+            self.updater
+                .sync_market_items_for_skin(item.skin_id)
+                .await?;
         }
 
         self.attempt_purchase(item).await
     }
 
     async fn handle_delisted_or_sold(&self, item: WsData) -> Result<()> {
-        self.db.delete_market_item(item.id.parse()?).await?;
+        if let Err(MarketItemDeleteFailed(_)) = self.db.delete_market_item(item.id.parse()?).await {
+            warn!("Failed to delete item {0}", item.id);
+            self.updater
+                .sync_market_items_for_skin(item.skin_id)
+                .await?;
+        }
         //TODO: if it was a sale, add it to sale table
         Ok(())
     }
@@ -126,7 +134,6 @@ impl Trader {
                     "Failed to execute purchase for item {}. Updating database for {}...",
                     deal.id, skin_id
                 );
-                self.db.delete_market_item(deal.id.parse()?).await?;
                 self.updater.sync_market_items_for_skin(skin_id).await?;
                 Err(InternalService(endpoint))?
             }
@@ -150,16 +157,6 @@ impl Trader {
     async fn execute_purchase(&self, deal: MarketDeal, mean_price: f64) -> bitskins::Result<()> {
         info!("Buying {} for {}", deal.id, deal.price);
         self.http.buy_item(&deal.id, deal.price).await?;
-
-        let trader = self.clone();
-        spawn(async move {
-            sleep(Duration::from_secs(10)).await;
-            info!("Listing {} for {}", deal.id, mean_price);
-            if let Err(e) = trader.http.list_item(&deal.id, mean_price).await {
-                error!("Failed to list item: {e}");
-            }
-        });
-
         Ok(())
     }
 
