@@ -73,6 +73,7 @@ impl Updater {
     }
 
     async fn handle_market_items(&self, skin: &db::Skin) -> Result<()> {
+        self.db.delete_market_items_for_skin(skin.id).await?;
         for market_item in self.client.fetch_market_items_for_skin(skin.id).await? {
             self.handle_market_item(market_item).await?;
         }
@@ -132,6 +133,8 @@ impl Updater {
 
         let skin_ids: Vec<i32> = skins.iter().map(|s| s.id).collect();
         let latest_dates = self.db.get_latest_sale_dates(&skin_ids).await?;
+        let count = &AtomicUsize::new(0);
+        let total = &skin_ids.len();
 
         join_all(skins.into_iter().zip(latest_dates.into_iter()).map(
             |(skin, latest_date)| async move {
@@ -142,6 +145,12 @@ impl Updater {
                     .unwrap_or_default()
                     .into_iter()
                     .filter_map(move |sale| Some(sale).filter(|s| s.created_at > latest_date));
+
+                log::info!(
+                    "Fetching sales for skin {}/{}",
+                    count.fetch_add(1, Ordering::Relaxed),
+                    total
+                );
 
                 for sale in sales {
                     log::info!(
@@ -204,6 +213,7 @@ impl Updater {
     }
 
     pub async fn sync_market_items_for_skin(&self, skin_id: i32) -> Result<()> {
+        log::info!("Syncing market items for skin {}", skin_id);
         let skin = self.db.get_skin(skin_id).await?;
         self.handle_market_items(&skin).await
     }

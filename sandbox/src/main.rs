@@ -1,15 +1,18 @@
 #[allow(dead_code)]
 mod plotter;
 
-use bitskins::Updater;
+use bitskins::Database;
+use env_logger::Builder;
+use log::LevelFilter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
+    Builder::new().filter_level(LevelFilter::Info).init();
 
-    let updater = Updater::new().await?;
+    let db = Database::new();
 
-    updater.update_listings().await?;
+    db.update_price_statistics().await?;
 
     Ok(())
 }
