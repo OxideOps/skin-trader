@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use bitskins::Error::InternalService;
+use bitskins::Error::{InternalService, MarketItemDeleteFailed, MarketItemUpdateFailed};
 use bitskins::{Channel, Database, HttpClient, Skin, Stats, Updater, WsData, CS2_APP_ID};
 use log::{debug, error, info, warn};
 use std::cmp::Ordering;
@@ -7,16 +7,17 @@ use std::time::Duration;
 use tokio::spawn;
 use tokio::time::sleep;
 
-const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.10;
-const BUY_THRESHOLD: f64 = 0.8;
-const MIN_SALE_COUNT: i32 = 200;
+const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.20;
+const SALES_FEE: f64 = 0.1;
+const MIN_PROFIT_MARGIN: f64 = 0.05;
+const MIN_SALE_COUNT: i32 = 150;
 const MIN_SLOPE: f64 = 0.0;
 
 #[derive(Clone)]
 pub(crate) struct Trader {
     db: Database,
     http: HttpClient,
-    updater: Updater,
+    pub updater: Updater,
 }
 
 impl Trader {
@@ -40,7 +41,7 @@ impl Trader {
         }
 
         if let Err(e) = self.process_data_fallible(channel, item).await {
-            error!("Failed to process data: {e}");
+            warn!("{e}");
         }
     }
 
@@ -65,15 +66,23 @@ impl Trader {
         let price = item.price.unwrap();
         let id = item.id.parse()?;
 
-        if self.db.update_market_item_price(id, price).await.is_err() {
-            self.insert_item(&item).await?;
+        if let Err(MarketItemUpdateFailed(_)) = self.db.update_market_item_price(id, price).await {
+            warn!("Failed to update price for item {id}");
+            self.updater
+                .sync_market_items_for_skin(item.skin_id)
+                .await?;
         }
 
         self.attempt_purchase(item).await
     }
 
     async fn handle_delisted_or_sold(&self, item: WsData) -> Result<()> {
-        self.db.delete_market_item(item.id.parse()?).await?;
+        if let Err(MarketItemDeleteFailed(_)) = self.db.delete_market_item(item.id.parse()?).await {
+            warn!("Failed to delete item {0}", item.id);
+            self.updater
+                .sync_market_items_for_skin(item.skin_id)
+                .await?;
+        }
         //TODO: if it was a sale, add it to sale table
         Ok(())
     }
@@ -125,7 +134,6 @@ impl Trader {
                     "Failed to execute purchase for item {}. Updating database for {}...",
                     deal.id, skin_id
                 );
-                self.db.delete_market_item(deal.id.parse()?).await?;
                 self.updater.sync_market_items_for_skin(skin_id).await?;
                 Err(InternalService(endpoint))?
             }
@@ -149,16 +157,6 @@ impl Trader {
     async fn execute_purchase(&self, deal: MarketDeal, mean_price: f64) -> bitskins::Result<()> {
         info!("Buying {} for {}", deal.id, deal.price);
         self.http.buy_item(&deal.id, deal.price).await?;
-
-        let trader = self.clone();
-        spawn(async move {
-            sleep(Duration::from_secs(10)).await;
-            info!("Listing {} for {}", deal.id, mean_price);
-            if let Err(e) = trader.http.list_item(&deal.id, mean_price).await {
-                error!("Failed to list item: {e}");
-            }
-        });
-
         Ok(())
     }
 
@@ -191,6 +189,7 @@ impl MarketDeal {
     }
 
     fn is_profitable(&self, mean_price: f64) -> bool {
-        self.price < (BUY_THRESHOLD * mean_price)
+        let fee = (SALES_FEE * mean_price).max(10.0); // Fee is always at least 1 cent
+        self.price < (mean_price - fee) * (1.0 - MIN_PROFIT_MARGIN)
     }
 }

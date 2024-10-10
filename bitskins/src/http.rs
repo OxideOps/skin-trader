@@ -16,7 +16,7 @@ const BASE_URL: &str = "https://api.bitskins.com";
 const MAX_LIMIT: usize = 500;
 const MAX_OFFSET: usize = 2000;
 pub const CS2_APP_ID: i32 = 730;
-const SPEED: f64 = 0.6; // Fraction of the default rate limit
+const SPEED: f64 = 0.5; // Fraction of the default rate limit
 
 const STATUS_SELLING: usize = 2;
 const STATUS_INVENTORY: usize = 4;
@@ -99,14 +99,15 @@ pub struct MarketItem {
     pub typesub_id: Option<i32>,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct MarketData {
-    pub list: Vec<MarketItem>,
-    pub counter: MarketDataCounter,
+#[derive(Deserialize)]
+#[serde(bound(deserialize = "T: Deserialize<'de>"))]
+pub struct ListData<T> {
+    pub list: Vec<T>,
+    pub counter: DataCounter,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct MarketDataCounter {
+pub struct DataCounter {
     filtered: usize,
 }
 
@@ -126,6 +127,25 @@ impl ItemPrice {
 pub struct ListResponse {
     pub id: String,
     pub success: bool,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Transaction {
+    pub action: String,
+    pub amount: i32,
+    pub channel: String,
+    pub created_at: DateTime,
+    pub extras: Option<Value>,
+    pub id: String,
+    pub service_id: u32,
+    #[serde(rename = "type")]
+    pub type_: u32,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TransactionData {
+    pub list: Vec<Transaction>,
+    pub counter: DataCounter,
 }
 
 impl Default for HttpClient {
@@ -220,7 +240,7 @@ impl HttpClient {
     }
 
     pub async fn fetch_owned_items(&self, status: usize) -> Result<Vec<MarketItem>> {
-        self.fetch_market_data_generic(|offset| async move {
+        self.fetch_list_data(|offset| async move {
             let request_body = json!({
                 "where_mine": {
                     "status": [status]
@@ -335,10 +355,11 @@ impl HttpClient {
         self.post(Endpoint::SearchGet, json!({"id": id})).await
     }
 
-    async fn fetch_market_data_generic<R, F>(&self, request: R) -> Result<Vec<MarketItem>>
+    async fn fetch_list_data<T, R, F>(&self, request: R) -> Result<Vec<T>>
     where
+        T: DeserializeOwned,
         R: Fn(usize) -> F,
-        F: Future<Output = Result<MarketData>>,
+        F: Future<Output = Result<ListData<T>>>,
     {
         let mut offset = 0;
 
@@ -361,7 +382,7 @@ impl HttpClient {
         &self,
         skin_id: i32,
         offset: usize,
-    ) -> Result<MarketData> {
+    ) -> Result<ListData<MarketItem>> {
         let response = self
             .post(
                 Endpoint::SearchCsgo,
@@ -369,6 +390,10 @@ impl HttpClient {
                     "where": { "skin_id": [skin_id] },
                     "limit": MAX_LIMIT,
                     "offset": offset,
+                    "order": [{
+                        "field": "price",
+                        "order": "ASC"
+                    }],
                 }),
             )
             .await?;
@@ -377,10 +402,8 @@ impl HttpClient {
     }
 
     pub async fn fetch_market_items_for_skin(&self, skin_id: i32) -> Result<Vec<MarketItem>> {
-        self.fetch_market_data_generic(|offset| {
-            self.fetch_market_data_response_by_skin(skin_id, offset)
-        })
-        .await
+        self.fetch_list_data(|offset| self.fetch_market_data_response_by_skin(skin_id, offset))
+            .await
     }
 
     // This might be useful if it ever starts working
@@ -389,6 +412,16 @@ impl HttpClient {
             Endpoint::HistoryList,
             json!({"type": "buyer", "limit": MAX_LIMIT, "offset": offset}),
         )
+        .await
+    }
+
+    pub async fn fetch_transactions(&self) -> Result<Vec<Transaction>> {
+        self.fetch_list_data(|offset| {
+            self.post(
+                Endpoint::Transactions,
+                json!({"limit": MAX_LIMIT, "offset": offset}),
+            )
+        })
         .await
     }
 }

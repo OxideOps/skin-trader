@@ -28,4 +28,6 @@ pub enum Endpoint {
     Inventory,
     #[strum(serialize = "/market/update_price/many")]
     UpdateOfferPrices,
+    #[strum(serialize = "/wallet/transaction/list")]
+    Transactions,
 }
