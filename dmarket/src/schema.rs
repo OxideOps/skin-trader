@@ -55,6 +55,7 @@ pub struct Extra {
     pub float_value: Option<f64>,
     pub is_new: bool,
     pub tradable: bool,
+    pub offer_id: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
