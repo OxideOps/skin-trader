@@ -1,11 +1,8 @@
 use anyhow::{bail, Result};
 use bitskins::Error::{InternalService, MarketItemDeleteFailed, MarketItemUpdateFailed};
 use bitskins::{Channel, Database, HttpClient, Skin, Stats, Updater, WsData, CS2_APP_ID};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use std::cmp::Ordering;
-use std::time::Duration;
-use tokio::spawn;
-use tokio::time::sleep;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.20;
 const SALES_FEE: f64 = 0.1;
@@ -128,7 +125,7 @@ impl Trader {
             bail!("Item is not profitable: {}", skin_id)
         }
 
-        match self.execute_purchase(deal.clone(), mean).await {
+        match self.execute_purchase(deal.clone()).await {
             Err(InternalService(endpoint)) => {
                 warn!(
                     "Failed to execute purchase for item {}. Updating database for {}...",
@@ -154,7 +151,7 @@ impl Trader {
             .min_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(Ordering::Equal)))
     }
 
-    async fn execute_purchase(&self, deal: MarketDeal, mean_price: f64) -> bitskins::Result<()> {
+    async fn execute_purchase(&self, deal: MarketDeal) -> bitskins::Result<()> {
         info!("Buying {} for {}", deal.id, deal.price);
         self.http.buy_item(&deal.id, deal.price).await?;
         Ok(())

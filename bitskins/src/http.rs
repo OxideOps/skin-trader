@@ -142,12 +142,6 @@ pub struct Transaction {
     pub type_: u32,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct TransactionData {
-    pub list: Vec<Transaction>,
-    pub counter: DataCounter,
-}
-
 impl Default for HttpClient {
     fn default() -> Self {
         Self::new()
