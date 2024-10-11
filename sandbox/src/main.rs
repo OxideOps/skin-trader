@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 mod plotter;
 
-use bitskins::Database;
+use bitskins::Updater;
 use env_logger::Builder;
 use log::LevelFilter;
 
@@ -10,9 +10,9 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     Builder::new().filter_level(LevelFilter::Info).init();
 
-    let db = Database::new();
+    let updater = Updater::new().await?;
 
-    db.update_price_statistics().await?;
+    updater.sync_data().await?;
 
     Ok(())
 }
