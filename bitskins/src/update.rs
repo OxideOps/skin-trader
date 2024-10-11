@@ -60,7 +60,6 @@ impl Updater {
     }
 
     async fn handle_market_item(&self, item: http::MarketItem) -> Result<()> {
-        self.db.delete_market_item(item.id.parse()?).await.ok();
         self.db.insert_market_item(item.clone().into()).await?;
         for sticker in item.stickers.into_iter().flatten() {
             self.handle_sticker(
