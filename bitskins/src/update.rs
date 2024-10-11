@@ -72,8 +72,9 @@ impl Updater {
     }
 
     async fn handle_market_items(&self, skin: &db::Skin) -> Result<()> {
+        let market_items = self.client.fetch_market_items_for_skin(skin.id).await?;
         self.db.delete_market_items_for_skin(skin.id).await?;
-        for market_item in self.client.fetch_market_items_for_skin(skin.id).await? {
+        for market_item in market_items {
             self.handle_market_item(market_item).await?;
         }
         Ok(())
