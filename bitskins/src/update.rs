@@ -59,8 +59,7 @@ impl Updater {
         Ok(())
     }
 
-    async fn handle_market_item(&self, item: http::MarketItem) -> Result<()> {
-        self.db.insert_market_item(item.clone().into()).await?;
+    async fn handle_stickers(&self, item: http::MarketItem) -> Result<()> {
         for sticker in item.stickers.into_iter().flatten() {
             self.handle_sticker(
                 sticker.clone(),
@@ -73,9 +72,16 @@ impl Updater {
 
     async fn handle_market_items(&self, skin: &db::Skin) -> Result<()> {
         let market_items = self.client.fetch_market_items_for_skin(skin.id).await?;
-        self.db.delete_market_items_for_skin(skin.id).await?;
-        for market_item in market_items {
-            self.handle_market_item(market_item).await?;
+        let db_items = market_items
+            .clone()
+            .into_iter()
+            .map(|item| item.into())
+            .collect();
+        self.db
+            .update_market_items_for_skin(skin.id, db_items)
+            .await?;
+        for item in market_items {
+            self.handle_stickers(item).await?;
         }
         Ok(())
     }

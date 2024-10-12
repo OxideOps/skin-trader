@@ -4,7 +4,7 @@
 //! that stores information about CS:GO skins, sales, and related statistics.
 use crate::date::DateTime;
 use crate::{Error, Result};
-use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, PgPool};
+use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, Executor, PgPool};
 use std::collections::HashMap;
 use std::env;
 
@@ -247,7 +247,14 @@ impl Database {
         Ok(row.id)
     }
 
-    pub async fn insert_market_item(&self, item: MarketItem) -> Result<()> {
+    pub async fn insert_market_item_generic<'a, 'e, E>(
+        &'a self,
+        executor: E,
+        item: MarketItem,
+    ) -> Result<()>
+    where
+        E: 'e + Executor<'e, Database = sqlx::Postgres>,
+    {
         sqlx::query!(
             r#"
             INSERT INTO MarketItem (created_at, id, skin_id, price, phase_id, float_value)
@@ -261,17 +268,17 @@ impl Database {
             item.phase_id,
             item.float_value
         )
-        .execute(&self.pool)
+        .execute(executor)
         .await?;
 
         Ok(())
     }
 
-    pub async fn delete_market_item(&self, item_id: i32) -> Result<()> {
-        sqlx::query!(r#"DELETE FROM Sticker WHERE market_item_id = $1"#, item_id)
-            .execute(&self.pool)
-            .await?;
+    pub async fn insert_market_item(&self, item: MarketItem) -> Result<()> {
+        self.insert_market_item_generic(&self.pool, item).await
+    }
 
+    pub async fn delete_market_item(&self, item_id: i32) -> Result<()> {
         let result = sqlx::query!(
             r#"
             DELETE FROM MarketItem
@@ -584,29 +591,26 @@ impl Database {
         )
     }
 
-    pub async fn delete_market_items_for_skin(&self, skin_id: i32) -> Result<()> {
-        sqlx::query!(
-            r#"
-            DELETE FROM Sticker
-            WHERE market_item_id IN (
-                SELECT id FROM MarketItem WHERE skin_id = $1
-            )
-            "#,
-            skin_id
-        )
-        .execute(&self.pool)
-        .await?;
-
+    pub async fn update_market_items_for_skin(
+        &self,
+        skin_id: i32,
+        items: Vec<MarketItem>,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
         sqlx::query!(
             r#"
             DELETE FROM MarketItem WHERE skin_id = $1
             "#,
             skin_id
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
 
-        Ok(())
+        for item in items {
+            self.insert_market_item_generic(&mut *tx, item).await?;
+        }
+
+        Ok(tx.commit().await?)
     }
 
     pub async fn insert_offer(&self, item: MarketItem) -> Result<()> {

@@ -1,10 +1,10 @@
 CREATE TABLE Sticker
 (
     id              SERIAL PRIMARY KEY,
-    sale_id         INTEGER REFERENCES Sale (id),
+    sale_id         INTEGER REFERENCES Sale (id) ON DELETE CASCADE,
     skin_id         INTEGER REFERENCES Skin (id),
     image           VARCHAR(255),
-    market_item_id  INTEGER REFERENCES MarketItem (id),
+    market_item_id  INTEGER REFERENCES MarketItem (id) ON DELETE CASCADE,
     slot            SMALLINT CHECK (slot >= 0),
     wear            DOUBLE PRECISION,
     suggested_price INTEGER CHECK (suggested_price >= 0),
