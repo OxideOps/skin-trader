@@ -247,7 +247,7 @@ impl Database {
         Ok(row.id)
     }
 
-    pub async fn insert_market_item_generic<'a, 'e, E>(
+    async fn insert_market_item_generic<'a, 'e, E>(
         &'a self,
         executor: E,
         item: MarketItem,
@@ -617,6 +617,13 @@ impl Database {
         let item_id = item.id;
         self.insert_market_item(item).await?;
         sqlx::query!("INSERT INTO Offer (item_id) VALUES ($1)", item_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_offer(&self, item_id: i32) -> Result<()> {
+        sqlx::query!("DELETE FROM Offer WHERE item_id = $1", item_id)
             .execute(&self.pool)
             .await?;
         Ok(())

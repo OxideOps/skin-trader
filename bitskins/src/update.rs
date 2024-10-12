@@ -184,33 +184,39 @@ impl Updater {
     async fn process_items<T: Into<db::MarketItem>>(
         &self,
         items: Vec<T>,
-    ) -> Result<Vec<ItemPrice>> {
+    ) -> Result<(Vec<ItemPrice>, Vec<db::MarketItem>)> {
         let mut result = Vec::new();
 
         for item in items {
             let market_item: db::MarketItem = item.into();
             if let Ok(stat) = self.db.get_price_statistics(market_item.skin_id).await {
                 let price = stat.mean_price.unwrap().round() as u32;
-                result.push(ItemPrice::new(market_item.id.to_string(), price));
+                result.push((
+                    ItemPrice::new(market_item.id.to_string(), price),
+                    market_item,
+                ));
             }
         }
 
-        Ok(result)
+        Ok(result.into_iter().unzip())
     }
 
     pub async fn list_inventory_items(&self) -> Result<()> {
         let inventory = self.client.fetch_inventory().await?;
-        let items = self.process_items(inventory).await?;
+        let (item_prices, items) = self.process_items(inventory).await?;
         if !items.is_empty() {
             log::info!("Listing items: {items:?}");
-            self.client.list_items(&items).await?;
+            self.client.list_items(&item_prices).await?;
+            for item in items {
+                self.db.insert_offer(item).await?;
+            }
         }
         Ok(())
     }
 
     pub async fn update_offer_prices(&self) -> Result<()> {
         let offers = self.client.fetch_offers().await?;
-        let updates = self.process_items(offers).await?;
+        let (updates, _) = self.process_items(offers).await?;
         if !updates.is_empty() {
             log::info!("Updating prices: {updates:?}");
             self.client.update_market_offers(&updates).await?;

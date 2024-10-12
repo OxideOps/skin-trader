@@ -80,6 +80,7 @@ impl Trader {
                 .sync_market_items_for_skin(item.skin_id)
                 .await?;
         }
+        self.db.delete_offer(item.id.parse()?).await?;
         //TODO: if it was a sale, add it to sale table
         Ok(())
     }
