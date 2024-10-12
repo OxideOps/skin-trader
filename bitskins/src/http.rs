@@ -233,11 +233,11 @@ impl HttpClient {
         self.request(builder, endpoint).await
     }
 
-    pub async fn fetch_owned_items(&self, status: usize) -> Result<Vec<MarketItem>> {
+    async fn fetch_owned_items(&self, status: usize) -> Result<Vec<MarketItem>> {
         self.fetch_list_data(|offset| async move {
             let request_body = json!({
                 "where_mine": {
-                    "status": [status]
+                    "status": [status],
                 },
                 "limit": MAX_LIMIT,
                 "offset": offset

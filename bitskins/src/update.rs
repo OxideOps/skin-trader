@@ -123,7 +123,7 @@ impl Updater {
         log::info!("Updating price statistics");
         self.db.calculate_and_update_price_statistics().await?;
 
-        Ok(())
+        self.sync_offered_items().await
     }
 
     pub async fn sync_new_sales(&self) -> Result<()> {
@@ -216,5 +216,14 @@ impl Updater {
         log::info!("Syncing market items for skin {}", skin_id);
         let skin = self.db.get_skin(skin_id).await?;
         self.handle_market_items(&skin).await
+    }
+
+    pub async fn sync_offered_items(&self) -> Result<()> {
+        log::info!("Syncing offered items");
+        self.db.delete_all_offers().await?;
+        for offer in self.client.fetch_offers().await? {
+            self.db.insert_offer(offer.into()).await?;
+        }
+        Ok(())
     }
 }

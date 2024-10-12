@@ -608,4 +608,17 @@ impl Database {
 
         Ok(())
     }
+
+    pub async fn insert_offer(&self, item: MarketItem) -> Result<()> {
+        let item_id = item.id;
+        self.insert_market_item(item).await?;
+        sqlx::query!("INSERT INTO Offer (item_id) VALUES ($1)", item_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn delete_all_offers(&self) -> Result<()> {
+        self.flush_table("Offer").await
+    }
 }

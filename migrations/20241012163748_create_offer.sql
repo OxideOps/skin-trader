@@ -1,0 +1,4 @@
+CREATE TABLE Offer (
+    item_id INTEGER PRIMARY KEY,
+    FOREIGN KEY (item_id) REFERENCES MarketItem(id) ON DELETE CASCADE
+);
