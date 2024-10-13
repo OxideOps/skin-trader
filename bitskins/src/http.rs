@@ -237,7 +237,7 @@ impl HttpClient {
         self.fetch_list_data(|offset| async move {
             let request_body = json!({
                 "where_mine": {
-                    "status": [status],
+                    "status": [status]
                 },
                 "limit": MAX_LIMIT,
                 "offset": offset
@@ -257,13 +257,22 @@ impl HttpClient {
     }
 
     pub async fn update_market_offers(&self, updates: &[ItemPrice]) -> Result<Vec<ListResponse>> {
-        self.post(
-            Endpoint::UpdateOfferPrices,
-            json!({
-                "items": updates
-            }),
-        )
-        .await
+        let mut responses = Vec::new();
+
+        for chunk in updates.chunks(100) {
+            let mut response = self
+                .post(
+                    Endpoint::UpdateOfferPrices,
+                    json!({
+                        "items": chunk
+                    }),
+                )
+                .await?;
+
+            responses.append(&mut response);
+        }
+
+        Ok(responses)
     }
 
     pub async fn delist_item(&self, item_id: &str) -> Result<bool> {
