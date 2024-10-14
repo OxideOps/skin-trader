@@ -6,8 +6,8 @@ use std::cmp::Ordering;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.20;
 const SALES_FEE: f64 = 0.1;
-const MIN_PROFIT_MARGIN: f64 = 0.05;
-const MIN_SALE_COUNT: i32 = 150;
+const MIN_PROFIT_MARGIN: f64 = 0.1;
+const MIN_SALE_COUNT: i32 = 200;
 const MIN_SLOPE: f64 = 0.0;
 
 #[derive(Clone)]
@@ -56,6 +56,7 @@ impl Trader {
 
     async fn handle_listed(&self, item: WsData) -> Result<()> {
         self.insert_item(&item).await?;
+        self.updater.update_offer_prices().await?; // In case we can undercut the cheapest
         self.attempt_purchase(item).await
     }
 
@@ -70,6 +71,8 @@ impl Trader {
                 .await?;
         }
 
+        self.updater.update_offer_prices().await?; // In case we can undercut the cheapest
+
         self.attempt_purchase(item).await
     }
 
@@ -80,7 +83,7 @@ impl Trader {
                 .sync_market_items_for_skin(item.skin_id)
                 .await?;
         }
-        //TODO: if it was a sale, add it to sale table
+        self.updater.update_offer_prices().await?; // In case we can undercut the cheapest
         Ok(())
     }
 

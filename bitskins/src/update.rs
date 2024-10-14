@@ -2,6 +2,7 @@ use crate::http::ItemPrice;
 use crate::Result;
 use crate::{db, http, Database, HttpClient};
 use futures_util::future::{join_all, try_join};
+use std::cmp::max;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Clone)]
@@ -59,8 +60,7 @@ impl Updater {
         Ok(())
     }
 
-    async fn handle_market_item(&self, item: http::MarketItem) -> Result<()> {
-        self.db.insert_market_item(item.clone().into()).await?;
+    async fn handle_stickers(&self, item: http::MarketItem) -> Result<()> {
         for sticker in item.stickers.into_iter().flatten() {
             self.handle_sticker(
                 sticker.clone(),
@@ -72,9 +72,17 @@ impl Updater {
     }
 
     async fn handle_market_items(&self, skin: &db::Skin) -> Result<()> {
-        self.db.delete_market_items_for_skin(skin.id).await?;
-        for market_item in self.client.fetch_market_items_for_skin(skin.id).await? {
-            self.handle_market_item(market_item).await?;
+        let market_items = self.client.fetch_market_items_for_skin(skin.id).await?;
+        let db_items = market_items
+            .clone()
+            .into_iter()
+            .map(|item| item.into())
+            .collect();
+        self.db
+            .update_market_items_for_skin(skin.id, db_items)
+            .await?;
+        for item in market_items {
+            self.handle_stickers(item).await?;
         }
         Ok(())
     }
@@ -122,7 +130,7 @@ impl Updater {
         log::info!("Updating price statistics");
         self.db.calculate_and_update_price_statistics().await?;
 
-        Ok(())
+        self.sync_offered_items().await
     }
 
     pub async fn sync_new_sales(&self) -> Result<()> {
@@ -174,17 +182,21 @@ impl Updater {
         self.update_offer_prices().await
     }
 
-    async fn process_items<T: Into<db::MarketItem>>(
-        &self,
-        items: Vec<T>,
-    ) -> Result<Vec<ItemPrice>> {
+    pub async fn get_listing_prices(&self, items: Vec<db::MarketItem>) -> Result<Vec<ItemPrice>> {
         let mut result = Vec::new();
 
         for item in items {
-            let market_item: db::MarketItem = item.into();
-            if let Ok(stat) = self.db.get_price_statistics(market_item.skin_id).await {
-                let price = stat.mean_price.unwrap().round() as u32;
-                result.push(ItemPrice::new(market_item.id.to_string(), price));
+            if let Ok(stat) = self.db.get_price_statistics(item.skin_id).await {
+                let mut price = stat.mean_price.unwrap().round() as u32;
+                if let Some(cheapest_competitor) = self.db.get_cheapest_price(item.skin_id).await? {
+                    // sell at 1 cent below the cheapest competitor if still more than the mean
+                    price = max(price, cheapest_competitor as u32 - 10);
+                }
+                // Bitskins UI appears to round up to the nearest 10 anyway, so we might as well
+                price = (price + 9) / 10 * 10;
+                if price != item.price.round() as u32 {
+                    result.push(ItemPrice::new(item.id.to_string(), price));
+                }
             }
         }
 
@@ -193,20 +205,29 @@ impl Updater {
 
     pub async fn list_inventory_items(&self) -> Result<()> {
         let inventory = self.client.fetch_inventory().await?;
-        let items = self.process_items(inventory).await?;
-        if !items.is_empty() {
-            log::info!("Listing items: {items:?}");
-            self.client.list_items(&items).await?;
+        let items: Vec<db::MarketItem> = inventory.into_iter().map(|item| item.into()).collect();
+        let item_prices = self.get_listing_prices(items.clone()).await?;
+        if !item_prices.is_empty() {
+            log::info!("Listing items: {item_prices:?}");
+            self.client.list_items(&item_prices).await?;
+            for item in items {
+                self.db.insert_offer(item).await?;
+            }
         }
         Ok(())
     }
 
     pub async fn update_offer_prices(&self) -> Result<()> {
-        let offers = self.client.fetch_offers().await?;
-        let updates = self.process_items(offers).await?;
+        let offers = self.db.get_all_offers().await?;
+        let updates = self.get_listing_prices(offers).await?;
         if !updates.is_empty() {
             log::info!("Updating prices: {updates:?}");
             self.client.update_market_offers(&updates).await?;
+            for update in updates {
+                self.db
+                    .update_market_item_price(update.id.parse()?, update.price as f64)
+                    .await?;
+            }
         }
         Ok(())
     }
@@ -215,5 +236,14 @@ impl Updater {
         log::info!("Syncing market items for skin {}", skin_id);
         let skin = self.db.get_skin(skin_id).await?;
         self.handle_market_items(&skin).await
+    }
+
+    pub async fn sync_offered_items(&self) -> Result<()> {
+        log::info!("Syncing offered items");
+        self.db.delete_all_offers().await?;
+        for offer in self.client.fetch_offers().await? {
+            self.db.insert_offer(offer.into()).await?;
+        }
+        Ok(())
     }
 }
