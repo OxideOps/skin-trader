@@ -206,13 +206,13 @@ impl Updater {
     pub async fn list_inventory_items(&self) -> Result<()> {
         let inventory = self.client.fetch_inventory().await?;
         let items: Vec<db::MarketItem> = inventory.into_iter().map(|item| item.into()).collect();
-        let item_prices = self.get_listing_prices(items.clone()).await?;
+        for item in &items {
+            self.db.insert_offer(item.clone()).await?;
+        }
+        let item_prices = self.get_listing_prices(items).await?;
         if !item_prices.is_empty() {
             log::info!("Listing items: {item_prices:?}");
             self.client.list_items(&item_prices).await?;
-            for item in items {
-                self.db.insert_offer(item).await?;
-            }
         }
         Ok(())
     }

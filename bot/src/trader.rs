@@ -55,13 +55,14 @@ impl Trader {
     }
 
     async fn handle_listed(&self, item: WsData) -> Result<()> {
+        self.attempt_purchase(&item).await?;
         self.insert_item(&item).await?;
-        self.attempt_purchase(item).await?;
         self.updater.update_offer_prices().await?; // In case we can undercut the cheapest
         Ok(())
     }
 
     async fn handle_price_change(&self, item: WsData) -> Result<()> {
+        self.attempt_purchase(&item).await?;
         let price = item.price.unwrap();
         let id = item.id.parse()?;
         if let Err(MarketItemUpdateFailed(_)) = self.db.update_market_item_price(id, price).await {
@@ -70,7 +71,6 @@ impl Trader {
                 .sync_market_items_for_skin(item.skin_id)
                 .await?;
         }
-        self.attempt_purchase(item).await?;
         self.updater.update_offer_prices().await?; // In case we can undercut the cheapest
         Ok(())
     }
@@ -100,12 +100,12 @@ impl Trader {
         Ok(())
     }
 
-    async fn attempt_purchase(&self, item: WsData) -> Result<()> {
+    async fn attempt_purchase(&self, item: &WsData) -> Result<()> {
         let price = match item.price {
             Some(price) => price,
             _ => bail!("Missing item price for skin_id: {}", item.skin_id),
         };
-        self.attempt_purchase_generic(MarketDeal::new(item.id, price), item.skin_id)
+        self.attempt_purchase_generic(MarketDeal::new(item.id.clone(), price), item.skin_id)
             .await
     }
 
