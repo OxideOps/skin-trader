@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.20;
 const SALES_FEE: f64 = 0.1;
-const MIN_PROFIT_MARGIN: f64 = 0.1;
+const MIN_PROFIT_MARGIN: f64 = 0.05;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
 
@@ -188,7 +188,8 @@ impl MarketDeal {
     }
 
     fn is_profitable(&self, mean_price: f64) -> bool {
-        let fee = (SALES_FEE * mean_price).max(10.0); // Fee is always at least 1 cent
-        self.price < (mean_price - fee) * (1.0 - MIN_PROFIT_MARGIN)
+        let sale_price = (1.0 - Updater::SELLING_DISCOUNT) * mean_price;
+        let fee = (SALES_FEE * sale_price).max(10.0); // Fee is always at least 1 cent
+        self.price < (sale_price - fee) * (1.0 - MIN_PROFIT_MARGIN)
     }
 }
