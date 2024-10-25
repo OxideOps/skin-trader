@@ -12,6 +12,8 @@ pub struct Updater {
 }
 
 impl Updater {
+    pub const SELLING_DISCOUNT: f64 = 0.05;
+
     pub async fn new() -> Result<Self> {
         Ok(Self {
             db: Database::new().await?,
@@ -187,7 +189,8 @@ impl Updater {
 
         for item in items {
             if let Ok(stat) = self.db.get_price_statistics(item.skin_id).await {
-                let mut price = stat.mean_price.unwrap().round() as u32;
+                let mut price =
+                    ((1.0 - Self::SELLING_DISCOUNT) * stat.mean_price.unwrap()).round() as u32;
                 if let Some(cheapest_competitor) = self.db.get_cheapest_price(item.skin_id).await? {
                     // sell at 1 cent below the cheapest competitor if still more than the mean
                     price = max(price, cheapest_competitor as u32 - 10);
