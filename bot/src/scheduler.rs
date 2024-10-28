@@ -43,6 +43,11 @@ impl Scheduler {
         })
         .await?;
 
+        self.schedule_task("every hour", |trader| async move {
+            Ok(trader.updater.sync_offered_items().await?)
+        })
+        .await?;
+
         self.schedule_task("every day", |trader| async move {
             Ok(trader.purchase_best_items().await?)
         })
@@ -50,6 +55,11 @@ impl Scheduler {
 
         self.schedule_task("every 10 days", |trader| async move {
             Ok(trader.updater.sync_new_sales().await?)
+        })
+        .await?;
+
+        self.schedule_task("every 10 days", |trader| async move {
+            Ok(trader.updater.sync_market_items().await?)
         })
         .await?;
 
