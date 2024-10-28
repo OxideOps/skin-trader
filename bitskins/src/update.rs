@@ -178,6 +178,18 @@ impl Updater {
         self.update_listings().await
     }
 
+    pub async fn sync_market_items(&self) -> Result<()> {
+        let skins = self.fetch_skins().await?;
+        self.db.insert_skins(&skins).await?;
+        join_all(
+            skins
+                .into_iter()
+                .map(|skin| async move { self.handle_market_items(&skin).await }),
+        )
+        .await;
+        Ok(())
+    }
+
     pub async fn update_listings(&self) -> Result<()> {
         log::info!("Updating price statistics");
         self.db.calculate_and_update_price_statistics().await?;
