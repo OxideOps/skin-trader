@@ -5,7 +5,7 @@
 use crate::date::DateTime;
 use crate::{Error, Result};
 use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, Executor, PgPool};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 
 const MAX_CONNECTIONS: u32 = 5;
@@ -52,13 +52,8 @@ pub struct Sticker {
 pub struct Stats {
     pub skin_id: i32,
     pub mean_price: Option<f64>,
-    pub std_dev_price: Option<f64>,
     pub sale_count: Option<i32>,
-    pub min_float: Option<f64>,
-    pub max_float: Option<f64>,
-    pub time_correlation: Option<f64>,
     pub price_slope: Option<f64>,
-    pub last_update: Option<OffsetDateTime>,
 }
 
 #[derive(Clone, Debug)]
@@ -68,7 +63,6 @@ pub struct MarketItem {
     pub skin_id: i32,
     pub price: f64,
     pub float_value: Option<f64>,
-    pub phase_id: Option<i32>,
 }
 
 /// Handles database operations for BitSkins data.
@@ -96,55 +90,43 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn calculate_price_statistics(&self, float_min: f64) -> Result<Vec<Stats>> {
+    pub async fn calculate_price_statistics(&self) -> Result<Vec<Stats>> {
         let stats = sqlx::query_as!(
             Stats,
             r#"
-        WITH filtered_sales AS (
+            WITH filtered_sales AS (
+                SELECT
+                    skin_id,
+                    LN(price) as log_price,
+                    EXTRACT(EPOCH FROM created_at) as time
+                FROM Sale
+                WHERE price > 0
+            ),
+            price_quartiles AS (
+                SELECT
+                    skin_id,
+                    percentile_cont(0.25) WITHIN GROUP (ORDER BY log_price) AS q1,
+                    percentile_cont(0.75) WITHIN GROUP (ORDER BY log_price) AS q3
+                FROM filtered_sales
+                GROUP BY skin_id
+            ),
+            outlier_bounds AS (
+                SELECT
+                    skin_id,
+                    q1 - 1.5 * (q3 - q1) AS lower_bound,
+                    q3 + 1.5 * (q3 - q1) AS upper_bound
+                FROM price_quartiles
+            )
             SELECT
-                skin_id,
-                price,
-                float_value,
-                EXTRACT(EPOCH FROM created_at) as time
-            FROM Sale
-            WHERE float_value >= $1
-        ),
-        price_quartiles AS (
-            SELECT
-                skin_id,
-                percentile_cont(0.25) WITHIN GROUP (ORDER BY price) AS q1,
-                percentile_cont(0.75) WITHIN GROUP (ORDER BY price) AS q3
-            FROM filtered_sales
-            GROUP BY skin_id
-        ),
-        outlier_bounds AS (
-            SELECT
-                skin_id,
-                q1 - 1.5 * (q3 - q1) AS lower_bound,
-                q3 + 1.5 * (q3 - q1) AS upper_bound
-            FROM price_quartiles
-        ),
-        sales_without_outliers AS (
-            SELECT fs.*
+                fs.skin_id,
+                EXP(AVG(fs.log_price)) as mean_price,
+                COUNT(*)::INTEGER as sale_count,
+                REGR_SLOPE(fs.log_price, fs.time) as price_slope
             FROM filtered_sales fs
             JOIN outlier_bounds ob ON fs.skin_id = ob.skin_id
-            WHERE fs.price BETWEEN ob.lower_bound AND ob.upper_bound
-        )
-        SELECT
-            skin_id,
-            AVG(price) as mean_price,
-            STDDEV(price) as std_dev_price,
-            COUNT(*)::INTEGER as sale_count,
-            MIN(float_value) as min_float,
-            MAX(float_value) as max_float,
-            CORR(time, price) as time_correlation,
-            REGR_SLOPE(price, time) as price_slope,
-            $2::TIMESTAMPTZ as last_update
-        FROM sales_without_outliers
-        GROUP BY skin_id
-        "#,
-            float_min,
-            OffsetDateTime::now_utc(),
+            WHERE fs.log_price BETWEEN ob.lower_bound AND ob.upper_bound
+            GROUP BY fs.skin_id
+            "#
         )
         .fetch_all(&self.pool)
         .await?;
@@ -158,31 +140,18 @@ impl Database {
         for stat in stats {
             sqlx::query!(
                 r#"
-                INSERT INTO price_statistics (
-                    skin_id, mean_price, std_dev_price, sale_count, min_float, max_float,
-                    time_correlation, price_slope, last_update
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                INSERT INTO price_statistics (skin_id, mean_price, sale_count, price_slope)
+                VALUES ($1, $2, $3, $4)
                 ON CONFLICT (skin_id) DO UPDATE
-                SET 
+                SET
                     mean_price = EXCLUDED.mean_price,
-                    std_dev_price = EXCLUDED.std_dev_price,
                     sale_count = EXCLUDED.sale_count,
-                    min_float = EXCLUDED.min_float,
-                    max_float = EXCLUDED.max_float,
-                    time_correlation = EXCLUDED.time_correlation,
-                    price_slope = EXCLUDED.price_slope,
-                    last_update = EXCLUDED.last_update
+                    price_slope = EXCLUDED.price_slope
                 "#,
                 stat.skin_id,
                 stat.mean_price,
-                stat.std_dev_price,
                 stat.sale_count,
-                stat.min_float,
-                stat.max_float,
-                stat.time_correlation,
-                stat.price_slope,
-                stat.last_update
+                stat.price_slope
             )
             .execute(&mut *tx)
             .await?;
@@ -204,7 +173,7 @@ impl Database {
     }
 
     pub async fn calculate_and_update_price_statistics(&self) -> Result<Vec<Stats>> {
-        let stats = self.calculate_price_statistics(0.0).await?;
+        let stats = self.calculate_price_statistics().await?;
         self.update_price_statistics(&stats).await?;
         Ok(stats)
     }
@@ -257,20 +226,18 @@ impl Database {
     {
         sqlx::query!(
             r#"
-            INSERT INTO MarketItem (created_at, id, skin_id, price, phase_id, float_value)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO MarketItem (created_at, id, skin_id, price, float_value)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (id) DO UPDATE SET
                 created_at = EXCLUDED.created_at,
                 skin_id = EXCLUDED.skin_id,
                 price = EXCLUDED.price,
-                phase_id = EXCLUDED.phase_id,
                 float_value = EXCLUDED.float_value
             "#,
             *item.created_at,
             item.id,
             item.skin_id,
             item.price,
-            item.phase_id,
             item.float_value
         )
         .execute(executor)
@@ -426,32 +393,7 @@ impl Database {
         .await?)
     }
 
-    pub async fn get_skin_ids_by_correlation_with_min_sales(
-        &self,
-        min_sales: i64,
-    ) -> Result<Vec<i32>> {
-        let skin_ids = sqlx::query!(
-            r#"
-            SELECT ps.skin_id
-            FROM price_statistics ps
-            JOIN (
-                SELECT skin_id
-                FROM Sale
-                GROUP BY skin_id
-                HAVING COUNT(*) >= $1
-            ) sc ON ps.skin_id = sc.skin_id
-            WHERE ps.time_correlation IS NOT NULL
-            ORDER BY ABS(ps.time_correlation) DESC
-            "#,
-            min_sales
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(skin_ids.into_iter().map(|r| r.skin_id).collect())
-    }
-
-    pub async fn insert_skins(&self, skins: &[Skin]) -> Result<()> {
+    pub async fn insert_skins(&self, skins: &Vec<Skin>) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
         for skin in skins {
@@ -551,7 +493,7 @@ impl Database {
         .await?)
     }
 
-    pub async fn get_latest_sale_dates(&self, skin_ids: &[i32]) -> Result<Vec<DateTime>> {
+    pub async fn get_latest_sale_dates(&self, skin_ids: &[i32]) -> Result<HashMap<i32, DateTime>> {
         let results = sqlx::query!(
             r#"
             SELECT skin_id, MAX(created_at)
@@ -564,7 +506,7 @@ impl Database {
         .fetch_all(&self.pool)
         .await?;
 
-        let date_map: HashMap<i32, DateTime> = results
+        Ok(results
             .into_iter()
             .map(|row| {
                 (
@@ -572,11 +514,6 @@ impl Database {
                     row.max.map(DateTime).unwrap_or(DateTime::min()),
                 )
             })
-            .collect();
-
-        Ok(skin_ids
-            .iter()
-            .map(|id| *date_map.get(id).unwrap_or(&DateTime::min()))
             .collect())
     }
 
@@ -601,21 +538,20 @@ impl Database {
         skin_id: i32,
         items: Vec<MarketItem>,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        sqlx::query!(
-            r#"
-            DELETE FROM MarketItem WHERE skin_id = $1
-            "#,
-            skin_id
-        )
-        .execute(&mut *tx)
-        .await?;
+        let existing_items = self.get_market_items(skin_id).await?;
+        let new_ids: HashSet<_> = items.iter().map(|item| item.id).collect();
 
-        for item in items {
-            self.insert_market_item_generic(&mut *tx, item).await?;
+        for item in existing_items {
+            if !new_ids.contains(&item.id) {
+                self.delete_market_item(item.id).await?;
+            }
         }
 
-        Ok(tx.commit().await?)
+        for item in items {
+            self.insert_market_item_generic(&self.pool, item).await?;
+        }
+
+        Ok(())
     }
 
     pub async fn insert_offer(&self, item: MarketItem) -> Result<()> {
