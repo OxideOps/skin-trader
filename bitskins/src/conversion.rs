@@ -19,7 +19,6 @@ impl From<http::MarketItem> for db::MarketItem {
             skin_id: item.skin_id,
             price: item.price,
             float_value: item.float_value,
-            phase_id: item.phase_id,
         }
     }
 }

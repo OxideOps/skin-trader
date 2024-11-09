@@ -1,6 +1,6 @@
 use crate::http::ItemPrice;
-use crate::Result;
 use crate::{db, http, Database, HttpClient};
+use crate::{DateTime, Result};
 use futures_util::future::{join_all, try_join};
 use std::cmp::max;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -12,7 +12,7 @@ pub struct Updater {
 }
 
 impl Updater {
-    pub const SELLING_DISCOUNT: f64 = 0.05;
+    pub const SELLING_DISCOUNT: f64 = 0.0;
 
     pub async fn new() -> Result<Self> {
         Ok(Self {
@@ -142,37 +142,52 @@ impl Updater {
 
         let skin_ids: Vec<i32> = skins.iter().map(|s| s.id).collect();
         let latest_dates = self.db.get_latest_sale_dates(&skin_ids).await?;
+        let skins_and_dates: Vec<_> = skins
+            .iter()
+            .map(|skin| {
+                (
+                    skin,
+                    latest_dates
+                        .get(&skin.id)
+                        .cloned()
+                        .unwrap_or(DateTime::min()),
+                )
+            })
+            .collect();
+
         let count = &AtomicUsize::new(0);
         let total = &skin_ids.len();
 
-        join_all(skins.into_iter().zip(latest_dates.into_iter()).map(
-            |(skin, latest_date)| async move {
-                let sales = self
-                    .client
-                    .fetch_sales(skin.id)
-                    .await
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(move |sale| Some(sale).filter(|s| s.created_at > latest_date));
+        join_all(
+            skins_and_dates
+                .into_iter()
+                .map(|(skin, latest_date)| async move {
+                    let sales = self
+                        .client
+                        .fetch_sales(skin.id)
+                        .await
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter_map(move |sale| Some(sale).filter(|s| s.created_at > latest_date));
 
-                log::info!(
-                    "Fetching sales for skin {}/{}",
-                    count.fetch_add(1, Ordering::Relaxed),
-                    total
-                );
-
-                for sale in sales {
                     log::info!(
-                        "Syncing new sale for skin {} created at {}",
-                        skin.id,
-                        sale.created_at
+                        "Fetching sales for skin {}/{}",
+                        count.fetch_add(1, Ordering::Relaxed),
+                        total
                     );
-                    if let Err(e) = self.handle_sale(&skin, sale).await {
-                        log::error!("Error handling sale: {}", e);
+
+                    for sale in sales {
+                        log::info!(
+                            "Syncing new sale for skin {} created at {}",
+                            skin.id,
+                            sale.created_at
+                        );
+                        if let Err(e) = self.handle_sale(&skin, sale).await {
+                            log::error!("Error handling sale: {}", e);
+                        }
                     }
-                }
-            },
-        ))
+                }),
+        )
         .await;
 
         self.update_listings().await
