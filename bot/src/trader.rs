@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 
 const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.3;
 const SALES_FEE: f64 = 0.1;
-const MIN_PROFIT_MARGIN: f64 = 0.075;
+const MIN_PROFIT_MARGIN: f64 = 0.05;
 const MIN_SALE_COUNT: i32 = 200;
 const MIN_SLOPE: f64 = 0.0;
 

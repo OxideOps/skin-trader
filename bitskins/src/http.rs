@@ -95,7 +95,7 @@ pub struct MarketItem {
     pub stickers: Option<Vec<Sticker>>,
     pub suggested_price: Option<i32>,
     pub tradehold: i32,
-    pub type_id: i8,
+    pub type_id: Option<i8>,
     pub typesub_id: Option<i32>,
 }
 
