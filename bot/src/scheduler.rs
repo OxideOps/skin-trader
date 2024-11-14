@@ -44,11 +44,6 @@ impl Scheduler {
         .await?;
 
         self.schedule_task("every day", |trader| async move {
-            Ok(trader.updater.sync_offered_items().await?)
-        })
-        .await?;
-
-        self.schedule_task("every day", |trader| async move {
             Ok(trader.purchase_best_items().await?)
         })
         .await?;
