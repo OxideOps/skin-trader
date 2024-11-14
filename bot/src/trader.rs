@@ -30,7 +30,7 @@ impl Trader {
     }
 
     pub async fn process_data(&self, channel: Channel, item: WsData) {
-        info!("Received data from {channel:?}");
+        info!("Received data from {channel:?}, ID: {}", item.id);
 
         if item.app_id != Some(CS2_APP_ID) {
             debug!("app_id is not {CS2_APP_ID}, skipping..");
@@ -67,9 +67,6 @@ impl Trader {
         let id = item.id.parse()?;
         if let Err(MarketItemUpdateFailed(_)) = self.db.update_market_item_price(id, price).await {
             warn!("Failed to update price for item {id}");
-            self.updater
-                .sync_market_items_for_skin(item.skin_id)
-                .await?;
         }
         self.updater.update_offer_prices().await?; // In case we can undercut the cheapest
         Ok(())
@@ -78,9 +75,6 @@ impl Trader {
     async fn handle_delisted_or_sold(&self, item: WsData) -> Result<()> {
         if let Err(MarketItemDeleteFailed(_)) = self.db.delete_market_item(item.id.parse()?).await {
             warn!("Failed to delete item {0}", item.id);
-            self.updater
-                .sync_market_items_for_skin(item.skin_id)
-                .await?;
         }
         self.updater.update_offer_prices().await?; // In case we can undercut the cheapest
         Ok(())
@@ -120,7 +114,10 @@ impl Trader {
         let balance = self.http.fetch_balance().await?;
 
         if !deal.is_affordable(balance) {
-            bail!("Price for best deal exceeds our max price for our current balance")
+            bail!(
+                "{} exceeds our max price for our current balance",
+                deal.price
+            );
         }
 
         if !deal.is_profitable(mean) {
@@ -133,7 +130,7 @@ impl Trader {
                     "Failed to execute purchase for item {}. Updating database for {}...",
                     deal.id, skin_id
                 );
-                self.updater.sync_market_items_for_skin(skin_id).await?;
+                self.db.delete_market_item(deal.id.parse()?).await?;
                 Err(InternalService(endpoint))?
             }
             other => Ok(other?),

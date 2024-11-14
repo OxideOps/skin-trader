@@ -16,11 +16,10 @@ type WriteSocket = SplitSink<WsStream, Message>;
 type ReadSocket = SplitStream<WsStream>;
 
 const WEB_SOCKET_URL: &str = "wss://ws.bitskins.com";
-const CHANNELS: [Channel; 4] = [
+const CHANNELS: [Channel; 3] = [
     Channel::Listed,
     Channel::PriceChanged,
     Channel::DelistedOrSold,
-    Channel::ExtraInfo,
 ];
 
 #[derive(Serialize, Deserialize, Debug)]
