@@ -29,7 +29,9 @@ async fn sync_dmarket_items() -> Result<()> {
 
 async fn start_bitskins() -> Result<()> {
     let trader = Trader::new().await?;
-    let scheduler = Scheduler::new(trader.clone()).await?;
+    // Hack: trader2 has a different http client and so won't block the actual trader
+    let trader2 = Trader::new().await?;
+    let scheduler = Scheduler::new(trader2).await?;
 
     try_join!(start_ws(trader), scheduler.start())?;
 

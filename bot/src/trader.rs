@@ -1,6 +1,8 @@
 use anyhow::{bail, Result};
 use bitskins::Error::{InternalService, MarketItemDeleteFailed, MarketItemUpdateFailed};
-use bitskins::{Channel, Database, HttpClient, Skin, Stats, Updater, WsData, CS2_APP_ID};
+use bitskins::{
+    Channel, Database, DateTime, HttpClient, MarketItem, Skin, Stats, Updater, WsData, CS2_APP_ID,
+};
 use log::{debug, info, warn};
 use std::cmp::Ordering;
 
@@ -73,6 +75,9 @@ impl Trader {
     }
 
     async fn handle_delisted_or_sold(&self, item: WsData) -> Result<()> {
+        if self.db.is_in_offers(item.id.parse()?).await? {
+            self.updater.update_balance().await?;
+        }
         if let Err(MarketItemDeleteFailed(_)) = self.db.delete_market_item(item.id.parse()?).await {
             warn!("Failed to delete item {0}", item.id);
         }
@@ -80,8 +85,17 @@ impl Trader {
         Ok(())
     }
 
+    fn create_market_item(&self, item: &WsData) -> Result<MarketItem> {
+        Ok(MarketItem {
+            id: item.id.parse()?,
+            skin_id: item.skin_id,
+            price: item.price.unwrap(),
+            float_value: item.float_value,
+            created_at: DateTime::now(),
+        })
+    }
+
     async fn insert_item(&self, item: &WsData) -> Result<()> {
-        let db_item = self.http.fetch_market_item(&item.id).await?.into();
         self.db
             .insert_skin(Skin {
                 id: item.skin_id,
@@ -90,8 +104,8 @@ impl Trader {
                 suggested_price: item.suggested_price,
             })
             .await?;
-        self.db.insert_market_item(db_item).await?;
-        Ok(())
+        let db_item = self.create_market_item(item)?;
+        Ok(self.db.insert_market_item(db_item).await?)
     }
 
     async fn attempt_purchase(&self, item: &WsData) -> Result<()> {
@@ -111,8 +125,7 @@ impl Trader {
             bail!("Price stats are not reliable for skin_id: {}", skin_id);
         }
 
-        let balance = self.http.fetch_balance().await?;
-
+        let balance = self.db.get_balance().await?;
         if !deal.is_affordable(balance) {
             bail!(
                 "{} exceeds our max price for our current balance",
@@ -133,6 +146,7 @@ impl Trader {
                 self.db.delete_market_item(deal.id.parse()?).await?;
                 Err(InternalService(endpoint))?
             }
+            Ok(()) => Ok(self.updater.update_balance().await?),
             other => Ok(other?),
         }
     }

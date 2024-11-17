@@ -1,0 +1,3 @@
+CREATE TABLE Account (
+    balance DOUBLE PRECISION NOT NULL
+);

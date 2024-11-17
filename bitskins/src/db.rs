@@ -589,6 +589,15 @@ impl Database {
         Ok(())
     }
 
+    pub async fn is_in_offers(&self, item_id: i32) -> Result<bool> {
+        Ok(
+            sqlx::query_scalar!("SELECT 1 FROM Offer WHERE item_id = $1", item_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .is_some(),
+        )
+    }
+
     pub async fn delete_all_offers(&self) -> Result<()> {
         self.flush_table("Offer").await
     }
@@ -611,5 +620,18 @@ impl Database {
         )
         .fetch_optional(&self.pool)
         .await?)
+    }
+
+    pub async fn update_balance(&self, balance: f64) -> Result<()> {
+        sqlx::query!("UPDATE Account SET balance = $1", balance)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn get_balance(&self) -> Result<f64> {
+        Ok(sqlx::query_scalar!("SELECT balance FROM Account")
+            .fetch_one(&self.pool)
+            .await?)
     }
 }

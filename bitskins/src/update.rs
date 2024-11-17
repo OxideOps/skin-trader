@@ -132,6 +132,8 @@ impl Updater {
         log::info!("Updating price statistics");
         self.db.calculate_and_update_price_statistics().await?;
 
+        self.update_balance().await?;
+
         self.sync_offered_items().await
     }
 
@@ -275,5 +277,10 @@ impl Updater {
             self.db.insert_offer(offer.into()).await?;
         }
         Ok(())
+    }
+
+    pub async fn update_balance(&self) -> Result<()> {
+        let balance = self.client.fetch_balance().await?;
+        self.db.update_balance(balance).await
     }
 }
