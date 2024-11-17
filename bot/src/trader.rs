@@ -73,6 +73,9 @@ impl Trader {
     }
 
     async fn handle_delisted_or_sold(&self, item: WsData) -> Result<()> {
+        if self.db.is_in_offers(item.id.parse()?).await? {
+            self.updater.update_balance().await?;
+        }
         if let Err(MarketItemDeleteFailed(_)) = self.db.delete_market_item(item.id.parse()?).await {
             warn!("Failed to delete item {0}", item.id);
         }
@@ -111,8 +114,7 @@ impl Trader {
             bail!("Price stats are not reliable for skin_id: {}", skin_id);
         }
 
-        let balance = self.http.fetch_balance().await?;
-
+        let balance = self.db.get_balance().await?;
         if !deal.is_affordable(balance) {
             bail!(
                 "{} exceeds our max price for our current balance",
@@ -133,6 +135,7 @@ impl Trader {
                 self.db.delete_market_item(deal.id.parse()?).await?;
                 Err(InternalService(endpoint))?
             }
+            Ok(()) => Ok(self.updater.update_balance().await?),
             other => Ok(other?),
         }
     }

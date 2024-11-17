@@ -142,6 +142,11 @@ pub struct Transaction {
     pub type_: u32,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Receipt {
+    pub receipt_id: String,
+}
+
 impl Default for HttpClient {
     fn default() -> Self {
         Self::new()
@@ -326,7 +331,7 @@ impl HttpClient {
             .balance as f64)
     }
 
-    pub async fn buy_item(&self, item_id: &str, price: f64) -> Result<()> {
+    pub async fn buy_item(&self, item_id: &str, price: f64) -> Result<Receipt> {
         self.post(
             Endpoint::BuySingle,
             json!({
