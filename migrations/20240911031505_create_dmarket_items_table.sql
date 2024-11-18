@@ -14,7 +14,7 @@ CREATE TABLE dmarket_items (
     instant_price_usd TEXT,
     suggested_price_usd TEXT,
     type TEXT NOT NULL,
-    offer_id TEXT NOT NULL,
+    offer_id TEXT,
     PRIMARY KEY (game_id, item_id)
 );
 
