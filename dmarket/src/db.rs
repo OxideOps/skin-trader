@@ -44,7 +44,7 @@ impl Database {
                 float_value: row.float_value,
                 is_new: row.is_new,
                 tradable: row.tradable,
-                offer_id: Some(row.offer_id),
+                offer_id: row.offer_id,
             },
             status: serde_json::from_str(&row.status).unwrap_or(ItemStatus::Default),
             price: row.price_usd.map(|usd| Price { usd }),
