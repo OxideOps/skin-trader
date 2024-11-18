@@ -5,7 +5,7 @@ use crate::sign::Signer;
 use crate::Result;
 use async_stream::try_stream;
 use futures::Stream;
-use reqwest::Method;
+use reqwest::{Method, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use url::Url;
@@ -71,12 +71,16 @@ impl Client {
             request = request.json(&body);
         }
 
-        let response = request.send().await?;
-
-        if response.status().is_success() {
-            Ok(response.json().await?)
-        } else {
-            Err(Error::Response(response.status(), response.text().await?))
+        loop {
+            let response = request.try_clone().unwrap().send().await?;
+            if response.status().is_success() {
+                return Ok(response.json().await?);
+            } else if response.status() == StatusCode::TOO_MANY_REQUESTS {
+                log::warn!("Rate limit hit for path {path}");
+                self.wait_for_rate_limit(limiter_type).await;
+            } else {
+                return Err(Error::Response(response.status(), response.text().await?));
+            }
         }
     }
 
