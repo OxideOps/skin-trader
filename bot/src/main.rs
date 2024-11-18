@@ -12,8 +12,7 @@ use trader::Trader;
 #[tokio::main]
 async fn main() -> Result<()> {
     setup_env();
-    // start_bitskins().await?;
-    start_dmarket().await?;
+    try_join!(start_bitskins(), start_dmarket())?;
     Ok(())
 }
 
