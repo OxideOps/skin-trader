@@ -56,7 +56,6 @@ impl Database {
 
     pub async fn store_items(&self, items: Vec<Item>) -> Result<()> {
         let mut tx = self.pool.begin().await?;
-
         for item in items {
             sqlx::query!(
                 r#"
@@ -66,7 +65,20 @@ impl Database {
                     status, price_usd, instant_price_usd, suggested_price_usd, type
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-                ON CONFLICT (game_id, item_id) DO NOTHING
+                ON CONFLICT (game_id, item_id) DO UPDATE 
+                SET title = EXCLUDED.title,
+                    amount = EXCLUDED.amount,
+                    created_at = EXCLUDED.created_at,
+                    discount = EXCLUDED.discount,
+                    category = EXCLUDED.category,
+                    float_value = EXCLUDED.float_value,
+                    is_new = EXCLUDED.is_new,
+                    tradable = EXCLUDED.tradable,
+                    status = EXCLUDED.status,
+                    price_usd = EXCLUDED.price_usd,
+                    instant_price_usd = EXCLUDED.instant_price_usd,
+                    suggested_price_usd = EXCLUDED.suggested_price_usd,
+                    type = EXCLUDED.type
                 "#,
                 item.game_id,
                 item.item_id,
@@ -87,9 +99,37 @@ impl Database {
             .execute(&mut *tx)
             .await?;
         }
-
         tx.commit().await?;
-
         Ok(())
+    }
+
+    pub async fn get_best_titles(&self, limit: i64) -> Result<Vec<(String, String)>> {
+        let rows = sqlx::query!(
+            r#"
+            WITH item_stats AS (
+                SELECT 
+                    game_id,
+                    title,
+                    COUNT(*) as item_count
+                FROM dmarket_items
+                WHERE status = '"active"'
+                GROUP BY game_id, title
+            )
+            SELECT 
+                game_id,
+                title
+            FROM item_stats
+            WHERE item_count > (
+                SELECT AVG(item_count) FROM item_stats
+            )
+            ORDER BY item_count DESC
+            LIMIT $1
+            "#,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+    
+        Ok(rows.into_iter().map(|row| (row.game_id, row.title)).collect())
     }
 }

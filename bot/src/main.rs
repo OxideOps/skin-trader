@@ -13,17 +13,17 @@ use trader::Trader;
 async fn main() -> Result<()> {
     setup_env();
     try_join!(start_bitskins(), start_dmarket())?;
+    start_dmarket().await?;
     Ok(())
 }
 
 async fn start_dmarket() -> Result<()> {
-    sync_dmarket_items().await?;
-    Ok(())
-}
-
-async fn sync_dmarket_items() -> Result<()> {
     let updater = dmarket::Updater::new().await?;
     updater.sync_all_market_items().await?;
+    // updater.sync_best_items(2).await?;
+    // get best deals for best titles
+    // do analysis
+    // execute trades
     Ok(())
 }
 

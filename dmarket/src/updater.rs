@@ -17,8 +17,8 @@ impl Updater {
         })
     }
 
-    pub async fn sync_market_items(&self, game_id: &str) -> Result<()> {
-        let market_items = self.client.get_market_items(game_id, None).await;
+    pub async fn sync_market_items(&self, game_id: &str, title: Option<&str>) -> Result<()> {
+        let market_items = self.client.get_market_items(game_id, title).await;
 
         pin_mut!(market_items);
 
@@ -37,7 +37,13 @@ impl Updater {
     }
 
     pub async fn sync_all_market_items(&self) -> Result<()> {
-        try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id))).await?;
+        try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id, None))).await?;
+        Ok(())
+    }
+
+    pub async fn sync_best_items(&self, limit: i64) -> Result<()> {
+        let titles = self.db.get_best_titles(limit).await?;
+        try_join_all(titles.iter().map(|title| self.sync_market_items(&title.0, Some(&title.1)))).await?;
         Ok(())
     }
 }
