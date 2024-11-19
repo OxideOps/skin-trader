@@ -41,6 +41,7 @@ impl Updater {
         Ok(())
     }
 
+    /// Should be called more often than syncing all market items
     pub async fn sync_best_items(&self, limit: i64) -> Result<()> {
         let titles = self.db.get_best_titles(limit).await?;
         try_join_all(titles.iter().map(|title| self.sync_market_items(&title.0, Some(&title.1)))).await?;
