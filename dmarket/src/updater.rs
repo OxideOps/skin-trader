@@ -1,8 +1,10 @@
+use crate::schema::{GameTitle, Sale};
 use crate::Client;
 use crate::Database;
 use crate::Result;
 use crate::GAME_IDS;
 use futures::{future::try_join_all, pin_mut, StreamExt};
+use tokio::time::{sleep, Duration};
 
 pub struct Updater {
     db: Database,
@@ -36,15 +38,44 @@ impl Updater {
         Ok(())
     }
 
-    pub async fn sync_all_market_items(&self) -> Result<()> {
+    pub async fn sync(&self) -> Result<()> {
         try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id, None))).await?;
+
+        let titles = self.db.get_distinct_titles().await?;
+
+        for chunk in titles.chunks(10) {
+            futures::stream::iter(chunk)
+                .map(|gt| self.sync_sales(gt))
+                .buffer_unordered(3)
+                .collect::<Vec<_>>()
+                .await;
+
+            sleep(Duration::from_millis(100)).await;
+        }
+
         Ok(())
     }
 
-    /// Should be called more often than syncing all market items
-    pub async fn sync_best_items(&self, limit: i64) -> Result<()> {
-        let titles = self.db.get_best_titles(limit).await?;
-        try_join_all(titles.iter().map(|title| self.sync_market_items(&title.0, Some(&title.1)))).await?;
-        Ok(())
+    async fn sync_sales(&self, gt: &GameTitle) -> Result<()> {
+        match self.client.get_sales(gt.clone()).await {
+            Ok(sales) => {
+                let sales = sales
+                    .into_iter()
+                    .map(|s| s.with_game_title(gt.clone()))
+                    .collect::<Vec<_>>();
+
+                self.db.store_sales(sales).await?;
+                Ok(())
+            }
+            Err(e) => {
+                log::error!(
+                    "Failed to fetch sales for {}/{}: {:?}",
+                    gt.game_id,
+                    gt.title,
+                    e
+                );
+                Ok(()) // Convert error to Ok since we logged it
+            }
+        }
     }
 }

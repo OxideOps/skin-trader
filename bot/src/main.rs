@@ -18,9 +18,7 @@ async fn main() -> Result<()> {
 
 async fn start_dmarket() -> Result<()> {
     let updater = dmarket::Updater::new().await?;
-    updater.sync_all_market_items().await?;
-    // updater.sync_best_items(2).await?;
-    // get best deals for best titles
+    updater.sync().await?;
     // do analysis
     // execute trades
     Ok(())

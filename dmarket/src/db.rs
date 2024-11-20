@@ -103,8 +103,9 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_best_titles(&self, limit: i64) -> Result<Vec<(String, String)>> {
-        let rows = sqlx::query!(
+    pub async fn get_best_titles(&self, limit: i64) -> Result<Vec<GameTitle>> {
+        Ok(sqlx::query_as!(
+            GameTitle,
             r#"
             WITH item_stats AS (
                 SELECT 
@@ -128,8 +129,48 @@ impl Database {
             limit
         )
         .fetch_all(&self.pool)
-        .await?;
-    
-        Ok(rows.into_iter().map(|row| (row.game_id, row.title)).collect())
+        .await?)
+    }
+
+    pub async fn get_distinct_titles(&self) -> Result<Vec<GameTitle>> {
+        Ok(sqlx::query_as!(
+            GameTitle,
+            r#"
+            SELECT DISTINCT game_id, title 
+            FROM dmarket_items 
+            ORDER BY game_id, title
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?)
+    }
+
+    pub async fn store_sales(&self, sales: Vec<Sale>) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        for sale in sales {
+            sqlx::query!(
+                r#"
+                INSERT INTO dmarket_sales (
+                    game_id,
+                    title,
+                    price,
+                    date,
+                    tx_operation_type
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                "#,
+                sale.game_id,
+                sale.title,
+                sale.price,
+                sale.date,
+                sale.tx_operation_type,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
     }
 }
