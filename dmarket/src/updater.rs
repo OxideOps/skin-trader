@@ -6,6 +6,8 @@ use crate::GAME_IDS;
 use futures::{future::try_join_all, pin_mut, StreamExt};
 use tokio::time::{sleep, Duration};
 
+const MAX_TASKS: usize = 10;
+
 pub struct Updater {
     db: Database,
     client: Client,
@@ -43,14 +45,12 @@ impl Updater {
 
         let titles = self.db.get_distinct_titles().await?;
 
-        for chunk in titles.chunks(10) {
+        for chunk in titles.chunks(MAX_TASKS) {
             futures::stream::iter(chunk)
                 .map(|gt| self.sync_sales(gt))
                 .buffer_unordered(3)
                 .collect::<Vec<_>>()
                 .await;
-
-            sleep(Duration::from_millis(100)).await;
         }
 
         Ok(())
@@ -62,10 +62,9 @@ impl Updater {
                 let sales = sales
                     .into_iter()
                     .map(|s| s.with_game_title(gt.clone()))
-                    .collect::<Vec<_>>();
+                    .collect();
 
                 self.db.store_sales(sales).await?;
-                Ok(())
             }
             Err(e) => {
                 log::error!(
@@ -74,8 +73,8 @@ impl Updater {
                     gt.title,
                     e
                 );
-                Ok(()) // Convert error to Ok since we logged it
             }
         }
+        Ok(())
     }
 }
