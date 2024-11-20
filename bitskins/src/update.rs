@@ -184,7 +184,7 @@ impl Updater {
                             skin.id,
                             sale.created_at
                         );
-                        if let Err(e) = self.handle_sale(&skin, sale).await {
+                        if let Err(e) = self.handle_sale(skin, sale).await {
                             log::error!("Error handling sale: {}", e);
                         }
                     }
