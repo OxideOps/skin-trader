@@ -129,7 +129,7 @@ impl Client {
         }
     }
 
-    pub async fn get_sales(&self, game_title: GameTitle) -> Result<Vec<Sale>> {
+    pub async fn get_sales(&self, game_title: &GameTitle) -> Result<Vec<Sale>> {
         let path = "/trade-aggregator/v1/last-sales";
         let query = json!({
             "gameID": game_title.game_id,

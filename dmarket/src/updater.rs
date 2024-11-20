@@ -57,12 +57,9 @@ impl Updater {
     }
 
     async fn sync_sales(&self, gt: &GameTitle) -> Result<()> {
-        match self.client.get_sales(gt.clone()).await {
+        match self.client.get_sales(gt).await {
             Ok(sales) => {
-                let sales = sales
-                    .into_iter()
-                    .map(|s| s.with_game_title(gt.clone()))
-                    .collect();
+                let sales = sales.into_iter().map(|s| s.with_game_title(&gt)).collect();
 
                 self.db.store_sales(sales).await?;
             }

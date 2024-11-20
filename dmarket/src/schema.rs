@@ -99,15 +99,12 @@ pub struct Sale {
     #[serde(skip)]
     pub id: i64,
     #[serde(skip)]
-    pub game_id: String,
-    #[serde(skip)]
-    pub title: String,
+    pub game_title: GameTitle,
 }
 
 impl Sale {
-    pub fn with_game_title(mut self, game_title: GameTitle) -> Self {
-        self.game_id = game_title.game_id;
-        self.title = game_title.title;
+    pub fn with_game_title(mut self, game_title: &GameTitle) -> Self {
+        self.game_title = game_title.clone();
         self
     }
 }
@@ -128,7 +125,7 @@ pub struct DiscountItem {
     title: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct GameTitle {
     pub game_id: String,
     pub title: String,
