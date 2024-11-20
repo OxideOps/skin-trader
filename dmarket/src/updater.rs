@@ -1,10 +1,9 @@
-use crate::schema::{GameTitle, Sale};
+use crate::schema::GameTitle;
 use crate::Client;
 use crate::Database;
 use crate::Result;
 use crate::GAME_IDS;
 use futures::{future::try_join_all, pin_mut, StreamExt};
-use tokio::time::{sleep, Duration};
 
 const MAX_TASKS: usize = 10;
 
@@ -43,15 +42,11 @@ impl Updater {
     pub async fn sync(&self) -> Result<()> {
         try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id, None))).await?;
 
-        let titles = self.db.get_distinct_titles().await?;
-
-        for chunk in titles.chunks(MAX_TASKS) {
-            futures::stream::iter(chunk)
-                .map(|gt| self.sync_sales(gt))
-                .buffer_unordered(3)
-                .collect::<Vec<_>>()
-                .await;
-        }
+        futures::stream::iter(&self.db.get_distinct_titles().await?)
+            .map(|gt| self.sync_sales(gt))
+            .buffer_unordered(MAX_TASKS)
+            .collect::<Vec<_>>()
+            .await;
 
         Ok(())
     }

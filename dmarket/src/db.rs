@@ -160,8 +160,8 @@ impl Database {
                 )
                 VALUES ($1, $2, $3, $4, $5)
                 "#,
-                sale.game_id,
-                sale.title,
+                sale.game_title.game_id,
+                sale.game_title.title,
                 sale.price,
                 sale.date,
                 sale.tx_operation_type,
