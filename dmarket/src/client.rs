@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    DiscountItem, DiscountItemResponse, GameTitle, Item, ItemResponse, Sale, SaleResponse,
+    Balance, DiscountItem, DiscountItemResponse, GameTitle, Item, ItemResponse, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -148,5 +148,12 @@ impl Client {
 
         let response = self.get::<DiscountItemResponse>(path, query).await?;
         Ok(response.reduced_fees)
+    }
+
+    pub async fn get_balance(&self) -> Result<Balance> {
+        let path = "/account/v1/balance";
+        let query = json!({});
+
+        self.get(path, query).await
     }
 }

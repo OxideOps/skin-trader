@@ -131,3 +131,10 @@ pub struct GameTitle {
     pub game_id: String,
     pub title: String,
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Balance {
+    pub usd: String,
+    pub usd_available_to_withdraw: String,
+}
