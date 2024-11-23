@@ -17,13 +17,10 @@ async fn main() -> Result<()> {
 }
 
 async fn start_dmarket() -> Result<()> {
-    sync_dmarket_items().await?;
-    Ok(())
-}
-
-async fn sync_dmarket_items() -> Result<()> {
     let updater = dmarket::Updater::new().await?;
-    updater.sync_all_market_items().await?;
+    updater.sync().await?;
+    // do analysis
+    // execute trades
     Ok(())
 }
 

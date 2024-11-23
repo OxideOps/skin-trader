@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -85,12 +86,28 @@ pub struct SaleResponse {
     pub sales: Vec<Sale>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Sale {
-    price: String,
-    date: String,
-    tx_operation_type: String,
+    #[serde(rename = "price")]
+    pub price: String,
+    #[serde(rename = "date")]
+    pub date: String,
+    #[serde(rename = "txOperationType")]
+    pub tx_operation_type: String,
+
+    // DB-only fields, skipped during deserialization
+    #[serde(skip)]
+    pub id: i64,
+    #[serde(skip)]
+    pub game_title: GameTitle,
+}
+
+impl Sale {
+    pub fn with_game_title(mut self, game_title: &GameTitle) -> Self {
+        self.game_title = game_title.clone();
+        self
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -107,4 +124,10 @@ pub struct DiscountItem {
     max_price: i64,
     min_price: i64,
     title: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct GameTitle {
+    pub game_id: String,
+    pub title: String,
 }
