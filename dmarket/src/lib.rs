@@ -3,7 +3,6 @@ mod db;
 mod error;
 mod rate_limiter;
 mod schema;
-mod sign;
 mod updater;
 
 pub use client::{Client, GAME_IDS};
