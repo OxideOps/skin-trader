@@ -1,7 +1,8 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    Balance, DiscountItem, DiscountItemResponse, GameTitle, Item, ItemResponse, Sale, SaleResponse,
+    Balance, BestPrices, BestPricesResponse, DiscountItem, DiscountItemResponse, GameTitle, Item,
+    ItemResponse, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -27,6 +28,7 @@ const CURRENCY_USD: &str = "USD";
 const MARKET_LIMIT: usize = 100;
 const SALES_LIMIT: usize = 500;
 const DISCOUNT_LIMIT: usize = 500; // not sure on this one
+const BEST_PRICES_LIMIT: usize = 10000;
 
 pub struct Client {
     client: reqwest::Client,
@@ -151,9 +153,31 @@ impl Client {
     }
 
     pub async fn get_balance(&self) -> Result<Balance> {
-        let path = "/account/v1/balance";
-        let query = json!({});
+        self.get("/account/v1/balance", json!({})).await
+    }
 
-        self.get(path, query).await
+    pub async fn get_best_prices(&self) -> Result<Vec<BestPrices>> {
+        let path = "/price-aggregator/v1/aggregated-prices";
+        let initial_response = self.get::<BestPricesResponse>(path, json!({})).await?;
+
+        let mut all_prices = initial_response.aggregated_titles;
+        let total = initial_response.total.parse().unwrap();
+        let mut offset = BEST_PRICES_LIMIT;
+
+        while offset < total {
+            all_prices.extend(
+                self.get::<BestPricesResponse>(
+                    path,
+                    json!({
+                        "Offset": offset,
+                    }),
+                )
+                .await?
+                .aggregated_titles,
+            );
+            offset += BEST_PRICES_LIMIT;
+        }
+
+        Ok(all_prices)
     }
 }

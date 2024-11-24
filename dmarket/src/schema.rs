@@ -138,3 +138,26 @@ pub struct Balance {
     pub usd: String,
     pub usd_available_to_withdraw: String,
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct BestPricesResponse {
+    pub error: Option<String>,
+    pub total: String,
+    pub aggregated_titles: Vec<BestPrices>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct BestPrices {
+    pub market_hash_name: String,
+    pub offers: BestPrice,
+    pub orders: BestPrice,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct BestPrice {
+    pub best_price: String,
+    pub count: i64,
+}
