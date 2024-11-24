@@ -55,9 +55,14 @@ impl Updater {
     }
 
     async fn sync_sales(&self, gt: &GameTitle) -> Result<()> {
+        let latest_date = self.db.get_latest_date(gt).await?;
         match self.client.get_sales(gt).await {
             Ok(sales) => {
-                let sales = sales.into_iter().map(|s| s.with_game_title(gt)).collect();
+                let sales = sales
+                    .into_iter()
+                    .filter(|sale| sale.date.parse::<u64>().unwrap_or_default() > latest_date)
+                    .map(|s| s.with_game_title(gt))
+                    .collect();
 
                 self.db.store_sales(sales).await?;
             }

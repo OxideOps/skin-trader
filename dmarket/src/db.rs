@@ -173,4 +173,22 @@ impl Database {
         tx.commit().await?;
         Ok(())
     }
+
+    pub async fn get_latest_date(&self, game_title: &GameTitle) -> Result<u64> {
+        let latest_date = sqlx::query_scalar!(
+            r#"
+            SELECT max(date)
+            FROM dmarket_sales
+            WHERE game_id = $1 AND title = $2
+            "#,
+            game_title.game_id,
+            game_title.title
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(latest_date
+            .map(|d| d.parse().unwrap_or_default())
+            .unwrap_or_default())
+    }
 }
