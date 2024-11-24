@@ -40,18 +40,16 @@ impl Updater {
     }
 
     pub async fn sync(&self) -> Result<()> {
-        let balance = self.client.get_balance().await?;
-        dbg!(balance);
-        // try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id, None))).await?;
-        // futures::stream::iter(&self.db.get_distinct_titles().await?)
-        //     .map(|gt| async move {
-        //         if let Err(e) = self.sync_sales(gt).await {
-        //             log::error!("Error syncing sales: {e}");
-        //         }
-        //     })
-        //     .buffer_unordered(MAX_TASKS)
-        //     .collect::<Vec<_>>()
-        //     .await;
+        try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id, None))).await?;
+        futures::stream::iter(&self.db.get_distinct_titles().await?)
+            .map(|gt| async move {
+                if let Err(e) = self.sync_sales(gt).await {
+                    log::error!("Error syncing sales: {e}");
+                }
+            })
+            .buffer_unordered(MAX_TASKS)
+            .collect::<Vec<_>>()
+            .await;
 
         Ok(())
     }
