@@ -89,11 +89,8 @@ pub struct SaleResponse {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Sale {
-    #[serde(rename = "price")]
     pub price: String,
-    #[serde(rename = "date")]
     pub date: String,
-    #[serde(rename = "txOperationType")]
     pub tx_operation_type: String,
 
     // DB-only fields, skipped during deserialization
@@ -126,7 +123,7 @@ pub struct DiscountItem {
     title: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Hash, Eq, Serialize, Deserialize, Clone, Default, PartialEq)]
 pub struct GameTitle {
     pub game_id: String,
     pub title: String,
