@@ -1,15 +1,16 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    DiscountItem, DiscountItemResponse, GameTitle, Item, ItemResponse, Sale, SaleResponse,
+    Balance, DiscountItem, DiscountItemResponse, GameTitle, Item, ItemResponse, Sale, SaleResponse,
 };
-use crate::sign::Signer;
 use crate::Result;
 use async_stream::try_stream;
 use futures::Stream;
+use reqwest::header::HeaderValue;
 use reqwest::{Method, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
+use std::env;
 use url::Url;
 
 const BASE_URL: &str = "https://api.dmarket.com";
@@ -29,7 +30,6 @@ const DISCOUNT_LIMIT: usize = 500; // not sure on this one
 
 pub struct Client {
     client: reqwest::Client,
-    signer: Signer,
     request_limiters: RateLimiters,
 }
 
@@ -37,7 +37,6 @@ impl Client {
     pub fn new() -> Result<Self> {
         Ok(Self {
             client: reqwest::Client::new(),
-            signer: Signer::new()?,
             request_limiters: RateLimiter::request_limiters(),
         })
     }
@@ -62,12 +61,11 @@ impl Client {
         self.wait_for_rate_limit(limiter_type).await;
 
         let url = Url::parse(&format!("{BASE_URL}{path}"))?;
-        let body_str = body.as_ref().map(|b| b.to_string()).unwrap_or_default();
-        let headers = self
-            .signer
-            .generate_headers(method.as_str(), &url, &body_str)?;
 
-        let mut request = self.client.request(method, url).headers(headers);
+        let mut request = self.client.request(method, url).header(
+            "Authorization",
+            HeaderValue::from_str(&env::var("DMARKET_AUTHORIZATION")?)?,
+        );
 
         if let Some(body) = body {
             request = request.json(&body);
@@ -132,7 +130,7 @@ impl Client {
     pub async fn get_sales(&self, game_title: &GameTitle) -> Result<Vec<Sale>> {
         let path = "/trade-aggregator/v1/last-sales";
         let query = json!({
-            "gameID": game_title.game_id,
+            "gameId": game_title.game_id,
             "title": game_title.title,
             "limit": SALES_LIMIT,
         });
@@ -150,5 +148,12 @@ impl Client {
 
         let response = self.get::<DiscountItemResponse>(path, query).await?;
         Ok(response.reduced_fees)
+    }
+
+    pub async fn get_balance(&self) -> Result<Balance> {
+        let path = "/account/v1/balance";
+        let query = json!({});
+
+        self.get(path, query).await
     }
 }
