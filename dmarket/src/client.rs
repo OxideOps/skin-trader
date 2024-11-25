@@ -110,7 +110,7 @@ impl Client {
     ) -> impl Stream<Item = Result<Vec<Item>>> + 'a {
         try_stream! {
             let mut cursor = None;
-            loop {
+            for _ in 0..10 {
                 let query = json!({
                     "gameId": game_id,
                     "title": title,

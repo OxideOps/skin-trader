@@ -156,5 +156,5 @@ pub struct BestPrices {
 #[serde(rename_all = "PascalCase")]
 pub struct BestPrice {
     pub best_price: String,
-    pub count: i64,
+    pub count: i32,
 }
