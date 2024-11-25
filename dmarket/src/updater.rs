@@ -4,7 +4,6 @@ use crate::Database;
 use crate::Result;
 use crate::GAME_IDS;
 use futures::{future::try_join_all, pin_mut, StreamExt};
-use std::collections::HashSet;
 
 const MAX_TASKS: usize = 10;
 
@@ -41,16 +40,16 @@ impl Updater {
     }
 
     pub async fn sync(&self) -> Result<()> {
-        // try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id, None))).await?;
-        // futures::stream::iter(&self.db.get_distinct_titles().await?)
-        //     .map(|gt| async move {
-        //         if let Err(e) = self.sync_sales(gt).await {
-        //             log::error!("Error syncing sales: {e}");
-        //         }
-        //     })
-        //     .buffer_unordered(MAX_TASKS)
-        //     .collect::<Vec<_>>()
-        //     .await;
+        try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id, None))).await?;
+        futures::stream::iter(&self.db.get_distinct_titles().await?)
+            .map(|gt| async move {
+                if let Err(e) = self.sync_sales(gt).await {
+                    log::error!("Error syncing sales: {e}");
+                }
+            })
+            .buffer_unordered(MAX_TASKS)
+            .collect::<Vec<_>>()
+            .await;
 
         self.sync_best_prices().await?;
         Ok(())
