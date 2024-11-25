@@ -1,4 +1,4 @@
-use crate::schema::GameTitle;
+use crate::schema::{BestPrices, GameTitle};
 use crate::Client;
 use crate::Database;
 use crate::Result;
@@ -51,6 +51,7 @@ impl Updater {
             .collect::<Vec<_>>()
             .await;
 
+        self.sync_best_prices().await?;
         Ok(())
     }
 
@@ -75,6 +76,13 @@ impl Updater {
                 );
             }
         }
+
+        Ok(())
+    }
+
+    async fn sync_best_prices(&self) -> Result<()> {
+        let best_prices = self.client.get_best_prices().await?;
+        self.db.store_best_prices(best_prices).await?;
         Ok(())
     }
 }

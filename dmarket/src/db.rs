@@ -191,4 +191,33 @@ impl Database {
             .map(|d| d.parse().unwrap_or_default())
             .unwrap_or_default())
     }
+
+    pub async fn store_best_prices(&self, prices: Vec<BestPrices>) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        for price in prices {
+            sqlx::query!(
+                r#"
+                INSERT INTO dmarket_best_prices (
+                    market_hash_name,
+                    offers_best_price,
+                    offers_best_count,
+                    orders_best_price,
+                    orders_best_count
+                )
+                VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING
+                "#,
+                price.market_hash_name,
+                price.offers.best_price,
+                price.offers.count,
+                price.orders.best_price,
+                price.orders.count
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
 }
