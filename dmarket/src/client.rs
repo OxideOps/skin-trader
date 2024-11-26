@@ -145,7 +145,7 @@ impl Client {
         let path = "/exchange/v1/customized-fees";
         let query = json!({
             "gameID": game_id,
-            "limit": DISCOUNT_LIMIT,
+            "limit": 500000,
         });
 
         let response = self.get::<ListFeeResponse>(path, query).await?;
