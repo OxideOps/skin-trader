@@ -1,0 +1,12 @@
+[Unit]
+Description=Rebuild skin trader after update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/check-skin-trader.sh
+
+[Install]
+WantedBy=multi-user.target
+
