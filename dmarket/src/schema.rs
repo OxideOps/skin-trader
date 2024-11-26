@@ -109,18 +109,26 @@ impl Sale {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct DiscountItemResponse {
-    pub reduced_fees: Vec<DiscountItem>,
+pub struct ListFeeResponse {
+    pub default_fee: ListDefaultFee,
+    pub reduced_fees: Vec<ListPersonalFee>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct DiscountItem {
-    expires_at: i64,
-    fraction: String,
-    max_price: i64,
-    min_price: i64,
-    title: String,
+pub struct ListDefaultFee {
+    pub fraction: String,
+    pub min_amount: i64,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ListPersonalFee {
+    pub expires_at: i64,
+    pub fraction: String,
+    pub max_price: i64,
+    pub min_price: i64,
+    pub title: String,
 }
 
 #[derive(Debug, Hash, Eq, Serialize, Deserialize, Clone, Default, PartialEq)]

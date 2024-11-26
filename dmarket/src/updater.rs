@@ -1,4 +1,4 @@
-use crate::schema::{BestPrices, GameTitle};
+use crate::schema::GameTitle;
 use crate::Client;
 use crate::Database;
 use crate::Result;
@@ -52,6 +52,7 @@ impl Updater {
             .await;
 
         self.sync_best_prices().await?;
+        try_join_all(GAME_IDS.iter().map(|&id| self.sync_reduced_fees(id))).await?;
         Ok(())
     }
 
@@ -83,6 +84,12 @@ impl Updater {
     async fn sync_best_prices(&self) -> Result<()> {
         let best_prices = self.client.get_best_prices().await?;
         self.db.store_best_prices(best_prices).await?;
+        Ok(())
+    }
+
+    async fn sync_reduced_fees(&self, game_id: &str) -> Result<()> {
+        let fees = self.client.get_personal_fees(game_id).await?;
+        self.db.store_reduced_fees(game_id, fees).await?;
         Ok(())
     }
 }
