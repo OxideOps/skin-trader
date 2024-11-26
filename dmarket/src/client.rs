@@ -1,8 +1,8 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    Balance, BestPrices, BestPricesResponse, DiscountItem, DiscountItemResponse, GameTitle, Item,
-    ItemResponse, Sale, SaleResponse,
+    Balance, BestPrices, BestPricesResponse, GameTitle, Item, ItemResponse, ListDefaultFee,
+    ListFeeResponse, ListPersonalFee, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -141,15 +141,26 @@ impl Client {
         Ok(response.sales)
     }
 
-    pub async fn get_discounts(&self, game_id: &str) -> Result<Vec<DiscountItem>> {
+    pub async fn get_personal_fees(&self, game_id: &str) -> Result<Vec<ListPersonalFee>> {
         let path = "/exchange/v1/customized-fees";
         let query = json!({
             "gameID": game_id,
-            "limit": DISCOUNT_LIMIT,
+            "limit": u32::MAX,
         });
 
-        let response = self.get::<DiscountItemResponse>(path, query).await?;
+        let response = self.get::<ListFeeResponse>(path, query).await?;
         Ok(response.reduced_fees)
+    }
+
+    pub async fn get_default_fee(&self, game_id: &str) -> Result<ListDefaultFee> {
+        let path = "/exchange/v1/customized-fees";
+        let query = json!({
+            "gameID": game_id,
+            "limit": 1,
+        });
+
+        let response = self.get::<ListFeeResponse>(path, query).await?;
+        Ok(response.default_fee)
     }
 
     pub async fn get_balance(&self) -> Result<Balance> {
