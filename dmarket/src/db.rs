@@ -220,4 +220,39 @@ impl Database {
         tx.commit().await?;
         Ok(())
     }
+
+    pub async fn store_reduced_fees(
+        &self,
+        game_id: &str,
+        fees: Vec<ListPersonalFee>,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        for fee in fees {
+            sqlx::query!(
+                r#"
+                INSERT INTO dmarket_reduced_fees (
+                    game_id,
+                    title,
+                    expires_at,
+                    fraction,
+                    max_price,
+                    min_price
+                )
+                VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING
+                "#,
+                game_id,
+                fee.title,
+                fee.expires_at,
+                fee.fraction,
+                fee.max_price,
+                fee.min_price
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
 }

@@ -1,7 +1,4 @@
-#[allow(dead_code)]
-mod plotter;
-
-use bitskins::Updater;
+use dmarket::Updater;
 use env_logger::Builder;
 use log::LevelFilter;
 
@@ -11,8 +8,6 @@ async fn main() -> anyhow::Result<()> {
     Builder::new().filter_level(LevelFilter::Info).init();
 
     let updater = Updater::new().await?;
-
-    updater.sync_data().await?;
-
+    updater.sync().await?;
     Ok(())
 }
