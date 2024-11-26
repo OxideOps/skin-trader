@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer to periodically run check-skin-trader.service 
+
+[Timer]
+OnUnitInactiveSec=2min
+Unit=check-skin-trader.service
+
+[Install]
+WantedBy=timers.target
+
