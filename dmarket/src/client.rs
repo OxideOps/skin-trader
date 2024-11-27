@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
     Balance, BestPrices, BestPricesResponse, GameTitle, Item, ItemResponse, ListDefaultFee,
-    ListFeeResponse, ListPersonalFee, Sale, SaleResponse,
+    ListFeeResponse, ListPersonalFee, Offer, Sale, SaleResponse, Target,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -27,7 +27,6 @@ const CURRENCY_USD: &str = "USD";
 
 const MARKET_LIMIT: usize = 100;
 const SALES_LIMIT: usize = 500;
-const DISCOUNT_LIMIT: usize = 500; // not sure on this one
 const BEST_PRICES_LIMIT: usize = 10000;
 
 pub struct Client {
@@ -51,6 +50,10 @@ impl Client {
 
     pub async fn post<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
         self.request(Method::POST, path, Some(body)).await
+    }
+
+    pub async fn patch<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
+        self.request(Method::PATCH, path, Some(body)).await
     }
 
     async fn request<T: DeserializeOwned>(
@@ -190,5 +193,21 @@ impl Client {
         }
 
         Ok(all_prices)
+    }
+
+    pub async fn buy_offers(&self, offers: Vec<Offer>) -> Result<()> {
+        let body = json!({
+            "offers": offers,
+        });
+        self.patch("/exchange/v1/offers-buy", body).await
+    }
+
+    pub async fn create_target(&self, game_id: &str, targets: Vec<Target>) -> Result<()> {
+        let body = json!({
+            "GameID": game_id,
+            "Targets": targets,
+        });
+        self.post("/marketplace-api/v1/user-targets/create", body)
+            .await
     }
 }
