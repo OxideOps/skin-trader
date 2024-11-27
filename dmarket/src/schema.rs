@@ -166,3 +166,17 @@ pub struct BestPrice {
     pub best_price: String,
     pub count: i32,
 }
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Offer {
+    pub offer_id: String,
+    pub price: Money,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Money {
+    pub amount: String,
+    pub currency: String,
+}
