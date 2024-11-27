@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
     Balance, BestPrices, BestPricesResponse, GameTitle, Item, ItemResponse, ListDefaultFee,
-    ListFeeResponse, ListPersonalFee, Offer, Sale, SaleResponse,
+    ListFeeResponse, ListPersonalFee, Offer, Sale, SaleResponse, Target,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -200,5 +200,14 @@ impl Client {
             "offers": offers,
         });
         self.patch("/exchange/v1/offers-buy", body).await
+    }
+
+    pub async fn create_target(&self, game_id: &str, targets: Vec<Target>) -> Result<()> {
+        let body = json!({
+            "GameID": game_id,
+            "Targets": targets,
+        });
+        self.post("/marketplace-api/v1/user-targets/create", body)
+            .await
     }
 }

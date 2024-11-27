@@ -180,3 +180,30 @@ pub struct OfferMoney {
     pub amount: String,
     pub currency: String,
 }
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct Target {
+    pub amount: u64,
+    pub price: TargetMoney,
+    pub title: String,
+    pub attrs: TargetAttrs,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct TargetMoney {
+    pub currency: String,
+    pub amount: f64,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct TargetAttrs {
+    pub paint_seed: Option<i32>,
+    //[ , phase-1, phase-2, phase-3, phase-4, ruby, emerald, sapphire, black-pearl ]
+    pub phase: Option<String>,
+    // [ , FN-0, FN-1, FN-2, FN-3, FN-4, FN-5, FN-6, MW-0, MW-1, MW-2, MW-3, MW-4, FT-0, FT-1, FT-2,
+    // FT-3, FT-4, WW-0, WW-1, WW-2, WW-3, WW-4, BS-0, BS-1, BS-2, BS-3, BS-4 ]
+    pub float_part_value: Option<String>,
+}
