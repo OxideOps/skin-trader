@@ -171,12 +171,12 @@ pub struct BestPrice {
 #[serde(rename_all = "camelCase")]
 pub struct Offer {
     pub offer_id: String,
-    pub price: Money,
+    pub price: OfferMoney,
 }
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Money {
+pub struct OfferMoney {
     pub amount: String,
     pub currency: String,
 }
