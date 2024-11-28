@@ -255,4 +255,105 @@ impl Database {
         tx.commit().await?;
         Ok(())
     }
+
+    pub async fn calculate_price_statistics(&self) -> Result<Vec<Stats>> {
+        let stats = sqlx::query_as!(
+            Stats,
+            r#"
+            WITH filtered_sales AS (
+                SELECT
+                    game_id,
+                    title,
+                    LN(price::real) as log_price,
+                    date::integer as time
+                FROM dmarket_sales
+                WHERE price::real > 0
+            ),
+            price_quartiles AS (
+                SELECT
+                    game_id,
+                    title,
+                    percentile_cont(0.25) WITHIN GROUP (ORDER BY log_price) AS q1,
+                    percentile_cont(0.75) WITHIN GROUP (ORDER BY log_price) AS q3
+                FROM filtered_sales
+                GROUP BY game_id, title
+            ),
+            outlier_bounds AS (
+                SELECT
+                    game_id,
+                    title,
+                    q1 - 1.5 * (q3 - q1) AS lower_bound,
+                    q3 + 1.5 * (q3 - q1) AS upper_bound
+                FROM price_quartiles
+            )
+            SELECT
+                fs.game_id,
+                fs.title,
+                EXP(AVG(fs.log_price)) as mean,
+                COUNT(*)::INTEGER as sale_count,
+                REGR_SLOPE(fs.log_price, fs.time) as price_slope
+            FROM filtered_sales fs
+            JOIN outlier_bounds ob ON fs.game_id = ob.game_id AND fs.title = ob.title
+            WHERE fs.log_price BETWEEN ob.lower_bound AND ob.upper_bound
+            GROUP BY fs.game_id, fs.title
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(stats)
+    }
+
+    pub async fn update_price_statistics(&self, stats: &[Stats]) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        for stat in stats {
+            sqlx::query!(
+                r#"
+                INSERT INTO dmarket_stats (
+                    game_id,
+                    title,
+                    mean,
+                    sale_count,
+                    price_slope 
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (game_id, title) DO UPDATE SET
+                    mean = EXCLUDED.mean,
+                    sale_count = EXCLUDED.sale_count,
+                    price_slope = EXCLUDED.price_slope
+                "#,
+                stat.game_id,
+                stat.title,
+                stat.mean,
+                stat.sale_count,
+                stat.price_slope
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn get_price_statistics(&self, game_title: GameTitle) -> Result<Option<Stats>> {
+        let stats = sqlx::query_as!(
+            Stats,
+            r#"
+            SELECT
+                game_id,
+                title,
+                mean,
+                sale_count,
+                price_slope
+            FROM dmarket_stats
+            WHERE game_id = $1 AND title = $2
+            "#,
+            game_title.game_id,
+            game_title.title
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(stats)
+    }
 }
