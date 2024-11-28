@@ -27,12 +27,8 @@ impl Updater {
 
         while let Some(items_result) = market_items.next().await {
             match items_result {
-                Ok(items) => {
-                    self.db.store_items(items).await?;
-                }
-                Err(e) => {
-                    log::error!("Error fetching items: {e}");
-                }
+                Ok(items) => self.db.store_items(items).await?,
+                Err(e) => log::error!("Error fetching items: {e}"),
             }
         }
 

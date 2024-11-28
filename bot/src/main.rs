@@ -17,8 +17,8 @@ async fn main() -> Result<()> {
 }
 
 async fn start_dmarket() -> Result<()> {
-    let updater = dmarket::Updater::new().await?;
-    updater.sync().await?;
+    // let updater = dmarket::Updater::new().await?;
+    // updater.sync().await?;
     // do analysis
     // execute trades
     Ok(())

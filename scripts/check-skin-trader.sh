@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. "$HOME/.cargo/env"
+
 cd /home/oxideops/skin-trader
 
 git fetch

@@ -191,10 +191,8 @@ impl Client {
     }
 
     pub async fn buy_offers(&self, offers: Vec<Offer>) -> Result<()> {
-        let body = json!({
-            "offers": offers,
-        });
-        self.patch("/exchange/v1/offers-buy", body).await
+        self.patch("/exchange/v1/offers-buy", json!({"offers": offers}))
+            .await
     }
 
     pub async fn create_target(&self, game_id: &str, targets: Vec<Target>) -> Result<()> {

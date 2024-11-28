@@ -6,11 +6,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 bitskins = { path = "../bitskins" }
-dmarket = { path = "../dmarket" }
 tokio-cron-scheduler = { version = "0.13.0", features = ["english"] }
 tokio = { version = "1.38.1", features = ["macros", "rt-multi-thread", "signal"] }
 log = "0.4.22"
-serde_json = "1.0.122"
 env_logger = "0.11.5"
 dotenvy = "0.15.7"
-sqlx = { version = "0.8.2", features = ["uuid"] }
