@@ -221,6 +221,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitskins",
+ "dmarket",
  "dotenvy",
  "env_logger",
  "log",

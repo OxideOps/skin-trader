@@ -8,5 +8,7 @@ async fn main() -> Result<()> {
 }
 
 async fn start_dmarket() -> Result<()> {
-    todo!()
+    let updater = dmarket::Updater::new().await?;
+    updater.sync().await?;
+    Ok(())
 }
