@@ -216,7 +216,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bot"
+name = "bots"
 version = "0.1.0"
 dependencies = [
  "anyhow",

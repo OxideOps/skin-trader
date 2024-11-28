@@ -4,13 +4,13 @@ use log::error;
 use std::future::Future;
 use tokio_cron_scheduler::{Job, JobScheduler};
 
-pub(crate) struct Scheduler {
+pub struct Scheduler {
     trader: Trader,
     scheduler: JobScheduler,
 }
 
 impl Scheduler {
-    pub(crate) async fn new(trader: Trader) -> Result<Self> {
+    pub async fn new(trader: Trader) -> Result<Self> {
         let scheduler = JobScheduler::new().await?;
         Ok(Scheduler { trader, scheduler })
     }
@@ -61,7 +61,7 @@ impl Scheduler {
         Ok(())
     }
 
-    pub(crate) async fn start(self) -> Result<()> {
+    pub async fn start(self) -> Result<()> {
         self.schedule_tasks().await?;
         Ok(self.scheduler.start().await?)
     }

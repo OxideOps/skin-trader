@@ -17,7 +17,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
 RUN sqlx migrate run
-RUN cargo build --release --bin bot
+RUN cargo build --release --bin bots
 
 # We do not need the Rust toolchain to run the binary!
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS runtime

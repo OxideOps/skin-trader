@@ -13,7 +13,7 @@ const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
 
 #[derive(Clone)]
-pub(crate) struct Trader {
+pub struct Trader {
     db: Database,
     http: HttpClient,
     pub updater: Updater,
