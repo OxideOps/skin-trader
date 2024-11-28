@@ -180,14 +180,9 @@ impl Client {
 
         while offset < total {
             all_prices.extend(
-                self.get::<BestPricesResponse>(
-                    path,
-                    json!({
-                        "Offset": offset,
-                    }),
-                )
-                .await?
-                .aggregated_titles,
+                self.get::<BestPricesResponse>(path, json!({ "Offset": offset }))
+                    .await?
+                    .aggregated_titles,
             );
             offset += BEST_PRICES_LIMIT;
         }

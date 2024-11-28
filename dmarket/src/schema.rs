@@ -207,3 +207,11 @@ pub struct TargetAttrs {
     // FT-3, FT-4, WW-0, WW-1, WW-2, WW-3, WW-4, BS-0, BS-1, BS-2, BS-3, BS-4 ]
     pub float_part_value: Option<String>,
 }
+
+pub struct Stats {
+    pub game_id: String,
+    pub title: String,
+    pub mean: Option<f64>,
+    pub sale_count: Option<i32>,
+    pub price_slope: Option<f64>,
+}
