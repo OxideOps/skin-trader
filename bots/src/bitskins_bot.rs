@@ -1,26 +1,13 @@
-mod scheduler;
-mod trader;
-
-use crate::scheduler::Scheduler;
 use anyhow::Result;
 use bitskins::WsClient;
-use env_logger::Builder;
-use log::LevelFilter;
+use bots::scheduler::Scheduler;
+use bots::trader::Trader;
 use tokio::try_join;
-use trader::Trader;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    setup_env();
-    try_join!(start_bitskins(), start_dmarket())?;
-    Ok(())
-}
-
-async fn start_dmarket() -> Result<()> {
-    // let updater = dmarket::Updater::new().await?;
-    // updater.sync().await?;
-    // do analysis
-    // execute trades
+    bots::setup_env();
+    start_bitskins().await?;
     Ok(())
 }
 
@@ -38,9 +25,4 @@ async fn start_bitskins() -> Result<()> {
 async fn start_ws(trader: Trader) -> Result<()> {
     let ws = WsClient::connect(|channel, ws_data| trader.process_data(channel, ws_data)).await?;
     Ok(ws.start().await?)
-}
-
-pub fn setup_env() {
-    dotenvy::dotenv().ok();
-    Builder::new().filter_level(LevelFilter::Info).init();
 }

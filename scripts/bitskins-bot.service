@@ -1,12 +1,12 @@
 [Unit]
-Description=Skin Trader
+Description=Bitskins Bot
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/home/oxideops/skin-trader
-ExecStart=/home/oxideops/skin-trader/target/release/bot
+ExecStart=/home/oxideops/skin-trader/target/release/bitskins_bot
 StandardOutput=append:/var/log/skin-trader.log
 StandardError=append:/var/log/skin-trader.log
 Restart=on-failure
