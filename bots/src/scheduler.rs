@@ -53,11 +53,6 @@ impl Scheduler {
         })
         .await?;
 
-        self.schedule_task("every 10 days", |trader| async move {
-            Ok(trader.updater.sync_market_items().await?)
-        })
-        .await?;
-
         Ok(())
     }
 
