@@ -23,3 +23,9 @@ impl<'de> Deserialize<'de> for DateTime {
             .map_err(de::Error::custom)
     }
 }
+
+impl Default for DateTime {
+    fn default() -> Self {
+        Self::min()
+    }
+}

@@ -1,9 +1,12 @@
 use crate::http::ItemPrice;
+use crate::Result;
 use crate::{db, http, Database, HttpClient};
-use crate::{DateTime, Result};
-use futures_util::future::{join_all, try_join};
+use futures::future::try_join;
+use futures::{stream, StreamExt};
 use std::cmp::max;
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+const MAX_TASKS: usize = 10;
 
 #[derive(Clone)]
 pub struct Updater {
@@ -115,19 +118,22 @@ impl Updater {
         self.db.insert_skins(&skins).await?;
 
         let total = filtered_skins.len();
-        join_all(filtered_skins.into_iter().map(|skin| async move {
-            match self.handle_skin(&skin).await {
-                Ok(_) => {
-                    let i = i.fetch_add(1, Ordering::Relaxed);
-                    log::info!("Synced data for skin {} ({}/{})", skin.id, i, total)
-                }
-                Err(e) => {
-                    i.fetch_add(1, Ordering::Relaxed);
-                    log::error!("Error syncing data for skin {}: {}", skin.id, e)
-                }
-            };
-        }))
-        .await;
+        stream::iter(filtered_skins)
+            .map(|skin| async move {
+                match self.handle_skin(&skin).await {
+                    Ok(_) => {
+                        let i = i.fetch_add(1, Ordering::Relaxed);
+                        log::info!("Synced data for skin {} ({}/{})", skin.id, i, total)
+                    }
+                    Err(e) => {
+                        i.fetch_add(1, Ordering::Relaxed);
+                        log::error!("Error syncing data for skin {}: {}", skin.id, e)
+                    }
+                };
+            })
+            .buffer_unordered(MAX_TASKS)
+            .collect::<Vec<_>>()
+            .await;
 
         log::info!("Updating price statistics");
         self.db.calculate_and_update_price_statistics().await?;
@@ -142,55 +148,44 @@ impl Updater {
 
         self.db.insert_skins(&skins).await?;
 
-        let skin_ids: Vec<i32> = skins.iter().map(|s| s.id).collect();
-        let latest_dates = self.db.get_latest_sale_dates(&skin_ids).await?;
-        let skins_and_dates: Vec<_> = skins
-            .iter()
-            .map(|skin| {
-                (
-                    skin,
-                    latest_dates
-                        .get(&skin.id)
-                        .cloned()
-                        .unwrap_or(DateTime::min()),
-                )
-            })
-            .collect();
-
         let count = &AtomicUsize::new(0);
-        let total = &skin_ids.len();
+        let total = &skins.len();
 
-        join_all(
-            skins_and_dates
-                .into_iter()
-                .map(|(skin, latest_date)| async move {
-                    let sales = self
-                        .client
-                        .fetch_sales(skin.id)
-                        .await
-                        .unwrap_or_default()
-                        .into_iter()
-                        .filter_map(move |sale| Some(sale).filter(|s| s.created_at > latest_date));
+        stream::iter(skins)
+            .map(|skin| async move {
+                let latest_date = self
+                    .db
+                    .get_latest_sale_date(skin.id)
+                    .await
+                    .unwrap_or_default();
+                let sales = self
+                    .client
+                    .fetch_sales(skin.id)
+                    .await
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter_map(move |sale| Some(sale).filter(|s| s.created_at > latest_date));
 
+                log::info!(
+                    "Fetching sales for skin {}/{}",
+                    count.fetch_add(1, Ordering::Relaxed),
+                    total
+                );
+
+                for sale in sales {
                     log::info!(
-                        "Fetching sales for skin {}/{}",
-                        count.fetch_add(1, Ordering::Relaxed),
-                        total
+                        "Syncing new sale for skin {} created at {}",
+                        skin.id,
+                        sale.created_at
                     );
-
-                    for sale in sales {
-                        log::info!(
-                            "Syncing new sale for skin {} created at {}",
-                            skin.id,
-                            sale.created_at
-                        );
-                        if let Err(e) = self.handle_sale(skin, sale).await {
-                            log::error!("Error handling sale: {}", e);
-                        }
+                    if let Err(e) = self.handle_sale(&skin, sale).await {
+                        log::error!("Error handling sale: {}", e);
                     }
-                }),
-        )
-        .await;
+                }
+            })
+            .buffer_unordered(MAX_TASKS)
+            .collect::<Vec<_>>()
+            .await;
 
         self.update_listings().await
     }
@@ -198,12 +193,11 @@ impl Updater {
     pub async fn sync_market_items(&self) -> Result<()> {
         let skins = self.fetch_skins().await?;
         self.db.insert_skins(&skins).await?;
-        join_all(
-            skins
-                .into_iter()
-                .map(|skin| async move { self.handle_market_items(&skin).await }),
-        )
-        .await;
+        stream::iter(skins)
+            .map(|skin| async move { self.handle_market_items(&skin).await })
+            .buffer_unordered(MAX_TASKS)
+            .collect::<Vec<_>>()
+            .await;
         Ok(())
     }
 
