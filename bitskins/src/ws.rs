@@ -1,8 +1,8 @@
 //! WebSocket client for real-time communication with the BitSkins API.
 
 use crate::{Error, Result};
-use futures_util::stream::{SplitSink, SplitStream};
-use futures_util::{SinkExt, StreamExt};
+use futures::stream::{SplitSink, SplitStream};
+use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::env;

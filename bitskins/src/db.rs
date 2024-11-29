@@ -5,7 +5,7 @@
 use crate::date::DateTime;
 use crate::{Error, Result};
 use sqlx::{postgres::PgPoolOptions, types::time::OffsetDateTime, Executor, PgPool};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::env;
 
 const MAX_CONNECTIONS: u32 = 5;
@@ -493,28 +493,19 @@ impl Database {
         .await?)
     }
 
-    pub async fn get_latest_sale_dates(&self, skin_ids: &[i32]) -> Result<HashMap<i32, DateTime>> {
-        let results = sqlx::query!(
+    pub async fn get_latest_sale_date(&self, skin_id: i32) -> Result<DateTime> {
+        let result = sqlx::query!(
             r#"
-            SELECT skin_id, MAX(created_at)
+            SELECT MAX(created_at)
             FROM Sale
-            WHERE skin_id = ANY($1)
-            GROUP BY skin_id
+            WHERE skin_id = $1
             "#,
-            skin_ids
+            skin_id
         )
-        .fetch_all(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
-        Ok(results
-            .into_iter()
-            .map(|row| {
-                (
-                    row.skin_id,
-                    row.max.map(DateTime).unwrap_or(DateTime::min()),
-                )
-            })
-            .collect())
+        Ok(result.max.map(DateTime).unwrap_or_default())
     }
 
     pub async fn get_skin(&self, id: i32) -> Result<Skin> {
