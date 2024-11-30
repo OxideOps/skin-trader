@@ -38,11 +38,6 @@ impl Scheduler {
     }
 
     pub(crate) async fn schedule_tasks(&self) -> Result<()> {
-        self.schedule_task("every hour", |trader| async move {
-            Ok(trader.updater.list_inventory_items().await?)
-        })
-        .await?;
-
         self.schedule_task("every day", |trader| async move {
             Ok(trader.purchase_best_items().await?)
         })
