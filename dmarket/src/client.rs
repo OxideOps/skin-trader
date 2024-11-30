@@ -1,8 +1,9 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    Balance, BestPrices, BestPricesResponse, GameTitle, Item, ItemResponse, ListDefaultFee,
-    ListFeeResponse, ListPersonalFee, Offer, Sale, SaleResponse, Target,
+    Balance, BestPrices, BestPricesResponse, BuyOffer, CreateOffer, CreateTarget, DeleteOffer,
+    DeleteTarget, EditOffer, GameTitle, Item, ItemResponse, ListDefaultFee, ListFeeResponse,
+    ListPersonalFee, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -42,18 +43,22 @@ impl Client {
         })
     }
 
-    pub async fn get<T: DeserializeOwned>(&self, path: &str, query: Value) -> Result<T> {
+    async fn get<T: DeserializeOwned>(&self, path: &str, query: Value) -> Result<T> {
         let query = serde_qs::to_string(&query)?;
         self.request(Method::GET, &format!("{path}?{query}"), None)
             .await
     }
 
-    pub async fn post<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
+    async fn post<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
         self.request(Method::POST, path, Some(body)).await
     }
 
-    pub async fn patch<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
+    async fn patch<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
         self.request(Method::PATCH, path, Some(body)).await
+    }
+
+    async fn delete<T: DeserializeOwned>(&self, path: &str, body: Value) -> Result<T> {
+        self.request(Method::DELETE, path, Some(body)).await
     }
 
     async fn request<T: DeserializeOwned>(
@@ -190,17 +195,49 @@ impl Client {
         Ok(all_prices)
     }
 
-    pub async fn buy_offers(&self, offers: Vec<Offer>) -> Result<()> {
+    pub async fn buy_offers(&self, offers: Vec<BuyOffer>) -> Result<()> {
         self.patch("/exchange/v1/offers-buy", json!({"offers": offers}))
             .await
     }
 
-    pub async fn create_target(&self, game_id: &str, targets: Vec<Target>) -> Result<()> {
+    pub async fn create_targets(&self, game_id: &str, targets: Vec<CreateTarget>) -> Result<()> {
         let body = json!({
             "GameID": game_id,
             "Targets": targets,
         });
         self.post("/marketplace-api/v1/user-targets/create", body)
             .await
+    }
+
+    pub async fn delete_targets(&self, targets: Vec<DeleteTarget>) -> Result<()> {
+        self.post(
+            "/marketplace-api/v1/user-targets/delete",
+            json!({"Targets": targets}),
+        )
+        .await
+    }
+
+    pub async fn create_offers(&self, offers: Vec<CreateOffer>) -> Result<()> {
+        self.post(
+            "/marketplace-api/v1/user-offers/create",
+            json!({"Offers": offers}),
+        )
+        .await
+    }
+
+    pub async fn edit_offers(&self, offers: Vec<EditOffer>) -> Result<()> {
+        self.post(
+            "marketplace-api/v1/user-offers/edit",
+            json!({"Offers": offers}),
+        )
+        .await
+    }
+
+    pub async fn delete_offers(&self, force: bool, offers: Vec<DeleteOffer>) -> Result<()> {
+        let body = json!({
+            "force": force,
+            "objects": offers,
+        });
+        self.delete("/exchange/v1/offers", body).await
     }
 }

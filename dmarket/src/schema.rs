@@ -169,7 +169,7 @@ pub struct BestPrice {
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Offer {
+pub struct BuyOffer {
     pub offer_id: String,
     pub price: OfferMoney,
 }
@@ -183,16 +183,16 @@ pub struct OfferMoney {
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-pub struct Target {
+pub struct CreateTarget {
     pub amount: u64,
-    pub price: TargetMoney,
+    pub price: MarketMoney,
     pub title: String,
     pub attrs: TargetAttrs,
 }
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-pub struct TargetMoney {
+pub struct MarketMoney {
     pub currency: String,
     pub amount: f64,
 }
@@ -208,10 +208,42 @@ pub struct TargetAttrs {
     pub float_part_value: Option<String>,
 }
 
+#[derive(Serialize, Debug)]
+pub struct DeleteTarget {
+    #[serde(rename = "TargetID")]
+    pub target_id: String,
+}
+
 pub struct Stats {
     pub game_id: String,
     pub title: String,
     pub mean: Option<f64>,
     pub sale_count: Option<i32>,
     pub price_slope: Option<f64>,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateOffer {
+    #[serde(rename = "AssetID")]
+    pub asset_id: String,
+    pub price: MarketMoney,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteOffer {
+    pub item_id: String,
+    pub offer_id: String,
+    pub price: OfferMoney,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct EditOffer {
+    #[serde(rename = "OfferID")]
+    pub offer_id: String,
+    #[serde(rename = "AssetID")]
+    pub asset_id: String,
+    pub price: MarketMoney,
 }
