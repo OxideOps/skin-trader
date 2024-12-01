@@ -1,4 +1,3 @@
 [workspace]
-members = ["bitskins", "bots", "dmarket", "sandbox"]
-default-members = ["bots"]
+members = ["bitskins", "common", "dmarket", "sandbox"]
 resolver = "2"

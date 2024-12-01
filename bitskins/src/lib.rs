@@ -6,6 +6,8 @@ pub mod db;
 mod endpoint;
 mod error;
 mod http;
+pub mod scheduler;
+pub mod trader;
 mod update;
 mod ws;
 

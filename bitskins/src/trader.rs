@@ -1,8 +1,8 @@
-use anyhow::{bail, Result};
-use bitskins::Error::{InternalService, MarketItemDeleteFailed, MarketItemUpdateFailed};
-use bitskins::{
+use crate::Error::{InternalService, MarketItemDeleteFailed, MarketItemUpdateFailed};
+use crate::{
     Channel, Database, DateTime, HttpClient, MarketItem, Skin, Stats, Updater, WsData, CS2_APP_ID,
 };
+use anyhow::{bail, Result};
 use log::{debug, info, warn};
 use std::cmp::Ordering;
 
@@ -159,7 +159,7 @@ impl Trader {
         stats.sale_count >= Some(MIN_SALE_COUNT) && stats.price_slope >= Some(MIN_SLOPE)
     }
 
-    async fn find_best_market_deal(&self, skin_id: i32) -> bitskins::Result<Option<MarketDeal>> {
+    async fn find_best_market_deal(&self, skin_id: i32) -> Result<Option<MarketDeal>> {
         let market_list = self.db.get_market_items(skin_id).await?;
 
         Ok(market_list
@@ -168,13 +168,13 @@ impl Trader {
             .min_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(Ordering::Equal)))
     }
 
-    async fn execute_purchase(&self, deal: MarketDeal) -> bitskins::Result<()> {
+    async fn execute_purchase(&self, deal: MarketDeal) -> crate::Result<()> {
         info!("Buying {} for {}", deal.id, deal.price);
         self.http.buy_item(&deal.id, deal.price).await?;
         Ok(())
     }
 
-    pub(crate) async fn purchase_best_items(&self) -> bitskins::Result<()> {
+    pub async fn purchase_best_items(&self) -> Result<()> {
         let skin_ids = self
             .db
             .get_skins_by_sale_count(MIN_SALE_COUNT as i64)
