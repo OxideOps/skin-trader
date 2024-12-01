@@ -1,0 +1,16 @@
+[Unit]
+Description=DMarket Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/oxideops/skin-trader
+ExecStart=/home/oxideops/skin-trader/target/release/dmarket
+StandardOutput=append:/var/log/dmarket.log
+StandardError=append:/var/log/dmarket.log
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

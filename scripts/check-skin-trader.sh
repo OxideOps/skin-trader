@@ -12,7 +12,7 @@ REMOTE_HASH=$(git rev-parse '@{u}')
 if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
     git reset --hard "$REMOTE_HASH"
     sqlx migrate run
-    cargo build -p common -r
-    sudo systemctl restart bitskins-bot
+    cargo build -p bitskins -r
+    sudo systemctl restart bitskins
 fi
 
