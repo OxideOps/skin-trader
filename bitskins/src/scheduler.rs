@@ -39,7 +39,7 @@ impl Scheduler {
 
     pub async fn schedule_tasks(&self) -> Result<()> {
         self.schedule_task("every day", |trader| async move {
-            Ok(trader.purchase_best_items().await?)
+            trader.purchase_best_items().await
         })
         .await?;
 
