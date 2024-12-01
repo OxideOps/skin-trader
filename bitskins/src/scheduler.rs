@@ -15,7 +15,7 @@ impl Scheduler {
         Ok(Scheduler { trader, scheduler })
     }
 
-    pub(crate) async fn schedule_task<F, Fut>(&self, schedule: &str, task: F) -> Result<()>
+    pub async fn schedule_task<F, Fut>(&self, schedule: &str, task: F) -> Result<()>
     where
         F: Fn(Trader) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<()>> + Send + 'static,
@@ -37,7 +37,7 @@ impl Scheduler {
         Ok(())
     }
 
-    pub(crate) async fn schedule_tasks(&self) -> Result<()> {
+    pub async fn schedule_tasks(&self) -> Result<()> {
         self.schedule_task("every day", |trader| async move {
             Ok(trader.purchase_best_items().await?)
         })

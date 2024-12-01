@@ -17,7 +17,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
 RUN sqlx migrate run
-RUN cargo build --release --p bots
+RUN cargo build --release --p bitskins
 
 # We do not need the Rust toolchain to run the binary!
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS runtime
@@ -26,5 +26,5 @@ ARG DMARKET_API_KEY
 ARG DMARKET_SECRET_KEY
 ENV BITSKIN_API_KEY=$BITSKIN_API_KEY DMARKET_API_KEY=$DMARKET_API_KEY DMARKET_SECRET_KEY=$DMARKET_SECRET_KEY
 WORKDIR /app
-COPY --from=builder /app/target/release/bitskins_bot /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/bitskins_bot"]
+COPY --from=builder /app/target/release/bitskins /usr/local/bin
+ENTRYPOINT ["/usr/local/bin/bitskins"]

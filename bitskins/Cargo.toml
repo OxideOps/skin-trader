@@ -17,3 +17,6 @@ thiserror = "2.0.0"
 strum_macros = "0.26.4"
 strum = "0.26.3"
 derive_more = { version = "1.0.0", features = ["deref", "display", "into", "from"] }
+anyhow = "1.0.93"
+common = { path = "../common" }
+tokio-cron-scheduler = { version = "0.13.0", features = ["english"] }

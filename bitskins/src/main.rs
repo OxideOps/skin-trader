@@ -1,12 +1,12 @@
 use anyhow::Result;
+use bitskins::scheduler::Scheduler;
+use bitskins::trader::Trader;
 use bitskins::WsClient;
-use bots::scheduler::Scheduler;
-use bots::trader::Trader;
 use tokio::try_join;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    bots::setup_env();
+    common::setup_env();
     start_bitskins().await?;
     Ok(())
 }
