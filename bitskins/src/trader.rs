@@ -6,9 +6,9 @@ use anyhow::{bail, Result};
 use log::{debug, info, warn};
 use std::cmp::Ordering;
 
-const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.3;
+const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.5;
 const SALES_FEE: f64 = 0.1;
-const MIN_PROFIT_MARGIN: f64 = 0.1;
+const MIN_PROFIT_MARGIN: f64 = 0.15;
 const MIN_SALE_COUNT: i32 = 400;
 const MIN_SLOPE: f64 = 0.0;
 
@@ -199,12 +199,12 @@ impl MarketDeal {
         Self { id, price }
     }
     fn is_affordable(&self, balance: f64) -> bool {
-        self.price < (MAX_PRICE_BALANCE_THRESHOLD * balance)
+        self.price <= (MAX_PRICE_BALANCE_THRESHOLD * balance)
     }
 
     fn is_profitable(&self, mean_price: f64) -> bool {
         let sale_price = (1.0 - Updater::SELLING_DISCOUNT) * mean_price;
         let fee = (SALES_FEE * sale_price).max(10.0); // Fee is always at least 1 cent
-        self.price < (sale_price - fee) * (1.0 - MIN_PROFIT_MARGIN)
+        self.price * (1.0 + MIN_PROFIT_MARGIN) <= (sale_price - fee)
     }
 }
