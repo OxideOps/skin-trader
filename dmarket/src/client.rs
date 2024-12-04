@@ -1,9 +1,9 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    Balance, BestPrices, BestPricesResponse, BuyOffer, CreateOffer, CreateTarget, DeleteOffer,
-    DeleteTarget, EditOffer, GameTitle, Item, ItemResponse, ListDefaultFee, ListFeeResponse,
-    ListPersonalFee, Sale, SaleResponse,
+    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer,
+    CreateTarget, DeleteOffer, DeleteTarget, EditOffer, GameTitle, Item, ItemResponse,
+    ListDefaultFee, ListFeeResponse, ListPersonalFee, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -195,7 +195,7 @@ impl Client {
         Ok(all_prices)
     }
 
-    pub async fn buy_offers(&self, offers: Vec<BuyOffer>) -> Result<()> {
+    pub async fn buy_offers(&self, offers: Vec<BuyOffer>) -> Result<BuyOffersResponse> {
         self.patch("/exchange/v1/offers-buy", json!({"offers": offers}))
             .await
     }

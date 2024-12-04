@@ -174,6 +174,15 @@ pub struct BuyOffer {
     pub price: OfferMoney,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct BuyOffersResponse {
+    pub order_id: String,
+    //[ TxPending, TxSuccess, TxFailed ]
+    pub status: String,
+    pub tx_id: String,
+}
+
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct OfferMoney {
