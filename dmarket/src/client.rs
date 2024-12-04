@@ -1,7 +1,9 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteTarget, EditOffer, GameTitle, Item, ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, Sale, SaleResponse
+    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer,
+    CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteTarget, EditOffer, GameTitle, Item,
+    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -198,7 +200,11 @@ impl Client {
             .await
     }
 
-    pub async fn create_targets(&self, game_id: &str, targets: Vec<CreateTarget>) -> Result<CreateTargetsResponse> {
+    pub async fn create_targets(
+        &self,
+        game_id: &str,
+        targets: Vec<CreateTarget>,
+    ) -> Result<CreateTargetsResponse> {
         let body = json!({
             "GameID": game_id,
             "Targets": targets,

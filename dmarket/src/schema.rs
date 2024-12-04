@@ -213,14 +213,13 @@ pub struct CreateTargetsResponse {
 #[serde(rename_all = "PascalCase")]
 pub struct MarketError {
     pub code: String,
-    pub message: String
+    pub message: String,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct CreateTargetResponse {
     pub create_target: CreateTarget,
-
 }
 
 #[derive(Serialize, Debug, Deserialize)]
