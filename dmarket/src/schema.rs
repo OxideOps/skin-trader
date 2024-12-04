@@ -190,7 +190,7 @@ pub struct OfferMoney {
     pub currency: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct CreateTarget {
     pub amount: u64,
@@ -199,14 +199,38 @@ pub struct CreateTarget {
     pub attrs: TargetAttrs,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct CreateTargetsResponse {
+    pub result: Vec<CreateTargetResponse>,
+    #[serde(rename = "TargetID")]
+    pub target_id: String,
+    pub successful: bool,
+    pub error: MarketError,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct MarketError {
+    pub code: String,
+    pub message: String
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct CreateTargetResponse {
+    pub create_target: CreateTarget,
+
+}
+
+#[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarketMoney {
     pub currency: String,
     pub amount: f64,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetAttrs {
     pub paint_seed: Option<i32>,
