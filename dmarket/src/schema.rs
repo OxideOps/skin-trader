@@ -305,7 +305,7 @@ pub struct EditOffer {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct EditOffersResponse {
-    pub result: Vec<EditOfferResponse>
+    pub result: Vec<EditOfferResponse>,
 }
 
 #[derive(Deserialize, Debug)]
