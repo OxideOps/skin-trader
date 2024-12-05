@@ -174,6 +174,15 @@ pub struct BuyOffer {
     pub price: OfferMoney,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct BuyOffersResponse {
+    pub order_id: String,
+    //[ TxPending, TxSuccess, TxFailed ]
+    pub status: String,
+    pub tx_id: String,
+}
+
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct OfferMoney {
@@ -181,7 +190,7 @@ pub struct OfferMoney {
     pub currency: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct CreateTarget {
     pub amount: u64,
@@ -190,14 +199,37 @@ pub struct CreateTarget {
     pub attrs: TargetAttrs,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct CreateTargetsResponse {
+    pub result: Vec<CreateTargetResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct CreateTargetResponse {
+    pub create_target: CreateTarget,
+    #[serde(rename = "TargetID")]
+    pub target_id: String,
+    pub successful: bool,
+    pub error: MarketError,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct MarketError {
+    pub code: String,
+    pub message: String,
+}
+
+#[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarketMoney {
     pub currency: String,
     pub amount: f64,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetAttrs {
     pub paint_seed: Option<i32>,
@@ -208,10 +240,24 @@ pub struct TargetAttrs {
     pub float_part_value: Option<String>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct DeleteTarget {
     #[serde(rename = "TargetID")]
     pub target_id: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct DeleteTargetsResponse {
+    pub result: Vec<DeleteTargetResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct DeleteTargetResponse {
+    pub delete_target: DeleteTarget,
+    pub successful: bool,
+    pub error: MarketError,
 }
 
 pub struct Stats {
@@ -222,12 +268,54 @@ pub struct Stats {
     pub price_slope: Option<f64>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateOffer {
     #[serde(rename = "AssetID")]
     pub asset_id: String,
     pub price: MarketMoney,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct CreateOffersResponse {
+    pub result: Vec<CreateOffersResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct CreateOfferResponse {
+    pub create_offer: CreateOffer,
+    #[serde(rename = "OfferID")]
+    pub offer_id: String,
+    pub successful: bool,
+    pub error: MarketError,
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct EditOffer {
+    #[serde(rename = "OfferID")]
+    pub offer_id: String,
+    #[serde(rename = "AssetID")]
+    pub asset_id: String,
+    pub price: MarketMoney,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct EditOffersResponse {
+    pub result: Vec<EditOfferResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct EditOfferResponse {
+    pub edit_offer: EditOffer,
+    pub successful: bool,
+    pub error: MarketError,
+    #[serde(rename = "NewOfferID")]
+    pub new_offer_id: String,
 }
 
 #[derive(Serialize, Debug)]
@@ -238,12 +326,24 @@ pub struct DeleteOffer {
     pub price: OfferMoney,
 }
 
-#[derive(Serialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-pub struct EditOffer {
-    #[serde(rename = "OfferID")]
-    pub offer_id: String,
-    #[serde(rename = "AssetID")]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteOffersResponse {
+    pub result: Vec<DeleteOfferResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteOfferResponse {
+    pub created: Vec<CreatedOffer>,
+    pub fail: Vec<String>,
+    pub locked: Vec<String>,
+    pub success: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedOffer {
     pub asset_id: String,
-    pub price: MarketMoney,
+    pub offer_id: String,
 }

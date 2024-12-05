@@ -27,10 +27,10 @@ pub enum RateLimiterType {
 impl RateLimiter {
     pub fn request_limiters() -> RateLimiters {
         [
-            Mutex::new(RateLimiter::new(FEE)),
-            Mutex::new(RateLimiter::new(LAST_SALES)),
-            Mutex::new(RateLimiter::new(MARKET_ITEMS)),
-            Mutex::new(RateLimiter::new(OTHER)),
+            Mutex::new(Self::new(FEE)),
+            Mutex::new(Self::new(LAST_SALES)),
+            Mutex::new(Self::new(MARKET_ITEMS)),
+            Mutex::new(Self::new(OTHER)),
         ]
     }
 
