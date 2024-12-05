@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteTarget, DeleteTargetsResponse, EditOffer, GameTitle, Item, ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, Sale, SaleResponse
+    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer, CreateOffersResponse, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteOffersResponse, DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle, Item, ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, Sale, SaleResponse
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -211,7 +211,10 @@ impl Client {
             .await
     }
 
-    pub async fn delete_targets(&self, targets: Vec<DeleteTarget>) -> Result<DeleteTargetsResponse> {
+    pub async fn delete_targets(
+        &self,
+        targets: Vec<DeleteTarget>,
+    ) -> Result<DeleteTargetsResponse> {
         self.post(
             "/marketplace-api/v1/user-targets/delete",
             json!({"Targets": targets}),
@@ -219,7 +222,7 @@ impl Client {
         .await
     }
 
-    pub async fn create_offers(&self, offers: Vec<CreateOffer>) -> Result<()> {
+    pub async fn create_offers(&self, offers: Vec<CreateOffer>) -> Result<CreateOffersResponse> {
         self.post(
             "/marketplace-api/v1/user-offers/create",
             json!({"Offers": offers}),
@@ -227,7 +230,7 @@ impl Client {
         .await
     }
 
-    pub async fn edit_offers(&self, offers: Vec<EditOffer>) -> Result<()> {
+    pub async fn edit_offers(&self, offers: Vec<EditOffer>) -> Result<EditOffersResponse> {
         self.post(
             "marketplace-api/v1/user-offers/edit",
             json!({"Offers": offers}),
@@ -235,7 +238,7 @@ impl Client {
         .await
     }
 
-    pub async fn delete_offers(&self, force: bool, offers: Vec<DeleteOffer>) -> Result<()> {
+    pub async fn delete_offers(&self, force: bool, offers: Vec<DeleteOffer>) -> Result<DeleteOffersResponse> {
         let body = json!({
             "force": force,
             "objects": offers,
