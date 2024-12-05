@@ -56,7 +56,7 @@ pub struct Extra {
     pub float_value: Option<f64>,
     pub is_new: bool,
     pub tradable: bool,
-    pub offer_id: Option<String>,
+    pub offer_id: Option<Uuid>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -170,7 +170,7 @@ pub struct BestPrice {
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct BuyOffer {
-    pub offer_id: String,
+    pub offer_id: Uuid,
     pub price: OfferMoney,
 }
 

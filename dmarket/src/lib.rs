@@ -2,7 +2,7 @@ mod client;
 mod db;
 mod error;
 mod rate_limiter;
-mod schema;
+pub mod schema;
 mod updater;
 
 pub use client::{Client, GAME_IDS};

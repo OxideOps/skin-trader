@@ -1654,6 +1654,7 @@ dependencies = [
  "env_logger",
  "log",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
