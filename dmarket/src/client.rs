@@ -8,7 +8,8 @@ use crate::schema::{
 };
 use crate::Result;
 use async_stream::try_stream;
-use futures::Stream;
+use futures::StreamExt;
+use futures::{stream, stream::TryStreamExt, Stream};
 use reqwest::header::HeaderValue;
 use reqwest::{Method, StatusCode};
 use serde::de::DeserializeOwned;
@@ -112,10 +113,11 @@ impl Client {
         limiter.wait().await;
     }
 
-    pub async fn get_market_items<'a>(
+    pub async fn get_items_with_cursor<'a>(
         &'a self,
         game_id: &'a str,
         title: Option<&'a str>,
+        endpoint: &'a str,
     ) -> impl Stream<Item = Result<Vec<Item>>> + 'a {
         try_stream! {
             let mut cursor = None;
@@ -127,7 +129,7 @@ impl Client {
                     "limit": MARKET_LIMIT,
                     "cursor": cursor,
                 });
-                let response: ItemResponse = self.get("/exchange/v1/market/items", query).await?;
+                let response: ItemResponse = self.get(endpoint, query).await?;
                 yield response.objects;
 
                 cursor = response.cursor;
@@ -136,6 +138,15 @@ impl Client {
                 }
             }
         }
+    }
+
+    pub async fn get_market_items<'a>(
+        &'a self,
+        game_id: &'a str,
+        title: Option<&'a str>,
+    ) -> impl Stream<Item = Result<Vec<Item>>> + 'a {
+        self.get_items_with_cursor(game_id, title, "/exchange/v1/market/items")
+            .await
     }
 
     pub async fn get_sales(&self, game_title: &GameTitle) -> Result<Vec<Sale>> {
@@ -251,5 +262,19 @@ impl Client {
             "objects": offers,
         });
         self.delete("/exchange/v1/offers", body).await
+    }
+
+    async fn get_inventory_for_game(&self, game_id: &str) -> Result<Vec<Item>> {
+        self.get_items_with_cursor(game_id, None, "/exchange/v1/user/items")
+            .await
+            .try_concat()
+            .await
+    }
+
+    pub async fn get_inventory(&self) -> Result<Vec<Item>> {
+        stream::iter(GAME_IDS)
+            .then(|id| self.get_inventory_for_game(id))
+            .try_concat()
+            .await
     }
 }

@@ -62,9 +62,9 @@ impl Database {
                 INSERT INTO dmarket_items (
                     game_id, item_id, title, amount, created_at, discount,
                     category, float_value, is_new, tradable,
-                    status, price_usd, instant_price_usd, suggested_price_usd, type
+                    status, price_usd, instant_price_usd, suggested_price_usd, type, offer_id
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                 ON CONFLICT (game_id, item_id) DO UPDATE 
                 SET title = EXCLUDED.title,
                     amount = EXCLUDED.amount,
@@ -78,7 +78,8 @@ impl Database {
                     price_usd = EXCLUDED.price_usd,
                     instant_price_usd = EXCLUDED.instant_price_usd,
                     suggested_price_usd = EXCLUDED.suggested_price_usd,
-                    type = EXCLUDED.type
+                    type = EXCLUDED.type,
+                    offer_id = EXCLUDED.offer_id
                 "#,
                 item.game_id,
                 item.item_id,
@@ -94,7 +95,8 @@ impl Database {
                 item.price.as_ref().map(|p| &p.usd),
                 item.instant_price.as_ref().map(|p| &p.usd),
                 item.suggested_price.as_ref().map(|p| &p.usd),
-                serde_json::to_string(&item.r#type)?
+                serde_json::to_string(&item.r#type)?,
+                item.extra.offer_id
             )
             .execute(&mut *tx)
             .await?;

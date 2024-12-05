@@ -8,8 +8,8 @@ use futures::{future::try_join_all, pin_mut, StreamExt};
 const MAX_TASKS: usize = 10;
 
 pub struct Updater {
-    db: Database,
-    client: Client,
+    pub db: Database,
+    pub client: Client,
 }
 
 impl Updater {
@@ -31,7 +31,6 @@ impl Updater {
                 Err(e) => log::error!("Error fetching items: {e}"),
             }
         }
-
         Ok(())
     }
 

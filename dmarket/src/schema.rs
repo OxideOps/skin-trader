@@ -56,7 +56,7 @@ pub struct Extra {
     pub float_value: Option<f64>,
     pub is_new: bool,
     pub tradable: bool,
-    pub offer_id: Option<String>,
+    pub offer_id: Option<Uuid>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -170,7 +170,7 @@ pub struct BestPrice {
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct BuyOffer {
-    pub offer_id: String,
+    pub offer_id: Uuid,
     pub price: OfferMoney,
 }
 
@@ -269,17 +269,17 @@ pub struct Stats {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "PascalCase")]
 pub struct CreateOffer {
     #[serde(rename = "AssetID")]
-    pub asset_id: String,
+    pub asset_id: Uuid,
     pub price: MarketMoney,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct CreateOffersResponse {
-    pub result: Vec<CreateOffersResponse>,
+    pub result: Vec<CreateOfferResponse>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -289,7 +289,7 @@ pub struct CreateOfferResponse {
     #[serde(rename = "OfferID")]
     pub offer_id: String,
     pub successful: bool,
-    pub error: MarketError,
+    pub error: Option<MarketError>,
 }
 
 #[derive(Serialize, Debug, Deserialize)]
