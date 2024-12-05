@@ -1,9 +1,7 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer,
-    CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteTarget, EditOffer, GameTitle, Item,
-    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, Sale, SaleResponse,
+    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteTarget, DeleteTargetsResponse, EditOffer, GameTitle, Item, ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, Sale, SaleResponse
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -213,7 +211,7 @@ impl Client {
             .await
     }
 
-    pub async fn delete_targets(&self, targets: Vec<DeleteTarget>) -> Result<()> {
+    pub async fn delete_targets(&self, targets: Vec<DeleteTarget>) -> Result<DeleteTargetsResponse> {
         self.post(
             "/marketplace-api/v1/user-targets/delete",
             json!({"Targets": targets}),

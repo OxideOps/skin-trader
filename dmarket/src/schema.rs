@@ -203,6 +203,12 @@ pub struct CreateTarget {
 #[serde(rename_all = "PascalCase")]
 pub struct CreateTargetsResponse {
     pub result: Vec<CreateTargetResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct CreateTargetResponse {
+    pub create_target: CreateTarget,
     #[serde(rename = "TargetID")]
     pub target_id: String,
     pub successful: bool,
@@ -214,12 +220,6 @@ pub struct CreateTargetsResponse {
 pub struct MarketError {
     pub code: String,
     pub message: String,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-pub struct CreateTargetResponse {
-    pub create_target: CreateTarget,
 }
 
 #[derive(Serialize, Debug, Deserialize)]
@@ -240,10 +240,24 @@ pub struct TargetAttrs {
     pub float_part_value: Option<String>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct DeleteTarget {
     #[serde(rename = "TargetID")]
     pub target_id: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct DeleteTargetsResponse {
+    pub result: Vec<DeleteTargetResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct DeleteTargetResponse {
+    pub delete_target: DeleteTarget,
+    pub successful: bool,
+    pub error: MarketError,
 }
 
 pub struct Stats {
