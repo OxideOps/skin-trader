@@ -89,6 +89,10 @@ impl Trader {
     }
 
     async fn flip_game_title(&self, game_title: GameTitle) -> Result<()> {
+        if let Some(item) = self.client.get_best_offer(game_title).await? {
+            self.client.buy_offer(item.extra.offer_id.unwrap(), item.price.unwrap().usd).await?;
+        }
+
         Ok(())
     }
 
@@ -103,6 +107,7 @@ impl Trader {
             //     get offer_id for best item using client
             //     buy
             //     list
+            
         }
 
         Ok(())
