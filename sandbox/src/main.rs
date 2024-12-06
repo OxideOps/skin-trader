@@ -1,4 +1,4 @@
-use dmarket::Updater;
+use dmarket::{Trader, GAME_IDS};
 use env_logger::Builder;
 use log::LevelFilter;
 
@@ -7,7 +7,9 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     Builder::new().filter_level(LevelFilter::Info).init();
 
-    let updater = Updater::new().await?;
-    updater.sync().await?;
+    let trader = Trader::new().await?;
+    for game_id in GAME_IDS {
+        trader.sync_reduced_fees(game_id).await?;
+    }
     Ok(())
 }

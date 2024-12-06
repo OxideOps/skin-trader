@@ -88,7 +88,9 @@ impl Trader {
         Ok(())
     }
 
-    async fn flip_game_title(&self, game_title: GameTitle) -> Result<()> {}
+    async fn flip_game_title(&self, game_title: GameTitle) -> Result<()> {
+        Ok(())
+    }
 
     async fn flip(&self) -> Result<()> {
         for best_prices in self.client.get_best_prices().await? {
