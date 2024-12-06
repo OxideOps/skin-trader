@@ -87,4 +87,18 @@ impl Trader {
         self.db.store_reduced_fees(game_id, fees).await?;
         Ok(())
     }
+
+    async fn flip(&self) -> Result<()> {
+        for best_prices in self.client.get_best_prices().await? {
+            // get game title (use client if db doesn't work)
+            // get fee from db
+            // compare with stats
+            // if we want to buy
+            //     get offer_id for best item using client
+            //     buy
+            //     list
+        }
+
+        Ok(())
+    }
 }

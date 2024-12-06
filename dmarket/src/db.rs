@@ -358,4 +358,14 @@ impl Database {
 
         Ok(stats)
     }
+
+    pub async fn get_game_title(&self, title: &str) -> Result<Option<GameTitle>> {
+        Ok(sqlx::query_as!(
+            GameTitle,
+            "SELECT game_id, title FROM dmarket_items WHERE title = $1",
+            title
+        )
+        .fetch_optional(&self.pool)
+        .await?)
+    }
 }

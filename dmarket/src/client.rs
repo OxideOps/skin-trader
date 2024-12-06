@@ -113,7 +113,7 @@ impl Client {
         limiter.wait().await;
     }
 
-    pub async fn get_items_with_cursor<'a>(
+    async fn get_items_with_cursor<'a>(
         &'a self,
         game_id: &'a str,
         title: Option<&'a str>,
