@@ -7,12 +7,12 @@ use futures::{future::try_join_all, pin_mut, StreamExt};
 
 const MAX_TASKS: usize = 10;
 
-pub struct Updater {
+pub struct Trader {
     pub db: Database,
     pub client: Client,
 }
 
-impl Updater {
+impl Trader {
     pub async fn new() -> Result<Self> {
         Ok(Self {
             db: Database::new().await?,
