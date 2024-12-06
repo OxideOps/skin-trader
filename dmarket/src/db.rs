@@ -258,7 +258,7 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_reduced_fee(&self, game_title: GameTitle) -> Result<Option<ListPersonalFee>> {
+    pub async fn get_reduced_fee(&self, game_title: &GameTitle) -> Result<Option<ListPersonalFee>> {
         Ok(sqlx::query_as!(
             ListPersonalFee,
             r#"
@@ -357,7 +357,7 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_price_statistics(&self, game_title: GameTitle) -> Result<Option<Stats>> {
+    pub async fn get_price_statistics(&self, game_title: &GameTitle) -> Result<Option<Stats>> {
         let stats = sqlx::query_as!(
             Stats,
             r#"

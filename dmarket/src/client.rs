@@ -1,7 +1,10 @@
 use crate::error::Error;
 use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
-    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer, CreateOffersResponse, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteOffersResponse, DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle, Item, ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, OfferMoney, Sale, SaleResponse
+    Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer,
+    CreateOffersResponse, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteOffersResponse,
+    DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle, Item,
+    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, OfferMoney, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -11,9 +14,9 @@ use reqwest::header::HeaderValue;
 use reqwest::{Method, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
-use uuid::Uuid;
 use std::env;
 use url::Url;
+use uuid::Uuid;
 
 const BASE_URL: &str = "https://api.dmarket.com";
 
@@ -211,13 +214,14 @@ impl Client {
     }
 
     pub async fn buy_offer(&self, offer_id: Uuid, amount: String) -> Result<BuyOffersResponse> {
-        self.buy_offers(vec![BuyOffer{
+        self.buy_offers(vec![BuyOffer {
             offer_id,
             price: OfferMoney {
                 amount,
                 currency: CURRENCY_USD.to_string(),
-            }
-        }]).await
+            },
+        }])
+        .await
     }
 
     pub async fn create_targets(
