@@ -359,7 +359,7 @@ impl Database {
         Ok(stats)
     }
 
-    pub async fn get_game_title(&self, title: &str) -> Result<Option<GameTitle>> {
+    pub async fn get_game_title(&self, title: String) -> Result<Option<GameTitle>> {
         Ok(sqlx::query_as!(
             GameTitle,
             "SELECT game_id, title FROM dmarket_items WHERE title = $1",

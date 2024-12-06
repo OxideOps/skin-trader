@@ -88,9 +88,13 @@ impl Trader {
         Ok(())
     }
 
+    async fn flip_game_title(&self, game_title: GameTitle) -> Result<()> {}
+
     async fn flip(&self) -> Result<()> {
         for best_prices in self.client.get_best_prices().await? {
-            // get game title (use client if db doesn't work)
+            if let Some(game_title) = self.db.get_game_title(best_prices.market_hash_name).await? {
+                self.flip_game_title(game_title).await?;
+            }
             // get fee from db
             // compare with stats
             // if we want to buy
