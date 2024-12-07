@@ -1,14 +1,10 @@
 use anyhow::Result;
+use dmarket::trader::Trader;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     common::setup_env();
-    start_dmarket().await?;
-    Ok(())
-}
-
-async fn start_dmarket() -> Result<()> {
-    let updater = dmarket::Updater::new().await?;
-    updater.sync().await?;
+    let trader = Trader::new().await?;
+    trader.sync().await?;
     Ok(())
 }

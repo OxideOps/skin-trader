@@ -31,7 +31,7 @@ pub enum Error {
     Response(reqwest::StatusCode, String),
 
     #[error("Parse error: {0}")]
-    Parse(#[from] url::ParseError),
+    UrlParse(#[from] url::ParseError),
 
     #[error("Invalid header: {0}")]
     InvalidHeader(#[from] reqwest::header::InvalidHeaderValue),
@@ -47,4 +47,7 @@ pub enum Error {
 
     #[error("Serde json error: {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("Parse error: {0}")]
+    Parse(#[from] std::num::ParseFloatError),
 }

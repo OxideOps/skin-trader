@@ -1,4 +1,4 @@
-use dmarket::Updater;
+use dmarket::Trader;
 use env_logger::Builder;
 use log::LevelFilter;
 
@@ -7,7 +7,7 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     Builder::new().filter_level(LevelFilter::Info).init();
 
-    let updater = Updater::new().await?;
-    updater.sync().await?;
+    let trader = Trader::new().await?;
+    trader.flip().await?;
     Ok(())
 }

@@ -4,7 +4,7 @@ use crate::schema::{
     Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer,
     CreateOffersResponse, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteOffersResponse,
     DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle, Item,
-    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, Sale, SaleResponse,
+    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, OfferMoney, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -16,6 +16,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use std::env;
 use url::Url;
+use uuid::Uuid;
 
 const BASE_URL: &str = "https://api.dmarket.com";
 
@@ -113,7 +114,7 @@ impl Client {
         limiter.wait().await;
     }
 
-    pub async fn get_items_with_cursor<'a>(
+    async fn get_items_with_cursor<'a>(
         &'a self,
         game_id: &'a str,
         title: Option<&'a str>,
@@ -212,6 +213,17 @@ impl Client {
             .await
     }
 
+    pub async fn buy_offer(&self, offer_id: Uuid, amount: String) -> Result<BuyOffersResponse> {
+        self.buy_offers(vec![BuyOffer {
+            offer_id,
+            price: OfferMoney {
+                amount,
+                currency: CURRENCY_USD.to_string(),
+            },
+        }])
+        .await
+    }
+
     pub async fn create_targets(
         &self,
         game_id: &str,
@@ -265,9 +277,7 @@ impl Client {
     }
 
     async fn get_inventory_for_game(&self, game_id: &str) -> Result<Vec<Item>> {
-        self.get_items_with_cursor(game_id, None, "/exchange/v1/user/items")
-            .await
-            .try_concat()
+        self.get_items(game_id, None, "/exchange/v1/user/items")
             .await
     }
 
@@ -276,5 +286,29 @@ impl Client {
             .then(|id| self.get_inventory_for_game(id))
             .try_concat()
             .await
+    }
+
+    async fn get_items(
+        &self,
+        game_id: &str,
+        title: Option<&str>,
+        endpoint: &str,
+    ) -> Result<Vec<Item>> {
+        self.get_items_with_cursor(game_id, title, endpoint)
+            .await
+            .try_concat()
+            .await
+    }
+
+    pub async fn get_best_offer(&self, game_title: GameTitle) -> Result<Option<Item>> {
+        let items = self
+            .get_items(
+                &game_title.game_id,
+                Some(&game_title.title),
+                "/exchange/v1/market/items",
+            )
+            .await?;
+
+        Ok(items.into_iter().min_by_key(|item| item.amount))
     }
 }

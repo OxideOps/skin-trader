@@ -258,6 +258,26 @@ impl Database {
         Ok(())
     }
 
+    pub async fn get_reduced_fee(&self, game_title: &GameTitle) -> Result<Option<ListPersonalFee>> {
+        Ok(sqlx::query_as!(
+            ListPersonalFee,
+            r#"
+            SELECT
+                title,
+                expires_at,
+                fraction,
+                max_price,
+                min_price
+            FROM dmarket_reduced_fees
+            WHERE game_id = $1 AND title = $2
+            "#,
+            game_title.game_id,
+            game_title.title
+        )
+        .fetch_optional(&self.pool)
+        .await?)
+    }
+
     pub async fn calculate_price_statistics(&self) -> Result<Vec<Stats>> {
         let stats = sqlx::query_as!(
             Stats,
@@ -337,7 +357,7 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_price_statistics(&self, game_title: GameTitle) -> Result<Option<Stats>> {
+    pub async fn get_price_statistics(&self, game_title: &GameTitle) -> Result<Option<Stats>> {
         let stats = sqlx::query_as!(
             Stats,
             r#"
@@ -357,5 +377,15 @@ impl Database {
         .await?;
 
         Ok(stats)
+    }
+
+    pub async fn get_game_title(&self, title: String) -> Result<Option<GameTitle>> {
+        Ok(sqlx::query_as!(
+            GameTitle,
+            "SELECT game_id, title FROM dmarket_items WHERE title = $1",
+            title
+        )
+        .fetch_optional(&self.pool)
+        .await?)
     }
 }
