@@ -94,55 +94,72 @@ impl Trader {
     }
 
     async fn flip_game_title(&self, game_title: GameTitle, price: String) -> Result<()> {
-        if let Some(item) = self.client.get_best_offer(game_title).await? {
-            log::info!("Buying {} for {}", item.title, price);
-            self.client
-                .buy_offer(item.extra.offer_id.unwrap(), price)
-                .await?;
-        }
-
+        let item = match self.client.get_best_offer(game_title).await? {
+            Some(item) => item,
+            None => return Ok(()), // If there's no offer, just return
+        };
+    
+        log::info!("Buying {} for {}", item.title, price);
+        self.client.buy_offer(item.extra.offer_id.unwrap(), price).await?;
         Ok(())
     }
-
+    
     async fn get_fee(&self, game_title: &GameTitle) -> Result<f64> {
         if let Some(reduced_fee) = self.db.get_reduced_fee(game_title).await? {
-            Ok(reduced_fee.fraction.parse()?)
-        } else if game_title.game_id == CSGO_GAME_ID {
-            Ok(CS_GO_DEFAULT_FEE)
+            return reduced_fee.fraction.parse().map_err(From::from);
+        }
+    
+        let fee = if game_title.game_id == CSGO_GAME_ID {
+            CS_GO_DEFAULT_FEE
         } else {
-            Ok(DEFAULT_FEE)
-        }
+            DEFAULT_FEE
+        };
+        Ok(fee)
     }
-
+    
     async fn is_profitable(&self, game_title: &GameTitle, price: f64) -> Result<bool> {
-        if let Some(stats) = self.db.get_price_statistics(game_title).await? {
-            if let (Some(mean), Some(sale_count), Some(price_slope)) =
-                (stats.mean, stats.sale_count, stats.price_slope)
-            {
-                if price_slope < 0.0 {
-                    return Ok(false);
-                }
-                if sale_count < MIN_SALE_COUNT {
-                    return Ok(false);
-                }
-                let fee = self.get_fee(game_title).await?;
-                return Ok((1.0 + MIN_PROFIT_MARGIN) * price <= mean * (1.0 - fee));
-            }
+        let stats = match self.db.get_price_statistics(game_title).await? {
+            Some(stats) => stats,
+            None => return Ok(false),
+        };
+    
+        let (mean, sale_count, price_slope) = match (stats.mean, stats.sale_count, stats.price_slope) {
+            (Some(m), Some(sc), Some(ps)) => (m, sc, ps),
+            _ => return Ok(false),
+        };
+    
+        if price_slope < 0.0 || sale_count < MIN_SALE_COUNT {
+            return Ok(false);
         }
-        Ok(false)
+    
+        let fee = self.get_fee(game_title).await?;
+        let target_price = (1.0 + MIN_PROFIT_MARGIN) * price;
+        let max_buy_price = mean * (1.0 - fee);
+    
+        Ok(target_price <= max_buy_price)
     }
-
+    
     pub async fn flip(&self) -> Result<()> {
-        for best_prices in self.client.get_best_prices().await? {
-            log::info!("Best price: {}", best_prices.offers.best_price);
-            if let Some(game_title) = self.db.get_game_title(best_prices.market_hash_name).await? {
-                let best_price = best_prices.offers.best_price;
-                if self.is_profitable(&game_title, best_price.parse()?).await? {
-                    self.flip_game_title(game_title, best_price).await?;
-                }
+        let best_prices_list = self.client.get_best_prices().await?;
+        for best_prices in best_prices_list {
+            let best_price = best_prices.offers.best_price;
+            log::info!("Best price: {}", best_price);
+    
+            let game_title = match self.db.get_game_title(best_prices.market_hash_name).await? {
+                Some(title) => title,
+                None => continue,
+            };
+    
+            let price: f64 = match best_price.parse() {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
+    
+            if self.is_profitable(&game_title, price).await? {
+                self.flip_game_title(game_title, best_price).await?;
             }
         }
-
+    
         Ok(())
     }
 }
