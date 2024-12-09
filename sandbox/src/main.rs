@@ -8,6 +8,6 @@ async fn main() -> anyhow::Result<()> {
     Builder::new().filter_level(LevelFilter::Info).init();
 
     let trader = Trader::new().await?;
-    trader.flip().await?;
+    trader.sync().await?;
     Ok(())
 }
