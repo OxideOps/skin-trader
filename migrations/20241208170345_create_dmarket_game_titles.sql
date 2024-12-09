@@ -1,8 +1,8 @@
-CREATE TABLE dmarket_stats (
+CREATE TABLE dmarket_game_titles (
     game_id TEXT NOT NULL,
     title TEXT NOT NULL,
-    mean DOUBLE PRECISION,
+    mean_price DOUBLE PRECISION,
     sale_count INTEGER,
     price_slope DOUBLE PRECISION,
     PRIMARY KEY (game_id, title)
-);
+)

@@ -263,7 +263,7 @@ pub struct DeleteTargetResponse {
 pub struct Stats {
     pub game_id: String,
     pub title: String,
-    pub mean: Option<f64>,
+    pub mean_price: Option<f64>,
     pub sale_count: Option<i32>,
     pub price_slope: Option<f64>,
 }
@@ -346,4 +346,13 @@ pub struct DeleteOfferResponse {
 pub struct CreatedOffer {
     pub asset_id: String,
     pub offer_id: String,
+}
+
+impl From<Item> for GameTitle {
+    fn from(item: Item) -> Self {
+        Self {
+            game_id: item.game_id,
+            title: item.title,
+        }
+    }
 }

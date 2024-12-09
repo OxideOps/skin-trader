@@ -3,7 +3,6 @@ use crate::Result;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::env;
-use uuid::Uuid;
 
 const MAX_CONNECTIONS: u32 = 50;
 
@@ -22,81 +21,16 @@ impl Database {
         Ok(Self { pool })
     }
 
-    pub async fn get_item(&self, item_id: Uuid) -> Result<Option<Item>> {
-        let row = sqlx::query!(
-            r#"
-            SELECT * FROM dmarket_items WHERE item_id = $1
-            "#,
-            item_id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row.map(|row| Item {
-            game_id: row.game_id,
-            item_id: row.item_id,
-            title: row.title,
-            amount: row.amount,
-            created_at: row.created_at,
-            discount: row.discount,
-            extra: Extra {
-                category: row.category,
-                float_value: row.float_value,
-                is_new: row.is_new,
-                tradable: row.tradable,
-                offer_id: row.offer_id,
-            },
-            status: serde_json::from_str(&row.status).unwrap_or(ItemStatus::Default),
-            price: row.price_usd.map(|usd| Price { usd }),
-            instant_price: row.instant_price_usd.map(|usd| Price { usd }),
-            suggested_price: row.suggested_price_usd.map(|usd| Price { usd }),
-            r#type: serde_json::from_str(&row.r#type).unwrap_or(ItemType::Item),
-        }))
-    }
-
-    pub async fn store_items(&self, items: Vec<Item>) -> Result<()> {
+    pub async fn store_game_titles(&self, game_titles: Vec<GameTitle>) -> Result<()> {
         let mut tx = self.pool.begin().await?;
-        for item in items {
+        for game_title in game_titles {
             sqlx::query!(
                 r#"
-                INSERT INTO dmarket_items (
-                    game_id, item_id, title, amount, created_at, discount,
-                    category, float_value, is_new, tradable,
-                    status, price_usd, instant_price_usd, suggested_price_usd, type, offer_id
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                ON CONFLICT (game_id, item_id) DO UPDATE 
-                SET title = EXCLUDED.title,
-                    amount = EXCLUDED.amount,
-                    created_at = EXCLUDED.created_at,
-                    discount = EXCLUDED.discount,
-                    category = EXCLUDED.category,
-                    float_value = EXCLUDED.float_value,
-                    is_new = EXCLUDED.is_new,
-                    tradable = EXCLUDED.tradable,
-                    status = EXCLUDED.status,
-                    price_usd = EXCLUDED.price_usd,
-                    instant_price_usd = EXCLUDED.instant_price_usd,
-                    suggested_price_usd = EXCLUDED.suggested_price_usd,
-                    type = EXCLUDED.type,
-                    offer_id = EXCLUDED.offer_id
+                INSERT INTO dmarket_game_titles (game_id, title) VALUES ($1, $2)
+                ON CONFLICT (game_id, title) DO NOTHING
                 "#,
-                item.game_id,
-                item.item_id,
-                item.title,
-                item.amount,
-                item.created_at,
-                item.discount,
-                item.extra.category,
-                item.extra.float_value,
-                item.extra.is_new,
-                item.extra.tradable,
-                serde_json::to_string(&item.status)?,
-                item.price.as_ref().map(|p| &p.usd),
-                item.instant_price.as_ref().map(|p| &p.usd),
-                item.suggested_price.as_ref().map(|p| &p.usd),
-                serde_json::to_string(&item.r#type)?,
-                item.extra.offer_id
+                game_title.game_id,
+                game_title.title,
             )
             .execute(&mut *tx)
             .await?;
@@ -105,43 +39,10 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_best_titles(&self, limit: i64) -> Result<Vec<GameTitle>> {
-        Ok(sqlx::query_as!(
-            GameTitle,
-            r#"
-            WITH item_stats AS (
-                SELECT 
-                    game_id,
-                    title,
-                    COUNT(*) as item_count
-                FROM dmarket_items
-                WHERE status = '"active"'
-                GROUP BY game_id, title
-            )
-            SELECT 
-                game_id,
-                title
-            FROM item_stats
-            WHERE item_count > (
-                SELECT AVG(item_count) FROM item_stats
-            )
-            ORDER BY item_count DESC
-            LIMIT $1
-            "#,
-            limit
-        )
-        .fetch_all(&self.pool)
-        .await?)
-    }
-
     pub async fn get_distinct_titles(&self) -> Result<Vec<GameTitle>> {
         Ok(sqlx::query_as!(
             GameTitle,
-            r#"
-            SELECT DISTINCT game_id, title 
-            FROM dmarket_items 
-            ORDER BY game_id, title
-            "#
+            r#"SELECT DISTINCT game_id, title FROM dmarket_game_titles"#
         )
         .fetch_all(&self.pool)
         .await?)
@@ -194,40 +95,19 @@ impl Database {
             .unwrap_or_default())
     }
 
-    pub async fn store_best_prices(&self, prices: Vec<BestPrices>) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-
-        for price in prices {
-            sqlx::query!(
-                r#"
-                INSERT INTO dmarket_best_prices (
-                    market_hash_name,
-                    offers_best_price,
-                    offers_best_count,
-                    orders_best_price,
-                    orders_best_count
-                )
-                VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING
-                "#,
-                price.market_hash_name,
-                price.offers.best_price,
-                price.offers.count,
-                price.orders.best_price,
-                price.orders.count
-            )
-            .execute(&mut *tx)
-            .await?;
-        }
-
-        tx.commit().await?;
-        Ok(())
-    }
-
     pub async fn store_reduced_fees(
         &self,
         game_id: &str,
         fees: Vec<ListPersonalFee>,
     ) -> Result<()> {
+        let game_titles = fees
+            .iter()
+            .map(|f| GameTitle {
+                game_id: game_id.to_string(),
+                title: f.title.clone(),
+            })
+            .collect();
+        self.store_game_titles(game_titles).await?;
         let mut tx = self.pool.begin().await?;
 
         for fee in fees {
@@ -311,7 +191,7 @@ impl Database {
             SELECT
                 fs.game_id,
                 fs.title,
-                EXP(AVG(fs.log_price)) as mean,
+                EXP(AVG(fs.log_price)) as mean_price,
                 COUNT(*)::INTEGER as sale_count,
                 REGR_SLOPE(fs.log_price, fs.time) as price_slope
             FROM filtered_sales fs
@@ -331,22 +211,22 @@ impl Database {
         for stat in stats {
             sqlx::query!(
                 r#"
-                INSERT INTO dmarket_stats (
+                INSERT INTO dmarket_game_titles (
                     game_id,
                     title,
-                    mean,
+                    mean_price,
                     sale_count,
                     price_slope 
                 )
                 VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT (game_id, title) DO UPDATE SET
-                    mean = EXCLUDED.mean,
+                    mean_price = EXCLUDED.mean_price,
                     sale_count = EXCLUDED.sale_count,
                     price_slope = EXCLUDED.price_slope
                 "#,
                 stat.game_id,
                 stat.title,
-                stat.mean,
+                stat.mean_price,
                 stat.sale_count,
                 stat.price_slope
             )
@@ -364,10 +244,10 @@ impl Database {
             SELECT
                 game_id,
                 title,
-                mean,
+                mean_price,
                 sale_count,
                 price_slope
-            FROM dmarket_stats
+            FROM dmarket_game_titles
             WHERE game_id = $1 AND title = $2
             "#,
             game_title.game_id,
@@ -382,7 +262,7 @@ impl Database {
     pub async fn get_game_title(&self, title: String) -> Result<Option<GameTitle>> {
         Ok(sqlx::query_as!(
             GameTitle,
-            "SELECT game_id, title FROM dmarket_items WHERE title = $1",
+            "SELECT game_id, title FROM dmarket_game_titles WHERE title = $1",
             title
         )
         .fetch_optional(&self.pool)

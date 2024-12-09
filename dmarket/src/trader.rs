@@ -25,14 +25,17 @@ impl Trader {
         })
     }
 
-    pub async fn sync_market_items(&self, game_id: &str, title: Option<&str>) -> Result<()> {
+    pub async fn sync_game_titles(&self, game_id: &str, title: Option<&str>) -> Result<()> {
         let market_items = self.client.get_market_items(game_id, title).await;
 
         pin_mut!(market_items);
 
         while let Some(items_result) = market_items.next().await {
             match items_result {
-                Ok(items) => self.db.store_items(items).await?,
+                Ok(items) => {
+                    let game_titles = items.into_iter().map(|item| item.into()).collect();
+                    self.db.store_game_titles(game_titles).await?
+                }
                 Err(e) => log::error!("Error fetching items: {e}"),
             }
         }
@@ -40,7 +43,7 @@ impl Trader {
     }
 
     pub async fn sync(&self) -> Result<()> {
-        try_join_all(GAME_IDS.iter().map(|&id| self.sync_market_items(id, None))).await?;
+        try_join_all(GAME_IDS.iter().map(|&id| self.sync_game_titles(id, None))).await?;
         futures::stream::iter(&self.db.get_distinct_titles().await?)
             .map(|gt| async move {
                 if let Err(e) = self.sync_sales(gt).await {
@@ -51,11 +54,16 @@ impl Trader {
             .collect::<Vec<_>>()
             .await;
 
-        self.sync_best_prices().await?;
+        self.sync_stats().await?;
         try_join_all(GAME_IDS.iter().map(|&id| self.sync_reduced_fees(id))).await?;
+
         Ok(())
     }
 
+    async fn sync_stats(&self) -> Result<()> {
+        let stats = self.db.calculate_price_statistics().await?;
+        self.db.update_price_statistics(&stats).await
+    }
     async fn sync_sales(&self, gt: &GameTitle) -> Result<()> {
         let latest_date = self.db.get_latest_date(gt).await?;
         match self.client.get_sales(gt).await {
@@ -81,12 +89,6 @@ impl Trader {
         Ok(())
     }
 
-    async fn sync_best_prices(&self) -> Result<()> {
-        let best_prices = self.client.get_best_prices().await?;
-        self.db.store_best_prices(best_prices).await?;
-        Ok(())
-    }
-
     async fn sync_reduced_fees(&self, game_id: &str) -> Result<()> {
         let fees = self.client.get_personal_fees(game_id).await?;
         self.db.store_reduced_fees(game_id, fees).await?;
@@ -96,9 +98,9 @@ impl Trader {
     async fn flip_game_title(&self, game_title: GameTitle, price: String) -> Result<()> {
         if let Some(item) = self.client.get_best_offer(game_title).await? {
             log::info!("Buying {} for {}", item.title, price);
-            self.client
-                .buy_offer(item.extra.offer_id.unwrap(), price)
-                .await?;
+            // self.client
+            //     .buy_offer(item.extra.offer_id.unwrap(), price)
+            //     .await?;
         }
 
         Ok(())
@@ -117,7 +119,7 @@ impl Trader {
     async fn is_profitable(&self, game_title: &GameTitle, price: f64) -> Result<bool> {
         if let Some(stats) = self.db.get_price_statistics(game_title).await? {
             if let (Some(mean), Some(sale_count), Some(price_slope)) =
-                (stats.mean, stats.sale_count, stats.price_slope)
+                (stats.mean_price, stats.sale_count, stats.price_slope)
             {
                 if price_slope < 0.0 {
                     return Ok(false);
@@ -134,7 +136,6 @@ impl Trader {
 
     pub async fn flip(&self) -> Result<()> {
         for best_prices in self.client.get_best_prices().await? {
-            log::info!("Best price: {}", best_prices.offers.best_price);
             if let Some(game_title) = self.db.get_game_title(best_prices.market_hash_name).await? {
                 let best_price = best_prices.offers.best_price;
                 if self.is_profitable(&game_title, best_price.parse()?).await? {
