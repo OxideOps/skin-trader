@@ -9,7 +9,7 @@ use futures::{future::try_join_all, pin_mut, StreamExt};
 const MAX_TASKS: usize = 10;
 const CS_GO_DEFAULT_FEE: f64 = 0.02;
 const DEFAULT_FEE: f64 = 0.05;
-const MIN_PROFIT_MARGIN: f64 = 0.15;
+const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 400;
 
 pub struct Trader {
