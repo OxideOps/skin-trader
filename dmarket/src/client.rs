@@ -321,6 +321,11 @@ impl Client {
             )
             .await?;
 
-        Ok(items.into_iter().min_by_key(|item| item.amount))
+        Ok(items.into_iter().min_by_key(|item| {
+            item.price
+                .as_ref()
+                .and_then(|p| p.usd.parse::<u32>().ok())
+                .unwrap_or(u32::MAX)
+        }))
     }
 }
