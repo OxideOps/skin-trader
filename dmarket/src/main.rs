@@ -5,6 +5,7 @@ use dmarket::trader::Trader;
 async fn main() -> Result<()> {
     common::setup_env();
     let trader = Trader::new().await?;
-    trader.flip().await?;
-    Ok(())
+    loop {
+        trader.flip().await?;
+    }
 }

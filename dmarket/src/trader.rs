@@ -11,6 +11,7 @@ const CS_GO_DEFAULT_FEE: f64 = 0.02;
 const DEFAULT_FEE: f64 = 0.05;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 400;
+const MAX_BALANCE_FRACTION: f64 = 0.5;
 
 pub struct Trader {
     pub db: Database,
@@ -56,6 +57,7 @@ impl Trader {
 
         self.sync_stats().await?;
         try_join_all(GAME_IDS.iter().map(|&id| self.sync_reduced_fees(id))).await?;
+        self.sync_balance().await?;
 
         Ok(())
     }
@@ -95,12 +97,24 @@ impl Trader {
         Ok(())
     }
 
-    async fn flip_game_title(&self, game_title: GameTitle, price: String) -> Result<()> {
+    async fn sync_balance(&self) -> Result<()> {
+        let balance = self.client.get_balance().await?;
+        self.db.update_balance(balance.usd.parse()?).await?;
+        Ok(())
+    }
+
+    async fn flip_game_title(
+        &self,
+        game_title: GameTitle,
+        buy_price: String,
+        list_price: f64,
+    ) -> Result<()> {
         if let Some(item) = self.client.get_best_offer(game_title).await? {
-            log::info!("Buying {} for {}", item.title, price);
-            // self.client
-            //     .buy_offer(item.extra.offer_id.unwrap(), price)
-            //     .await?;
+            log::info!("Flipping {}: {}, {:.2}", item.title, buy_price, list_price);
+            let offer_id = item.extra.offer_id.unwrap();
+            self.client.buy_offer(offer_id, buy_price).await?;
+            self.client.create_offer(item.item_id, list_price).await?;
+            self.sync_balance().await?;
         }
 
         Ok(())
@@ -116,30 +130,37 @@ impl Trader {
         }
     }
 
-    async fn is_profitable(&self, game_title: &GameTitle, price: f64) -> Result<bool> {
+    async fn get_list_price(&self, game_title: &GameTitle, price: &str) -> Result<Option<f64>> {
+        let price = price.parse::<f64>()?;
+        if price > MAX_BALANCE_FRACTION * self.db.get_balance().await? {
+            return Ok(None);
+        }
         if let Some(stats) = self.db.get_price_statistics(game_title).await? {
             if let (Some(mean), Some(sale_count), Some(price_slope)) =
                 (stats.mean_price, stats.sale_count, stats.price_slope)
             {
                 if price_slope < 0.0 {
-                    return Ok(false);
+                    return Ok(None);
                 }
                 if sale_count < MIN_SALE_COUNT {
-                    return Ok(false);
+                    return Ok(None);
                 }
                 let fee = self.get_fee(game_title).await?;
-                return Ok((1.0 + MIN_PROFIT_MARGIN) * price <= mean * (1.0 - fee));
+                if (1.0 + MIN_PROFIT_MARGIN) * price <= mean * (1.0 - fee) {
+                    return Ok(Some(mean));
+                }
             }
         }
-        Ok(false)
+        Ok(None)
     }
 
     pub async fn flip(&self) -> Result<()> {
         for best_prices in self.client.get_best_prices().await? {
             if let Some(game_title) = self.db.get_game_title(best_prices.market_hash_name).await? {
                 let best_price = best_prices.offers.best_price;
-                if self.is_profitable(&game_title, best_price.parse()?).await? {
-                    self.flip_game_title(game_title, best_price).await?;
+                if let Some(list_price) = self.get_list_price(&game_title, &best_price).await? {
+                    self.flip_game_title(game_title, best_price, list_price)
+                        .await?;
                 }
             }
         }

@@ -4,7 +4,8 @@ use crate::schema::{
     Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer,
     CreateOffersResponse, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteOffersResponse,
     DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle, Item,
-    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, OfferMoney, Sale, SaleResponse,
+    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, MarketMoney, OfferMoney, Sale,
+    SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -253,6 +254,17 @@ impl Client {
             "/marketplace-api/v1/user-offers/create",
             json!({"Offers": offers}),
         )
+        .await
+    }
+
+    pub async fn create_offer(&self, item_id: Uuid, price: f64) -> Result<CreateOffersResponse> {
+        self.create_offers(vec![CreateOffer {
+            asset_id: item_id,
+            price: MarketMoney {
+                amount: price,
+                currency: CURRENCY_USD.to_string(),
+            },
+        }])
         .await
     }
 
