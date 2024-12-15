@@ -4,8 +4,7 @@ use crate::schema::{
     Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer,
     CreateOffersResponse, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteOffersResponse,
     DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle, Item,
-    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, MarketMoney, OfferMoney, Sale,
-    SaleResponse,
+    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, OfferMoney, Sale, SaleResponse,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -28,7 +27,7 @@ pub const RUST_GAME_ID: &str = "rust";
 
 pub const GAME_IDS: [&str; 4] = [CSGO_GAME_ID, TF2_GAME_ID, DOTA2_GAME_ID, RUST_GAME_ID];
 
-const CURRENCY_USD: &str = "USD";
+pub const CURRENCY_USD: &str = "USD";
 
 const MARKET_LIMIT: usize = 100;
 const SALES_LIMIT: usize = 500;
@@ -258,14 +257,8 @@ impl Client {
     }
 
     pub async fn create_offer(&self, item_id: Uuid, price: f64) -> Result<CreateOffersResponse> {
-        self.create_offers(vec![CreateOffer {
-            asset_id: item_id,
-            price: MarketMoney {
-                amount: price,
-                currency: CURRENCY_USD.to_string(),
-            },
-        }])
-        .await
+        self.create_offers(vec![CreateOffer::new(item_id, price)])
+            .await
     }
 
     pub async fn edit_offers(&self, offers: Vec<EditOffer>) -> Result<EditOffersResponse> {

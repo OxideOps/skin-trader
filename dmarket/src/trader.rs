@@ -1,5 +1,5 @@
 use crate::client::CSGO_GAME_ID;
-use crate::schema::GameTitle;
+use crate::schema::{CreateOffer, CreateOffersResponse, GameTitle};
 use crate::Client;
 use crate::Database;
 use crate::Result;
@@ -7,7 +7,7 @@ use crate::GAME_IDS;
 use futures::{future::try_join_all, pin_mut, StreamExt};
 
 const MAX_TASKS: usize = 10;
-const CS_GO_DEFAULT_FEE: f64 = 0.02;
+const CS_GO_DEFAULT_FEE: f64 = 0.1;
 const DEFAULT_FEE: f64 = 0.05;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 400;
@@ -38,7 +38,7 @@ impl Trader {
         while let Some(items_result) = market_items.next().await {
             match items_result {
                 Ok(items) => {
-                    let game_titles = items.into_iter().map(|item| item.into()).collect();
+                    let game_titles = items.iter().map(|item| item.into()).collect();
                     self.db.store_game_titles(game_titles).await?
                 }
                 Err(e) => log::error!("Error fetching items: {e}"),
@@ -107,17 +107,11 @@ impl Trader {
         Ok(())
     }
 
-    async fn flip_game_title(
-        &self,
-        game_title: GameTitle,
-        buy_price: String,
-        list_price: f64,
-    ) -> Result<()> {
+    async fn buy_game_title(&self, game_title: GameTitle, buy_price: String) -> Result<()> {
         if let Some(item) = self.client.get_best_offer(game_title).await? {
-            log::info!("Flipping {}: {}, {:.2}", item.title, buy_price, list_price);
+            log::info!("Buying {} for {}", item.title, buy_price);
             let offer_id = item.extra.offer_id.unwrap();
             self.client.buy_offer(offer_id, buy_price).await?;
-            self.client.create_offer(item.item_id, list_price).await?;
             self.sync_balance().await?;
         }
 
@@ -159,18 +153,30 @@ impl Trader {
         Ok(None)
     }
 
+    pub async fn list_inventory(&self) -> Result<CreateOffersResponse> {
+        let mut offers = vec![];
+        for item in &self.client.get_inventory().await? {
+            if let Some(price) = self.get_list_price(&item.into(), 0.0).await? {
+                offers.push(CreateOffer::new(item.item_id, price));
+            }
+        }
+        self.client.create_offers(offers).await
+    }
+
     pub async fn flip(&self) -> Result<()> {
         for prices in self.client.get_best_prices().await? {
             if prices.offers.count > 0 {
                 if let Some(game_title) = self.db.get_game_title(prices.market_hash_name).await? {
-                    let best_price = prices.offers.best_price.parse::<f64>()?;
-                    let cents = (100.0 * best_price).round().to_string();
-                    if let Some(list_price) = self.get_list_price(&game_title, best_price).await? {
-                        self.flip_game_title(game_title, cents, list_price).await?;
+                    let price = prices.offers.best_price.parse::<f64>()?;
+                    let cents = (100.0 * price).round().to_string();
+                    if self.get_list_price(&game_title, price).await?.is_some() {
+                        self.buy_game_title(game_title, cents).await?;
                     }
                 }
             }
         }
+
+        self.list_inventory().await?;
 
         Ok(())
     }

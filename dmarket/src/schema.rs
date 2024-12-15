@@ -348,11 +348,23 @@ pub struct CreatedOffer {
     pub offer_id: String,
 }
 
-impl From<Item> for GameTitle {
-    fn from(item: Item) -> Self {
+impl CreateOffer {
+    pub fn new(item_id: Uuid, price: f64) -> Self {
         Self {
-            game_id: item.game_id,
-            title: item.title,
+            asset_id: item_id,
+            price: MarketMoney {
+                amount: price,
+                currency: crate::client::CURRENCY_USD.to_string(),
+            },
+        }
+    }
+}
+
+impl From<&Item> for GameTitle {
+    fn from(item: &Item) -> Self {
+        Self {
+            game_id: item.game_id.clone(),
+            title: item.title.clone(),
         }
     }
 }
