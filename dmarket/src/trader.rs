@@ -13,6 +13,10 @@ const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 400;
 const MAX_BALANCE_FRACTION: f64 = 0.5;
 
+fn round_up_cents(price: f64) -> f64 {
+    (price * 100.0).ceil() / 100.0
+}
+
 pub struct Trader {
     pub db: Database,
     pub client: Client,
@@ -130,8 +134,7 @@ impl Trader {
         }
     }
 
-    async fn get_list_price(&self, game_title: &GameTitle, price: &str) -> Result<Option<f64>> {
-        let price = price.parse::<f64>()?;
+    async fn get_list_price(&self, game_title: &GameTitle, price: f64) -> Result<Option<f64>> {
         if price > MAX_BALANCE_FRACTION * self.db.get_balance().await? {
             return Ok(None);
         }
@@ -146,7 +149,9 @@ impl Trader {
                     return Ok(None);
                 }
                 let fee = self.get_fee(game_title).await?;
-                if (1.0 + MIN_PROFIT_MARGIN) * price <= mean * (1.0 - fee) {
+                let mean = round_up_cents(mean);
+                let fee_price = round_up_cents(mean * fee);
+                if (1.0 + MIN_PROFIT_MARGIN) * price <= mean - fee_price {
                     return Ok(Some(mean));
                 }
             }
@@ -155,12 +160,14 @@ impl Trader {
     }
 
     pub async fn flip(&self) -> Result<()> {
-        for best_prices in self.client.get_best_prices().await? {
-            if let Some(game_title) = self.db.get_game_title(best_prices.market_hash_name).await? {
-                let best_price = best_prices.offers.best_price;
-                if let Some(list_price) = self.get_list_price(&game_title, &best_price).await? {
-                    self.flip_game_title(game_title, best_price, list_price)
-                        .await?;
+        for prices in self.client.get_best_prices().await? {
+            if prices.offers.count > 0 {
+                if let Some(game_title) = self.db.get_game_title(prices.market_hash_name).await? {
+                    let best_price = prices.offers.best_price.parse::<f64>()?;
+                    let cents = (100.0 * best_price).round().to_string();
+                    if let Some(list_price) = self.get_list_price(&game_title, best_price).await? {
+                        self.flip_game_title(game_title, cents, list_price).await?;
+                    }
                 }
             }
         }
