@@ -321,6 +321,11 @@ impl Client {
             )
             .await?;
 
+        let items = items
+            .into_iter()
+            .filter(|i| i.title == game_title.title)
+            .collect::<Vec<_>>();
+
         Ok(items.into_iter().min_by_key(|item| {
             item.price
                 .as_ref()
