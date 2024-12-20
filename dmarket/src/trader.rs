@@ -130,7 +130,7 @@ impl Trader {
     }
 
     async fn get_list_price(&self, game_title: &GameTitle, price: f64) -> Result<Option<f64>> {
-        if price > MAX_BALANCE_FRACTION * self.db.get_balance().await? {
+        if 100.0 * price > MAX_BALANCE_FRACTION * self.db.get_balance().await? as f64 {
             return Ok(None);
         }
         if let Some(stats) = self.db.get_price_statistics(game_title).await? {

@@ -279,13 +279,13 @@ impl Database {
         .await?)
     }
 
-    pub async fn get_balance(&self) -> Result<f64> {
+    pub async fn get_balance(&self) -> Result<i32> {
         Ok(sqlx::query_scalar!("SELECT balance FROM dmarket_account")
             .fetch_one(&self.pool)
             .await?)
     }
 
-    pub async fn update_balance(&self, balance: f64) -> Result<()> {
+    pub async fn update_balance(&self, balance: i32) -> Result<()> {
         sqlx::query!("UPDATE dmarket_account SET balance = $1", balance)
             .execute(&self.pool)
             .await?;
