@@ -50,4 +50,7 @@ pub enum Error {
 
     #[error("Parse error: {0}")]
     Parse(#[from] std::num::ParseFloatError),
+
+    #[error("Parse error: {0}")]
+    ParseInt(#[from] std::num::ParseIntError),
 }

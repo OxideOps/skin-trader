@@ -10,7 +10,8 @@ const MAX_TASKS: usize = 10;
 const CS_GO_DEFAULT_FEE: f64 = 0.1;
 const DEFAULT_FEE: f64 = 0.05;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
-const MIN_SALE_COUNT: i32 = 400;
+const MIN_SALE_COUNT: i32 = 300;
+const MIN_MONTHLY_SALES: i32 = 60;
 const MAX_BALANCE_FRACTION: f64 = 0.5;
 
 fn round_up_cents(price: f64) -> f64 {
@@ -111,7 +112,8 @@ impl Trader {
         if let Some(item) = self.client.get_best_offer(game_title).await? {
             log::info!("Buying {} for {}", item.title, buy_price);
             let offer_id = item.extra.offer_id.unwrap();
-            self.client.buy_offer(offer_id, buy_price).await?;
+            let response = self.client.buy_offer(offer_id, buy_price).await?;
+            log::info!("{:?}", response);
             self.sync_balance().await?;
         }
 
@@ -129,17 +131,20 @@ impl Trader {
     }
 
     async fn get_list_price(&self, game_title: &GameTitle, price: f64) -> Result<Option<f64>> {
-        if price > MAX_BALANCE_FRACTION * self.db.get_balance().await? {
+        if 100.0 * price > MAX_BALANCE_FRACTION * self.db.get_balance().await? as f64 {
             return Ok(None);
         }
         if let Some(stats) = self.db.get_price_statistics(game_title).await? {
-            if let (Some(mean), Some(sale_count), Some(price_slope)) =
-                (stats.mean_price, stats.sale_count, stats.price_slope)
-            {
-                if price_slope < 0.0 {
-                    return Ok(None);
-                }
-                if sale_count < MIN_SALE_COUNT {
+            if let (Some(mean), Some(sale_count), Some(monthly_sales), Some(price_slope)) = (
+                stats.mean_price,
+                stats.sale_count,
+                stats.monthly_sales,
+                stats.price_slope,
+            ) {
+                if price_slope < 0.0
+                    || sale_count < MIN_SALE_COUNT
+                    || monthly_sales < MIN_MONTHLY_SALES
+                {
                     return Ok(None);
                 }
                 let fee = self.get_fee(game_title).await?;
@@ -177,6 +182,7 @@ impl Trader {
         }
 
         self.list_inventory().await?;
+        self.sync_balance().await?;
 
         Ok(())
     }
