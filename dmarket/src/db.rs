@@ -193,6 +193,12 @@ impl Database {
                 fs.title,
                 EXP(AVG(fs.log_price)) as mean_price,
                 COUNT(*)::INTEGER as sale_count,
+                SUM(
+                    CASE
+                        WHEN fs.time >= EXTRACT(EPOCH FROM (NOW() - INTERVAL '30 days')) THEN 1
+                        ELSE 0
+                    END
+                )::INTEGER AS monthly_sales,
                 REGR_SLOPE(fs.log_price, fs.time) as price_slope
             FROM filtered_sales fs
             JOIN outlier_bounds ob ON fs.game_id = ob.game_id AND fs.title = ob.title
@@ -216,18 +222,21 @@ impl Database {
                     title,
                     mean_price,
                     sale_count,
+                    monthly_sales,
                     price_slope 
                 )
-                VALUES ($1, $2, $3, $4, $5)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 ON CONFLICT (game_id, title) DO UPDATE SET
                     mean_price = EXCLUDED.mean_price,
                     sale_count = EXCLUDED.sale_count,
+                    monthly_sales = EXCLUDED.monthly_sales,
                     price_slope = EXCLUDED.price_slope
                 "#,
                 stat.game_id,
                 stat.title,
                 stat.mean_price,
                 stat.sale_count,
+                stat.monthly_sales,
                 stat.price_slope
             )
             .execute(&mut *tx)
@@ -246,6 +255,7 @@ impl Database {
                 title,
                 mean_price,
                 sale_count,
+                monthly_sales,
                 price_slope
             FROM dmarket_game_titles
             WHERE game_id = $1 AND title = $2
@@ -269,13 +279,13 @@ impl Database {
         .await?)
     }
 
-    pub async fn get_balance(&self) -> Result<f64> {
+    pub async fn get_balance(&self) -> Result<i32> {
         Ok(sqlx::query_scalar!("SELECT balance FROM dmarket_account")
             .fetch_one(&self.pool)
             .await?)
     }
 
-    pub async fn update_balance(&self, balance: f64) -> Result<()> {
+    pub async fn update_balance(&self, balance: i32) -> Result<()> {
         sqlx::query!("UPDATE dmarket_account SET balance = $1", balance)
             .execute(&self.pool)
             .await?;
