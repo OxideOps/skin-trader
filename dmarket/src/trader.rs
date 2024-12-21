@@ -112,7 +112,8 @@ impl Trader {
         if let Some(item) = self.client.get_best_offer(game_title).await? {
             log::info!("Buying {} for {}", item.title, buy_price);
             let offer_id = item.extra.offer_id.unwrap();
-            self.client.buy_offer(offer_id, buy_price).await?;
+            let response = self.client.buy_offer(offer_id, buy_price).await?;
+            log::info!("{:?}", response);
             self.sync_balance().await?;
         }
 
