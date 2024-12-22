@@ -266,7 +266,6 @@ pub struct Stats {
     pub mean_price: Option<f64>,
     pub sale_count: Option<i32>,
     pub monthly_sales: Option<i32>,
-    pub price_slope: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -1,10 +1,45 @@
 use crate::schema::*;
 use crate::Result;
+use chrono::Utc;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::env;
+use std::f64::consts::LN_2;
+use std::time::Duration;
 
 const MAX_CONNECTIONS: u32 = 50;
+const DAYS_30: u64 = 30 * 24 * 60 * 60;
+const LAMBDA: f64 = LN_2 / (6 * DAYS_30) as f64;
+
+struct LogPrice {
+    log_price: Option<f64>,
+    time: Option<i32>,
+}
+
+fn process_log_prices(
+    game_title: GameTitle,
+    log_prices: Vec<LogPrice>,
+    month_ago: i32,
+) -> Option<Stats> {
+    let mut ema = 0.0;
+    let mut last_time = log_prices.first()?.time?;
+    let mut monthly_sales = 0;
+    for log_price in &log_prices {
+        let a = (LAMBDA * (last_time - log_price.time?) as f64).exp();
+        ema = a * log_price.log_price? + (1.0 - a) * ema;
+        last_time = log_price.time?;
+        if log_price.time? > month_ago {
+            monthly_sales += 1;
+        }
+    }
+    Some(Stats {
+        game_id: game_title.game_id,
+        title: game_title.title,
+        mean_price: Some(ema.exp()),
+        sale_count: Some(log_prices.len() as i32),
+        monthly_sales: Some(monthly_sales),
+    })
+}
 
 #[derive(Clone)]
 pub struct Database {
@@ -158,57 +193,47 @@ impl Database {
         .await?)
     }
 
-    pub async fn calculate_price_statistics(&self) -> Result<Vec<Stats>> {
-        let stats = sqlx::query_as!(
-            Stats,
+    async fn get_log_prices(&self, game_title: &GameTitle) -> Result<Vec<LogPrice>> {
+        Ok(sqlx::query_as!(
+            LogPrice,
             r#"
             WITH filtered_sales AS (
                 SELECT
-                    game_id,
-                    title,
-                    LN(price::real) as log_price,
+                    LN(price::double precision) as log_price,
                     date::integer as time
                 FROM dmarket_sales
-                WHERE price::real > 0
-            ),
-            price_quartiles AS (
-                SELECT
-                    game_id,
-                    title,
-                    percentile_cont(0.25) WITHIN GROUP (ORDER BY log_price) AS q1,
-                    percentile_cont(0.75) WITHIN GROUP (ORDER BY log_price) AS q3
-                FROM filtered_sales
-                GROUP BY game_id, title
-            ),
-            outlier_bounds AS (
-                SELECT
-                    game_id,
-                    title,
-                    q1 - 1.5 * (q3 - q1) AS lower_bound,
-                    q3 + 1.5 * (q3 - q1) AS upper_bound
-                FROM price_quartiles
+                WHERE price::real > 0 and game_id = $1 and title = $2
             )
             SELECT
-                fs.game_id,
-                fs.title,
-                EXP(AVG(fs.log_price)) as mean_price,
-                COUNT(*)::INTEGER as sale_count,
-                SUM(
-                    CASE
-                        WHEN fs.time >= EXTRACT(EPOCH FROM (NOW() - INTERVAL '30 days')) THEN 1
-                        ELSE 0
-                    END
-                )::INTEGER AS monthly_sales,
-                REGR_SLOPE(fs.log_price, fs.time) as price_slope
-            FROM filtered_sales fs
-            JOIN outlier_bounds ob ON fs.game_id = ob.game_id AND fs.title = ob.title
-            WHERE fs.log_price BETWEEN ob.lower_bound AND ob.upper_bound
-            GROUP BY fs.game_id, fs.title
-            "#
+                fs.log_price,
+                fs.time
+                FROM filtered_sales fs
+                JOIN (
+                    SELECT
+                        percentile_cont(0.25) WITHIN GROUP (ORDER BY log_price) AS q1,
+                        percentile_cont(0.75) WITHIN GROUP (ORDER BY log_price) AS q3
+                    FROM filtered_sales
+                ) quartiles
+                  ON fs.log_price > quartiles.q1 - 1.5 * (quartiles.q3 - quartiles.q1)
+                 AND fs.log_price < quartiles.q3 + 1.5 * (quartiles.q3 - quartiles.q1)
+                ORDER BY fs.time
+            "#,
+            game_title.game_id,
+            game_title.title
         )
         .fetch_all(&self.pool)
-        .await?;
+        .await?)
+    }
 
+    pub async fn calculate_price_statistics(&self) -> Result<Vec<Stats>> {
+        let month_ago = (Utc::now() - Duration::from_secs(DAYS_30)).timestamp() as i32;
+        let mut stats = Vec::new();
+        for game_title in self.get_distinct_titles().await? {
+            let log_prices = self.get_log_prices(&game_title).await?;
+            if let Some(stat) = process_log_prices(game_title, log_prices, month_ago) {
+                stats.push(stat);
+            }
+        }
         Ok(stats)
     }
 
@@ -222,22 +247,19 @@ impl Database {
                     title,
                     mean_price,
                     sale_count,
-                    monthly_sales,
-                    price_slope 
+                    monthly_sales
                 )
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT (game_id, title) DO UPDATE SET
                     mean_price = EXCLUDED.mean_price,
                     sale_count = EXCLUDED.sale_count,
-                    monthly_sales = EXCLUDED.monthly_sales,
-                    price_slope = EXCLUDED.price_slope
+                    monthly_sales = EXCLUDED.monthly_sales
                 "#,
                 stat.game_id,
                 stat.title,
                 stat.mean_price,
                 stat.sale_count,
                 stat.monthly_sales,
-                stat.price_slope
             )
             .execute(&mut *tx)
             .await?;
@@ -255,8 +277,7 @@ impl Database {
                 title,
                 mean_price,
                 sale_count,
-                monthly_sales,
-                price_slope
+                monthly_sales
             FROM dmarket_game_titles
             WHERE game_id = $1 AND title = $2
             "#,

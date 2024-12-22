@@ -135,16 +135,10 @@ impl Trader {
             return Ok(None);
         }
         if let Some(stats) = self.db.get_price_statistics(game_title).await? {
-            if let (Some(mean), Some(sale_count), Some(monthly_sales), Some(price_slope)) = (
-                stats.mean_price,
-                stats.sale_count,
-                stats.monthly_sales,
-                stats.price_slope,
-            ) {
-                if price_slope < 0.0
-                    || sale_count < MIN_SALE_COUNT
-                    || monthly_sales < MIN_MONTHLY_SALES
-                {
+            if let (Some(mean), Some(sale_count), Some(monthly_sales)) =
+                (stats.mean_price, stats.sale_count, stats.monthly_sales)
+            {
+                if sale_count < MIN_SALE_COUNT || monthly_sales < MIN_MONTHLY_SALES {
                     return Ok(None);
                 }
                 let fee = self.get_fee(game_title).await?;
