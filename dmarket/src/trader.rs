@@ -9,7 +9,7 @@ use futures::{future::try_join_all, pin_mut, StreamExt};
 const MAX_TASKS: usize = 10;
 const CS_GO_DEFAULT_FEE: f64 = 0.1;
 const DEFAULT_FEE: f64 = 0.05;
-const MIN_PROFIT_MARGIN: f64 = 0.2;
+const MIN_PROFIT_MARGIN: f64 = 0.4;
 const MIN_SALE_COUNT: i32 = 300;
 const MIN_MONTHLY_SALES: i32 = 60;
 const MAX_BALANCE_FRACTION: f64 = 0.5;
@@ -49,20 +49,20 @@ impl Trader {
     }
 
     pub async fn sync(&self) -> Result<()> {
-        try_join_all(GAME_IDS.iter().map(|&id| self.sync_game_titles(id, None))).await?;
-        futures::stream::iter(&self.db.get_distinct_titles().await?)
-            .map(|gt| async move {
-                if let Err(e) = self.sync_sales(gt).await {
-                    log::error!("Error syncing sales: {e}");
-                }
-            })
-            .buffer_unordered(MAX_TASKS)
-            .collect::<Vec<_>>()
-            .await;
-
+        // try_join_all(GAME_IDS.iter().map(|&id| self.sync_game_titles(id, None))).await?;
+        // futures::stream::iter(&self.db.get_distinct_titles().await?)
+        //     .map(|gt| async move {
+        //         if let Err(e) = self.sync_sales(gt).await {
+        //             log::error!("Error syncing sales: {e}");
+        //         }
+        //     })
+        //     .buffer_unordered(MAX_TASKS)
+        //     .collect::<Vec<_>>()
+        //     .await;
+        //
         self.sync_stats().await?;
-        try_join_all(GAME_IDS.iter().map(|&id| self.sync_reduced_fees(id))).await?;
-        self.sync_balance().await?;
+        // try_join_all(GAME_IDS.iter().map(|&id| self.sync_reduced_fees(id))).await?;
+        // self.sync_balance().await?;
 
         Ok(())
     }
@@ -111,10 +111,10 @@ impl Trader {
     async fn buy_game_title(&self, game_title: GameTitle, buy_price: String) -> Result<()> {
         if let Some(item) = self.client.get_best_offer(game_title).await? {
             log::info!("Buying {} for {}", item.title, buy_price);
-            let offer_id = item.extra.offer_id.unwrap();
-            let response = self.client.buy_offer(offer_id, buy_price).await?;
-            log::info!("{:?}", response);
-            self.sync_balance().await?;
+            // let offer_id = item.extra.offer_id.unwrap();
+            // let response = self.client.buy_offer(offer_id, buy_price).await?;
+            // log::info!("{:?}", response);
+            // self.sync_balance().await?;
         }
 
         Ok(())

@@ -9,7 +9,7 @@ use std::time::Duration;
 
 const MAX_CONNECTIONS: u32 = 50;
 const DAYS_30: u64 = 30 * 24 * 60 * 60;
-const LAMBDA: f64 = LN_2 / (6 * DAYS_30) as f64;
+const LAMBDA: f64 = LN_2 / (4 * DAYS_30) as f64;
 
 struct LogPrice {
     log_price: Option<f64>,
@@ -21,13 +21,14 @@ fn process_log_prices(
     log_prices: Vec<LogPrice>,
     month_ago: i32,
 ) -> Option<Stats> {
-    let mut ema = 0.0;
-    let mut last_time = log_prices.first()?.time?;
+    let mut mean = 0.0;
+    let mut norm = 0.0;
+    let last_time = log_prices.last()?.time?;
     let mut monthly_sales = 0;
     for log_price in &log_prices {
-        let a = (LAMBDA * (last_time - log_price.time?) as f64).exp();
-        ema = a * log_price.log_price? + (1.0 - a) * ema;
-        last_time = log_price.time?;
+        let a = (LAMBDA * (log_price.time? - last_time) as f64).exp();
+        mean += a * log_price.log_price?;
+        norm += a;
         if log_price.time? > month_ago {
             monthly_sales += 1;
         }
@@ -35,7 +36,7 @@ fn process_log_prices(
     Some(Stats {
         game_id: game_title.game_id,
         title: game_title.title,
-        mean_price: Some(ema.exp()),
+        mean_price: Some((mean / norm).exp()),
         sale_count: Some(log_prices.len() as i32),
         monthly_sales: Some(monthly_sales),
     })
