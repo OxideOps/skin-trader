@@ -93,7 +93,7 @@ where
     /// Sends an action to the WebSocket server.
     async fn send_action<S: Serialize>(&mut self, action: WsAction, data: S) -> Result<()> {
         let message = json!([action, data]).to_string();
-        self.write.send(Message::Text(message)).await?;
+        self.write.send(Message::Text(message.into())).await?;
         Ok(())
     }
 
@@ -154,7 +154,7 @@ where
         while let Some(message) = self.read.next().await {
             match message {
                 Ok(Message::Text(text)) => {
-                    if let Err(e) = self.handle_message(text).await {
+                    if let Err(e) = self.handle_message(text.to_string()).await {
                         log::error!("Error occurred handling message: {e}")
                     }
                 }
