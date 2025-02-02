@@ -77,6 +77,7 @@ impl Updater {
     }
 
     async fn handle_market_items(&self, skin: &db::Skin) -> Result<()> {
+        log::info!("Fetching market items for skin {}", skin.id);
         let market_items = self.client.fetch_market_items_for_skin(skin.id).await?;
         let db_items = market_items
             .clone()
