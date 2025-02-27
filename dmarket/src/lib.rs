@@ -1,4 +1,4 @@
-mod client;
+pub mod client;
 mod db;
 mod error;
 mod rate_limiter;

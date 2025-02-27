@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use crate::client::CURRENCY_USD;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -196,7 +197,44 @@ pub struct CreateTarget {
     pub amount: u64,
     pub price: MarketMoney,
     pub title: String,
-    pub attrs: TargetAttrs,
+    // pub attrs: TargetAttrs,
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct ResponseCreateTarget {
+    pub amount: String,
+    pub price: MarketMoney,
+    pub title: String,
+    pub attrs: Option<TargetAttrs>,
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+pub struct GetTargetsResponse {
+    #[serde(rename = "UpdatedAt")]
+    pub updated_at: String,
+    pub offers: Vec<Target>, // Add this field
+    pub orders: Vec<Target>,
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Target {
+    pub amount: String,
+    pub price: String,
+    pub liquidity: String,
+    pub attributes: Vec<TargetAttribute>,
+    pub advanced_amount: String,
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TargetAttribute {
+    pub float_value: Option<String>,
+    pub paint_seed: Option<String>,
+    pub float_part_value: Option<String>,
+    pub is_advanced: Option<String>,
+    pub phase_title: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -208,11 +246,11 @@ pub struct CreateTargetsResponse {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct CreateTargetResponse {
-    pub create_target: CreateTarget,
+    pub create_target: ResponseCreateTarget,
     #[serde(rename = "TargetID")]
     pub target_id: String,
     pub successful: bool,
-    pub error: MarketError,
+    pub error: Option<MarketError>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -222,6 +260,48 @@ pub struct MarketError {
     pub message: String,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct Offer {
+    #[serde(rename = "GameID")]
+    pub game_id: String,
+    pub title: String,
+    #[serde(rename = "AssetID")]
+    pub asset_id: String,
+    pub offer: InnerOffer,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct InnerOffer {
+    #[serde(rename = "OfferID")]
+    pub offer_id: String,
+    pub price: MarketMoney,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct PaginatedResponse<T> {
+    pub items: Vec<T>,
+    pub total: String,
+    pub cursor: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct UserTarget {
+    #[serde(rename = "TargetID")]
+    pub target_id: String,
+    pub title: String,
+    pub amount: String,
+    pub status: String,
+    #[serde(rename = "GameID")]
+    pub game_id: String,
+    pub game_type: String,
+    // pub attributes: Vec<_>,
+    pub price: MarketMoney,
+}
+
 #[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarketMoney {
@@ -229,7 +309,7 @@ pub struct MarketMoney {
     pub amount: f64,
 }
 
-#[derive(Serialize, Debug, Deserialize)]
+#[derive(Serialize, Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetAttrs {
     pub paint_seed: Option<i32>,
@@ -349,20 +429,46 @@ pub struct CreatedOffer {
     pub offer_id: String,
 }
 
+impl MarketMoney {
+    pub fn new(amount: f64) -> Self {
+        Self {
+            amount,
+            currency: CURRENCY_USD.to_string(),
+        }
+    }
+}
+
 impl CreateOffer {
     pub fn new(item_id: Uuid, price: f64) -> Self {
         Self {
             asset_id: item_id,
-            price: MarketMoney {
-                amount: price,
-                currency: crate::client::CURRENCY_USD.to_string(),
-            },
+            price: MarketMoney::new(price),
+        }
+    }
+}
+
+impl CreateTarget {
+    pub fn new(title: String, price: f64) -> Self {
+        Self {
+            title,
+            amount: 1,
+            price: MarketMoney::new(price),
+            // attrs: Default::default(),
         }
     }
 }
 
 impl From<&Item> for GameTitle {
     fn from(item: &Item) -> Self {
+        Self {
+            game_id: item.game_id.clone(),
+            title: item.title.clone(),
+        }
+    }
+}
+
+impl From<&Offer> for GameTitle {
+    fn from(item: &Offer) -> Self {
         Self {
             game_id: item.game_id.clone(),
             title: item.title.clone(),

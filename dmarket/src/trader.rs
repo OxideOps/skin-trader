@@ -1,23 +1,36 @@
 use crate::client::CSGO_GAME_ID;
-use crate::schema::{CreateOffer, CreateOffersResponse, GameTitle};
+use crate::error::Error::Response;
+use crate::schema::{
+    CreateOffer, CreateOffersResponse, CreateTarget, DeleteTarget, EditOffer, GameTitle,
+    MarketMoney,
+};
 use crate::Client;
 use crate::Database;
 use crate::Result;
 use crate::GAME_IDS;
+use common::map;
 use futures::{future::try_join_all, pin_mut, StreamExt};
+use reqwest::StatusCode;
+use std::collections::HashMap;
 
 const MAX_TASKS: usize = 10;
 const CS_GO_DEFAULT_FEE: f64 = 0.1;
 const DEFAULT_FEE: f64 = 0.05;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
-const MIN_SALE_COUNT: i32 = 300;
+const MIN_SALE_COUNT: i32 = 400;
 const MIN_MONTHLY_SALES: i32 = 60;
 const MAX_BALANCE_FRACTION: f64 = 0.5;
+const MAX_CHUNK_SIZE: usize = 100;
 
 fn round_up_cents(price: f64) -> f64 {
     (price * 100.0).ceil() / 100.0
 }
 
+fn round_down_cents(price: f64) -> f64 {
+    (price * 100.0).floor() / 100.0
+}
+
+#[derive(Clone)]
 pub struct Trader {
     pub db: Database,
     pub client: Client,
@@ -71,6 +84,7 @@ impl Trader {
         let stats = self.db.calculate_price_statistics().await?;
         self.db.update_price_statistics(&stats).await
     }
+
     async fn sync_sales(&self, gt: &GameTitle) -> Result<()> {
         let latest_date = self.db.get_latest_date(gt).await?;
         match self.client.get_sales(gt).await {
@@ -108,8 +122,16 @@ impl Trader {
         Ok(())
     }
 
-    async fn buy_game_title(&self, game_title: GameTitle, buy_price: String) -> Result<()> {
-        if let Some(item) = self.client.get_best_offer(game_title).await? {
+    async fn get_mean(&self, game_title: &GameTitle) -> Result<Option<f64>> {
+        Ok(self
+            .db
+            .get_price_statistics(game_title)
+            .await?
+            .and_then(|stats| stats.mean_price.map(round_up_cents)))
+    }
+
+    pub async fn buy_game_title(&self, game_title: GameTitle, buy_price: String) -> Result<()> {
+        if let Some(item) = self.client.get_best_offer(&game_title).await? {
             log::info!("Buying {} for {}", item.title, buy_price);
             let offer_id = item.extra.offer_id.unwrap();
             let response = self.client.buy_offer(offer_id, buy_price).await?;
@@ -130,7 +152,18 @@ impl Trader {
         }
     }
 
-    async fn get_list_price(&self, game_title: &GameTitle, price: f64) -> Result<Option<f64>> {
+    pub async fn get_highest_bid(&self, game_title: &GameTitle) -> Result<Option<u64>> {
+        Ok(self
+            .client
+            .get_targets(game_title)
+            .await?
+            .into_iter()
+            .filter(|t| t.attributes.iter().all(|a| a.paint_seed.is_none()))
+            .map(|t| t.price.parse::<u64>().unwrap_or_default())
+            .max())
+    }
+
+    pub async fn get_list_price(&self, game_title: &GameTitle, price: f64) -> Result<Option<f64>> {
         if 100.0 * price > MAX_BALANCE_FRACTION * self.db.get_balance().await? as f64 {
             return Ok(None);
         }
@@ -158,14 +191,85 @@ impl Trader {
         Ok(None)
     }
 
+    pub async fn delete_targets(&self) -> Result<()> {
+        let targets = self.client.get_user_targets().await?;
+        let delete_targets: Vec<_> = map(targets, |t| DeleteTarget {
+            target_id: t.target_id,
+        });
+
+        for chunk in delete_targets.chunks(MAX_CHUNK_SIZE) {
+            match self.client.delete_targets(chunk).await {
+                Ok(response) => log::info!("{:?}", response),
+                Err(e) => log::error!("Error deleting targets: {:?}", e),
+            }
+        }
+
+        Ok(())
+    }
+
+    pub async fn create_targets(&self) -> Result<()> {
+        let mut targets_map: HashMap<String, Vec<_>> = HashMap::new();
+
+        for game_title in &self.db.get_distinct_titles().await? {
+            if let Some(list_price) = self.get_list_price(game_title, 0.0).await? {
+                let fee = self.get_fee(game_title).await?;
+                let fee_price = round_up_cents(list_price * fee);
+                let target_price =
+                    round_down_cents((list_price - fee_price) / (1.0 + MIN_PROFIT_MARGIN));
+
+                targets_map
+                    .entry(game_title.game_id.clone())
+                    .or_default()
+                    .push(CreateTarget::new(game_title.title.clone(), target_price));
+            }
+        }
+
+        for (game_id, targets) in targets_map {
+            for chunk in targets.chunks(MAX_CHUNK_SIZE) {
+                match self.client.create_targets(&game_id, chunk).await {
+                    Ok(response) => log::info!("{:?}", response),
+                    Err(Response(StatusCode::BAD_REQUEST, response)) => {
+                        log::info!("{:?}", response);
+                        break;
+                    }
+                    Err(e) => log::error!("Error creating targets for {}: {:?}", game_id, e),
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn list_inventory(&self) -> Result<CreateOffersResponse> {
         let mut offers = vec![];
         for item in &self.client.get_inventory().await? {
-            if let Some(price) = self.get_list_price(&item.into(), 0.0).await? {
+            if let Some(price) = self.get_mean(&item.into()).await? {
                 offers.push(CreateOffer::new(item.item_id, price));
             }
         }
-        self.client.create_offers(offers).await
+        self.client.create_offers(&offers).await
+    }
+
+    pub async fn update_offers(&self) -> Result<()> {
+        let mut offers = vec![];
+        for offer in &self.client.get_offers().await? {
+            if let Some(price) = self.get_mean(&offer.into()).await? {
+                offers.push(EditOffer {
+                    offer_id: offer.offer.offer_id.clone(),
+                    asset_id: offer.asset_id.clone(),
+                    price: MarketMoney::new(price),
+                });
+            }
+        }
+
+        for chunk in offers.chunks(MAX_CHUNK_SIZE) {
+            match self.client.edit_offers(chunk).await {
+                Ok(response) => log::info!("{:?}", response),
+                Err(e) => log::error!("Error editing offers: {e}"),
+            }
+        }
+
+        Ok(())
     }
 
     pub async fn flip(&self) -> Result<()> {
@@ -174,15 +278,25 @@ impl Trader {
                 if let Some(game_title) = self.db.get_game_title(prices.market_hash_name).await? {
                     let price = prices.offers.best_price.parse::<f64>()?;
                     let cents = (100.0 * price).round().to_string();
-                    if self.get_list_price(&game_title, price).await?.is_some() {
-                        self.buy_game_title(game_title, cents).await?;
+                    match self.get_list_price(&game_title, price).await {
+                        Ok(Some(_)) => {
+                            if let Err(e) = self.buy_game_title(game_title, cents).await {
+                                log::error!("Error buying game title: {e}");
+                            }
+                        }
+                        Err(e) => log::error!("Error getting list price: {e}"),
+                        _ => (),
                     }
                 }
             }
         }
 
-        self.list_inventory().await?;
-        self.sync_balance().await?;
+        if let Err(e) = self.list_inventory().await {
+            log::error!("Error listing inventory: {e}");
+        }
+        if let Err(e) = self.sync_balance().await {
+            log::error!("Error syncing balance: {e}");
+        }
 
         Ok(())
     }

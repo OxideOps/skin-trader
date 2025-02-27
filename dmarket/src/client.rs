@@ -3,8 +3,9 @@ use crate::rate_limiter::{RateLimiter, RateLimiterType, RateLimiters};
 use crate::schema::{
     Balance, BestPrices, BestPricesResponse, BuyOffer, BuyOffersResponse, CreateOffer,
     CreateOffersResponse, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteOffersResponse,
-    DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle, Item,
-    ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee, OfferMoney, Sale, SaleResponse,
+    DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle,
+    GetTargetsResponse, Item, ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee,
+    Offer, OfferMoney, PaginatedResponse, Sale, SaleResponse, Target, UserTarget,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -14,6 +15,7 @@ use reqwest::header::HeaderValue;
 use reqwest::{Method, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
+use std::default::Default;
 use std::env;
 use url::Url;
 use uuid::Uuid;
@@ -33,6 +35,7 @@ const MARKET_LIMIT: usize = 100;
 const SALES_LIMIT: usize = 500;
 const BEST_PRICES_LIMIT: usize = 10000;
 
+#[derive(Clone)]
 pub struct Client {
     client: reqwest::Client,
     request_limiters: RateLimiters,
@@ -193,7 +196,7 @@ impl Client {
         let initial_response = self.get::<BestPricesResponse>(path, json!({})).await?;
 
         let mut all_prices = initial_response.aggregated_titles;
-        let total = initial_response.total.parse().unwrap();
+        let total = initial_response.total.parse()?;
         let mut offset = BEST_PRICES_LIMIT;
 
         while offset < total {
@@ -208,13 +211,13 @@ impl Client {
         Ok(all_prices)
     }
 
-    pub async fn buy_offers(&self, offers: Vec<BuyOffer>) -> Result<BuyOffersResponse> {
+    pub async fn buy_offers(&self, offers: &[BuyOffer]) -> Result<BuyOffersResponse> {
         self.patch("/exchange/v1/offers-buy", json!({"offers": offers}))
             .await
     }
 
     pub async fn buy_offer(&self, offer_id: Uuid, amount: String) -> Result<BuyOffersResponse> {
-        self.buy_offers(vec![BuyOffer {
+        self.buy_offers(&[BuyOffer {
             offer_id,
             price: OfferMoney {
                 amount,
@@ -224,10 +227,43 @@ impl Client {
         .await
     }
 
+    pub async fn get_targets(&self, game_title: &GameTitle) -> Result<Vec<Target>> {
+        let path = "/order-book/v2/market-depth";
+        let query = json!({
+            "title": game_title.title,
+            "gameId": game_title.game_id,
+            "filters": "phase[]=any,floatPartValue[]=any",
+        });
+        let response: GetTargetsResponse = self.get(path, query).await?;
+        Ok(response.orders)
+    }
+
+    async fn get_paginated_items<T: DeserializeOwned>(&self, path: &str) -> Result<Vec<T>> {
+        let mut items = Vec::new();
+        let mut cursor = Default::default();
+
+        loop {
+            let response: PaginatedResponse<T> = self.get(path, json!({"Cursor": cursor})).await?;
+
+            items.extend(response.items);
+            if items.len() == response.total.parse::<usize>()? {
+                break;
+            }
+
+            cursor = response.cursor;
+        }
+
+        Ok(items)
+    }
+
+    pub async fn get_user_targets(&self) -> Result<Vec<UserTarget>> {
+        self.get_paginated_items("/marketplace-api/v1/user-targets")
+            .await
+    }
     pub async fn create_targets(
         &self,
         game_id: &str,
-        targets: Vec<CreateTarget>,
+        targets: &[CreateTarget],
     ) -> Result<CreateTargetsResponse> {
         let body = json!({
             "GameID": game_id,
@@ -237,10 +273,7 @@ impl Client {
             .await
     }
 
-    pub async fn delete_targets(
-        &self,
-        targets: Vec<DeleteTarget>,
-    ) -> Result<DeleteTargetsResponse> {
+    pub async fn delete_targets(&self, targets: &[DeleteTarget]) -> Result<DeleteTargetsResponse> {
         self.post(
             "/marketplace-api/v1/user-targets/delete",
             json!({"Targets": targets}),
@@ -248,7 +281,12 @@ impl Client {
         .await
     }
 
-    pub async fn create_offers(&self, offers: Vec<CreateOffer>) -> Result<CreateOffersResponse> {
+    pub async fn get_offers(&self) -> Result<Vec<Offer>> {
+        self.get_paginated_items("/marketplace-api/v1/user-offers")
+            .await
+    }
+
+    pub async fn create_offers(&self, offers: &[CreateOffer]) -> Result<CreateOffersResponse> {
         self.post(
             "/marketplace-api/v1/user-offers/create",
             json!({"Offers": offers}),
@@ -257,13 +295,13 @@ impl Client {
     }
 
     pub async fn create_offer(&self, item_id: Uuid, price: f64) -> Result<CreateOffersResponse> {
-        self.create_offers(vec![CreateOffer::new(item_id, price)])
+        self.create_offers(&[CreateOffer::new(item_id, price)])
             .await
     }
 
-    pub async fn edit_offers(&self, offers: Vec<EditOffer>) -> Result<EditOffersResponse> {
+    pub async fn edit_offers(&self, offers: &[EditOffer]) -> Result<EditOffersResponse> {
         self.post(
-            "marketplace-api/v1/user-offers/edit",
+            "/marketplace-api/v1/user-offers/edit",
             json!({"Offers": offers}),
         )
         .await
@@ -272,7 +310,7 @@ impl Client {
     pub async fn delete_offers(
         &self,
         force: bool,
-        offers: Vec<DeleteOffer>,
+        offers: &[DeleteOffer],
     ) -> Result<DeleteOffersResponse> {
         let body = json!({
             "force": force,
@@ -305,7 +343,7 @@ impl Client {
             .await
     }
 
-    pub async fn get_best_offer(&self, game_title: GameTitle) -> Result<Option<Item>> {
+    pub async fn get_best_offer(&self, game_title: &GameTitle) -> Result<Option<Item>> {
         let items = self
             .get_items(
                 &game_title.game_id,

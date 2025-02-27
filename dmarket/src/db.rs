@@ -42,7 +42,14 @@ impl Database {
     pub async fn get_distinct_titles(&self) -> Result<Vec<GameTitle>> {
         Ok(sqlx::query_as!(
             GameTitle,
-            r#"SELECT DISTINCT game_id, title FROM dmarket_game_titles"#
+            r#"
+            SELECT DISTINCT game_id, title
+            FROM (
+                SELECT game_id, title, sale_count
+                FROM dmarket_game_titles
+                ORDER BY sale_count DESC
+            ) AS sub
+            "#
         )
         .fetch_all(&self.pool)
         .await?)
