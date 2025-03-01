@@ -53,4 +53,7 @@ pub enum Error {
 
     #[error("Parse error: {0}")]
     ParseInt(#[from] std::num::ParseIntError),
+
+    #[error("Parse error: {0}")]
+    ParseUuid(#[from] uuid::Error),
 }

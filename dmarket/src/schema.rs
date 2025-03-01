@@ -23,6 +23,7 @@ pub struct Item {
     #[sqlx(flatten)]
     pub suggested_price: Option<Price>,
     pub r#type: ItemType,
+    pub owner: Uuid,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -197,7 +198,7 @@ pub struct CreateTarget {
     pub amount: u64,
     pub price: MarketMoney,
     pub title: String,
-    // pub attrs: TargetAttrs,
+    pub attrs: TargetAttrs,
 }
 
 #[derive(Serialize, Debug, Deserialize)]
@@ -337,7 +338,7 @@ pub struct DeleteTargetsResponse {
 pub struct DeleteTargetResponse {
     pub delete_target: DeleteTarget,
     pub successful: bool,
-    pub error: MarketError,
+    pub error: Option<MarketError>,
 }
 
 pub struct Stats {
@@ -377,9 +378,9 @@ pub struct CreateOfferResponse {
 #[serde(rename_all = "PascalCase")]
 pub struct EditOffer {
     #[serde(rename = "OfferID")]
-    pub offer_id: String,
+    pub offer_id: Uuid,
     #[serde(rename = "AssetID")]
-    pub asset_id: String,
+    pub asset_id: Uuid,
     pub price: MarketMoney,
 }
 
@@ -394,7 +395,7 @@ pub struct EditOffersResponse {
 pub struct EditOfferResponse {
     pub edit_offer: EditOffer,
     pub successful: bool,
-    pub error: MarketError,
+    pub error: Option<MarketError>,
     #[serde(rename = "NewOfferID")]
     pub new_offer_id: String,
 }
@@ -453,7 +454,7 @@ impl CreateTarget {
             title,
             amount: 1,
             price: MarketMoney::new(price),
-            // attrs: Default::default(),
+            attrs: Default::default(),
         }
     }
 }

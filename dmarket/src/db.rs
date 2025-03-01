@@ -47,7 +47,7 @@ impl Database {
             FROM (
                 SELECT game_id, title, sale_count
                 FROM dmarket_game_titles
-                ORDER BY sale_count DESC
+                ORDER BY monthly_sales DESC
             ) AS sub
             "#
         )

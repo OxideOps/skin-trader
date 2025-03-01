@@ -9,18 +9,20 @@ use crate::Database;
 use crate::Result;
 use crate::GAME_IDS;
 use common::map;
-use futures::{future::try_join_all, pin_mut, StreamExt};
+use futures::{future::try_join_all, pin_mut, StreamExt, TryStreamExt};
 use reqwest::StatusCode;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 const MAX_TASKS: usize = 10;
 const CS_GO_DEFAULT_FEE: f64 = 0.1;
 const DEFAULT_FEE: f64 = 0.05;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
-const MIN_SALE_COUNT: i32 = 400;
+const MIN_SALE_COUNT: i32 = 500;
 const MIN_MONTHLY_SALES: i32 = 60;
 const MAX_BALANCE_FRACTION: f64 = 0.5;
 const MAX_CHUNK_SIZE: usize = 100;
+const OWNER_ID: &str = "aa749fbf-e726-46db-9419-5a2f384a896e";
 
 fn round_up_cents(price: f64) -> f64 {
     (price * 100.0).ceil() / 100.0
@@ -122,12 +124,36 @@ impl Trader {
         Ok(())
     }
 
-    async fn get_mean(&self, game_title: &GameTitle) -> Result<Option<f64>> {
-        Ok(self
+    async fn get_potential_list_price(&self, game_title: &GameTitle) -> Result<Option<f64>> {
+        let avg_price = self
             .db
             .get_price_statistics(game_title)
             .await?
-            .and_then(|stats| stats.mean_price.map(round_up_cents)))
+            .and_then(|stats| stats.mean_price.map(round_up_cents));
+
+        if let Some(avg_price) = avg_price {
+            let market_items = self
+                .client
+                .get_market_items(&game_title.game_id, Some(&*game_title.title))
+                .await
+                .try_concat()
+                .await?;
+
+            let lowest_competitor = market_items
+                .into_iter()
+                .filter(|item| item.owner.to_string() != OWNER_ID)
+                .filter_map(|item| item.price)
+                .filter_map(|price| price.usd.parse().ok())
+                .reduce(f64::min);
+
+            let undercut_price = lowest_competitor
+                .map(|x| (x - 1.0) / 100.0)
+                .unwrap_or(f64::NEG_INFINITY);
+
+            return Ok(Some(avg_price.max(undercut_price).max(0.02)));
+        }
+
+        Ok(None)
     }
 
     pub async fn buy_game_title(&self, game_title: GameTitle, buy_price: String) -> Result<()> {
@@ -211,7 +237,7 @@ impl Trader {
         let mut targets_map: HashMap<String, Vec<_>> = HashMap::new();
 
         for game_title in &self.db.get_distinct_titles().await? {
-            if let Some(list_price) = self.get_list_price(game_title, 0.0).await? {
+            if let Some(list_price) = self.get_list_price(game_title, 0.1).await? {
                 let fee = self.get_fee(game_title).await?;
                 let fee_price = round_up_cents(list_price * fee);
                 let target_price =
@@ -243,7 +269,7 @@ impl Trader {
     pub async fn list_inventory(&self) -> Result<CreateOffersResponse> {
         let mut offers = vec![];
         for item in &self.client.get_inventory().await? {
-            if let Some(price) = self.get_mean(&item.into()).await? {
+            if let Some(price) = self.get_potential_list_price(&item.into()).await? {
                 offers.push(CreateOffer::new(item.item_id, price));
             }
         }
@@ -253,12 +279,14 @@ impl Trader {
     pub async fn update_offers(&self) -> Result<()> {
         let mut offers = vec![];
         for offer in &self.client.get_offers().await? {
-            if let Some(price) = self.get_mean(&offer.into()).await? {
-                offers.push(EditOffer {
-                    offer_id: offer.offer.offer_id.clone(),
-                    asset_id: offer.asset_id.clone(),
-                    price: MarketMoney::new(price),
-                });
+            if let Some(price) = self.get_potential_list_price(&offer.into()).await? {
+                if offer.offer.price.amount != price {
+                    offers.push(EditOffer {
+                        offer_id: offer.offer.offer_id.parse::<Uuid>()?,
+                        asset_id: offer.asset_id.parse::<Uuid>()?,
+                        price: MarketMoney::new(price),
+                    });
+                }
             }
         }
 
