@@ -5,7 +5,7 @@ use crate::schema::{
     CreateOffersResponse, CreateTarget, CreateTargetsResponse, DeleteOffer, DeleteOffersResponse,
     DeleteTarget, DeleteTargetsResponse, EditOffer, EditOffersResponse, GameTitle,
     GetTargetsResponse, Item, ItemResponse, ListDefaultFee, ListFeeResponse, ListPersonalFee,
-    Offer, OfferMoney, PaginatedResponse, Sale, SaleResponse, Target, UserTarget,
+    Offer, OfferMoney, PaginatedResponse, Sale, SaleResponse, Target,
 };
 use crate::Result;
 use async_stream::try_stream;
@@ -256,10 +256,10 @@ impl Client {
         Ok(items)
     }
 
-    pub async fn get_user_targets(&self) -> Result<Vec<UserTarget>> {
-        self.get_paginated_items("/marketplace-api/v1/user-targets")
-            .await
+    pub async fn get_user_targets(&self) -> Result<Vec<Item>> {
+        self.get_all_items("/exchange/v1/user/targets").await
     }
+
     pub async fn create_targets(
         &self,
         game_id: &str,
@@ -319,16 +319,8 @@ impl Client {
         self.delete("/exchange/v1/offers", body).await
     }
 
-    async fn get_inventory_for_game(&self, game_id: &str) -> Result<Vec<Item>> {
-        self.get_items(game_id, None, "/exchange/v1/user/items")
-            .await
-    }
-
     pub async fn get_inventory(&self) -> Result<Vec<Item>> {
-        stream::iter(GAME_IDS)
-            .then(|id| self.get_inventory_for_game(id))
-            .try_concat()
-            .await
+        self.get_all_items("/exchange/v1/user/items").await
     }
 
     async fn get_items(
@@ -339,6 +331,13 @@ impl Client {
     ) -> Result<Vec<Item>> {
         self.get_items_with_cursor(game_id, title, endpoint)
             .await
+            .try_concat()
+            .await
+    }
+
+    async fn get_all_items(&self, endpoint: &str) -> Result<Vec<Item>> {
+        stream::iter(GAME_IDS)
+            .then(|id| self.get_items(id, None, endpoint))
             .try_concat()
             .await
     }

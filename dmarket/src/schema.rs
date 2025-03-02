@@ -198,7 +198,7 @@ pub struct CreateTarget {
     pub amount: u64,
     pub price: MarketMoney,
     pub title: String,
-    pub attrs: TargetAttrs,
+    pub attrs: Option<TargetAttrs>,
 }
 
 #[derive(Serialize, Debug, Deserialize)]
@@ -288,21 +288,6 @@ pub struct PaginatedResponse<T> {
     pub cursor: String,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-pub struct UserTarget {
-    #[serde(rename = "TargetID")]
-    pub target_id: String,
-    pub title: String,
-    pub amount: String,
-    pub status: String,
-    #[serde(rename = "GameID")]
-    pub game_id: String,
-    pub game_type: String,
-    // pub attributes: Vec<_>,
-    pub price: MarketMoney,
-}
-
 #[derive(Serialize, Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarketMoney {
@@ -324,7 +309,7 @@ pub struct TargetAttrs {
 #[derive(Serialize, Debug, Deserialize)]
 pub struct DeleteTarget {
     #[serde(rename = "TargetID")]
-    pub target_id: String,
+    pub target_id: Uuid,
 }
 
 #[derive(Deserialize, Debug)]

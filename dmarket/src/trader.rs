@@ -10,7 +10,6 @@ use crate::Result;
 use crate::GAME_IDS;
 use common::map;
 use futures::{future::try_join_all, pin_mut, StreamExt, TryStreamExt};
-use reqwest::StatusCode;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -64,6 +63,7 @@ impl Trader {
     }
 
     pub async fn sync(&self) -> Result<()> {
+        log::info!("Syncing market data");
         try_join_all(GAME_IDS.iter().map(|&id| self.sync_game_titles(id, None))).await?;
         futures::stream::iter(&self.db.get_distinct_titles().await?)
             .map(|gt| async move {
@@ -150,7 +150,7 @@ impl Trader {
                 .map(|x| (x - 1.0) / 100.0)
                 .unwrap_or(f64::NEG_INFINITY);
 
-            return Ok(Some(avg_price.max(undercut_price).max(0.02)));
+            return Ok(Some(avg_price.max(undercut_price).max(0.03)));
         }
 
         Ok(None)
@@ -218,15 +218,15 @@ impl Trader {
     }
 
     pub async fn delete_targets(&self) -> Result<()> {
+        log::info!("Deleting targets");
         let targets = self.client.get_user_targets().await?;
         let delete_targets: Vec<_> = map(targets, |t| DeleteTarget {
-            target_id: t.target_id,
+            target_id: t.item_id,
         });
 
         for chunk in delete_targets.chunks(MAX_CHUNK_SIZE) {
-            match self.client.delete_targets(chunk).await {
-                Ok(response) => log::info!("{:?}", response),
-                Err(e) => log::error!("Error deleting targets: {:?}", e),
+            if let Err(e) = self.client.delete_targets(chunk).await {
+                log::error!("Error deleting targets: {:?}", e);
             }
         }
 
@@ -234,10 +234,11 @@ impl Trader {
     }
 
     pub async fn create_targets(&self) -> Result<()> {
+        log::info!("Creating targets");
         let mut targets_map: HashMap<String, Vec<_>> = HashMap::new();
 
         for game_title in &self.db.get_distinct_titles().await? {
-            if let Some(list_price) = self.get_list_price(game_title, 0.1).await? {
+            if let Some(list_price) = self.get_list_price(game_title, 0.02).await? {
                 let fee = self.get_fee(game_title).await?;
                 let fee_price = round_up_cents(list_price * fee);
                 let target_price =
@@ -252,13 +253,11 @@ impl Trader {
 
         for (game_id, targets) in targets_map {
             for chunk in targets.chunks(MAX_CHUNK_SIZE) {
-                match self.client.create_targets(&game_id, chunk).await {
-                    Ok(response) => log::info!("{:?}", response),
-                    Err(Response(StatusCode::BAD_REQUEST, response)) => {
-                        log::info!("{:?}", response);
+                if let Err(e) = self.client.create_targets(&game_id, chunk).await {
+                    log::error!("Error creating targets for {}: {:?}", game_id, e);
+                    if matches!(e, Response(_, _)) {
                         break;
                     }
-                    Err(e) => log::error!("Error creating targets for {}: {:?}", game_id, e),
                 }
             }
         }
@@ -267,6 +266,7 @@ impl Trader {
     }
 
     pub async fn list_inventory(&self) -> Result<CreateOffersResponse> {
+        log::info!("Listing inventory");
         let mut offers = vec![];
         for item in &self.client.get_inventory().await? {
             if let Some(price) = self.get_potential_list_price(&item.into()).await? {
@@ -277,6 +277,7 @@ impl Trader {
     }
 
     pub async fn update_offers(&self) -> Result<()> {
+        log::info!("Updating offers");
         let mut offers = vec![];
         for offer in &self.client.get_offers().await? {
             if let Some(price) = self.get_potential_list_price(&offer.into()).await? {
@@ -291,9 +292,8 @@ impl Trader {
         }
 
         for chunk in offers.chunks(MAX_CHUNK_SIZE) {
-            match self.client.edit_offers(chunk).await {
-                Ok(response) => log::info!("{:?}", response),
-                Err(e) => log::error!("Error editing offers: {e}"),
+            if let Err(e) = self.client.edit_offers(chunk).await {
+                log::error!("Error editing offers: {e}");
             }
         }
 
