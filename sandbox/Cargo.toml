@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.96"
+anyhow = "1.0.97"
 dmarket = { path = "../dmarket" }
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 dotenvy = "0.15.7"

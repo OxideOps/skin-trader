@@ -141,7 +141,7 @@ impl Trader {
 
             let lowest_competitor = market_items
                 .into_iter()
-                .filter(|item| item.owner.to_string() != OWNER_ID)
+                .filter(|item| item.owner.to_string() != OWNER_ID && item.title == game_title.title)
                 .filter_map(|item| item.price)
                 .filter_map(|price| price.usd.parse().ok())
                 .reduce(f64::min);
@@ -176,17 +176,6 @@ impl Trader {
         } else {
             Ok(DEFAULT_FEE)
         }
-    }
-
-    pub async fn get_highest_bid(&self, game_title: &GameTitle) -> Result<Option<u64>> {
-        Ok(self
-            .client
-            .get_targets(game_title)
-            .await?
-            .into_iter()
-            .filter(|t| t.attributes.iter().all(|a| a.paint_seed.is_none()))
-            .map(|t| t.price.parse::<u64>().unwrap_or_default())
-            .max())
     }
 
     pub async fn get_list_price(&self, game_title: &GameTitle, price: f64) -> Result<Option<f64>> {
@@ -318,14 +307,6 @@ impl Trader {
                 }
             }
         }
-
-        if let Err(e) = self.list_inventory().await {
-            log::error!("Error listing inventory: {e}");
-        }
-        if let Err(e) = self.sync_balance().await {
-            log::error!("Error syncing balance: {e}");
-        }
-
         Ok(())
     }
 }
