@@ -1,4 +1,5 @@
 use ringbuffer::{AllocRingBuffer, RingBuffer};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tokio::time::sleep;
@@ -10,8 +11,9 @@ const OTHER: usize = 20;
 
 const ONE_SECOND: Duration = Duration::from_secs(1);
 
-pub type RateLimiters = [Mutex<RateLimiter>; 4];
+pub type RateLimiters = [Arc<Mutex<RateLimiter>>; 4];
 
+#[derive(Clone)]
 pub struct RateLimiter {
     times: AllocRingBuffer<Instant>,
 }
@@ -27,10 +29,10 @@ pub enum RateLimiterType {
 impl RateLimiter {
     pub fn request_limiters() -> RateLimiters {
         [
-            Mutex::new(Self::new(FEE)),
-            Mutex::new(Self::new(LAST_SALES)),
-            Mutex::new(Self::new(MARKET_ITEMS)),
-            Mutex::new(Self::new(OTHER)),
+            Arc::from(Mutex::new(Self::new(FEE))),
+            Arc::from(Mutex::new(Self::new(LAST_SALES))),
+            Arc::from(Mutex::new(Self::new(MARKET_ITEMS))),
+            Arc::from(Mutex::new(Self::new(OTHER))),
         ]
     }
 
