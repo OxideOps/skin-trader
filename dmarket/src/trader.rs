@@ -9,7 +9,7 @@ use crate::Database;
 use crate::Result;
 use crate::GAME_IDS;
 use common::map;
-use futures::{future::try_join_all, pin_mut, StreamExt, TryStreamExt};
+use futures::{future::try_join_all, pin_mut, stream, StreamExt, TryStreamExt};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -20,6 +20,7 @@ const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_MONTHLY_SALES: i32 = 60;
 const MAX_BALANCE_FRACTION: f64 = 0.5;
+const MIN_LIST_PRICE: f64 = 1.0;
 const MAX_CHUNK_SIZE: usize = 100;
 const OWNER_ID: &str = "aa749fbf-e726-46db-9419-5a2f384a896e";
 
@@ -65,7 +66,7 @@ impl Trader {
     pub async fn sync(&self) -> Result<()> {
         log::info!("Syncing market data");
         try_join_all(GAME_IDS.iter().map(|&id| self.sync_game_titles(id, None))).await?;
-        futures::stream::iter(&self.db.get_distinct_titles().await?)
+        stream::iter(&self.db.get_distinct_titles().await?)
             .map(|gt| async move {
                 if let Err(e) = self.sync_sales(gt).await {
                     log::error!("Error syncing sales: {e}");
@@ -195,8 +196,11 @@ impl Trader {
                 {
                     return Ok(None);
                 }
-                let fee = self.get_fee(game_title).await?;
                 let mean = round_up_cents(mean);
+                if mean < MIN_LIST_PRICE {
+                    return Ok(None);
+                }
+                let fee = self.get_fee(game_title).await?;
                 let fee_price = round_up_cents(mean * fee);
                 if (1.0 + MIN_PROFIT_MARGIN) * price <= mean - fee_price {
                     return Ok(Some(mean));

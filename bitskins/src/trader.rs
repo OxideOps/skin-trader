@@ -11,6 +11,7 @@ const SALES_FEE: f64 = 0.1;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
+const MIN_LIST_PRICE: f64 = 500.0;
 
 #[derive(Clone)]
 pub struct Trader {
@@ -121,6 +122,10 @@ impl Trader {
         let stats = self.db.get_price_statistics(skin_id).await?;
         let mean = stats.mean_price.unwrap_or(0.0);
 
+        if mean < MIN_LIST_PRICE {
+            bail!("{} for {} is below min list price", skin_id, mean);
+        }
+
         if !Self::are_stats_reliable(&stats) {
             bail!("Price stats are not reliable for skin_id: {}", skin_id);
         }
@@ -203,8 +208,7 @@ impl MarketDeal {
     }
 
     fn is_profitable(&self, mean_price: f64) -> bool {
-        let sale_price = (1.0 - Updater::SELLING_DISCOUNT) * mean_price;
-        let fee = (SALES_FEE * sale_price).max(10.0); // Fee is always at least 1 cent
-        self.price * (1.0 + MIN_PROFIT_MARGIN) <= (sale_price - fee)
+        let fee = (SALES_FEE * mean_price).max(10.0); // Fee is always at least 1 cent
+        self.price * (1.0 + MIN_PROFIT_MARGIN) <= (mean_price - fee)
     }
 }
