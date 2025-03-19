@@ -196,7 +196,7 @@ impl Client {
         let initial_response = self.get::<BestPricesResponse>(path, json!({})).await?;
 
         let mut all_prices = initial_response.aggregated_titles;
-        let total = initial_response.total.parse()?;
+        let total = initial_response.total.parse::<usize>()?;
         let mut offset = BEST_PRICES_LIMIT;
 
         while offset < total {

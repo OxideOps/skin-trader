@@ -6,12 +6,12 @@ use anyhow::{bail, Result};
 use log::{debug, info, warn};
 use std::cmp::Ordering;
 
-const MAX_PRICE_BALANCE_THRESHOLD: f64 = 0.5;
+const MAX_PRICE_BALANCE_THRESHOLD: f64 = 1.0;
 const SALES_FEE: f64 = 0.1;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
-const MIN_LIST_PRICE: f64 = 500.0;
+const MIN_LIST_PRICE: f64 = 50.0;
 
 #[derive(Clone)]
 pub struct Trader {

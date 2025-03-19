@@ -217,7 +217,7 @@ impl Updater {
                     price = max(price, cheapest_competitor as u32 - 10);
                 }
                 // Bitskins UI appears to round up to the nearest 10 anyway, so we might as well
-                price = (price + 9) / 10 * 10;
+                price = price.div_ceil(10);
                 if price != item.price.round() as u32 {
                     result.push(ItemPrice::new(item.id.to_string(), price));
                 }
