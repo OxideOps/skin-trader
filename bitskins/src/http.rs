@@ -244,7 +244,7 @@ impl HttpClient {
                 "where_mine": {
                     "status": [status]
                 },
-                "limit": MAX_LIMIT,
+                // "limit": MAX_LIMIT,
                 "offset": offset
             });
 
