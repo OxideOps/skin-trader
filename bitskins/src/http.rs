@@ -302,13 +302,13 @@ impl HttpClient {
         .await
     }
 
-    pub async fn list_item(&self, item_id: &str, price: f64) -> Result<bool> {
+    pub async fn list_item(&self, item_id: &str, price: u32) -> Result<bool> {
         self.post(
             Endpoint::RelistSingle,
             json!({
                 "app_id": CS2_APP_ID,
                 "id": item_id,
-                "price": price.round() as u32,
+                "price": price,
             }),
         )
         .await

@@ -548,9 +548,14 @@ impl Database {
     pub async fn insert_offer(&self, item: MarketItem) -> Result<()> {
         let item_id = item.id;
         self.insert_market_item(item).await?;
-        sqlx::query!("INSERT INTO Offer (item_id) VALUES ($1)", item_id)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query!(
+            "
+            INSERT INTO Offer (item_id) VALUES ($1)
+            ON CONFLICT (item_id) DO NOTHING",
+            item_id
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
