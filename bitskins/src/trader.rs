@@ -6,12 +6,11 @@ use anyhow::{bail, Result};
 use log::{debug, info, warn};
 use std::cmp::Ordering;
 
-const MAX_PRICE_BALANCE_THRESHOLD: f64 = 1.0;
 const SALES_FEE: f64 = 0.1;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
-const MIN_LIST_PRICE: f64 = 50.0;
+const MIN_LIST_PRICE: f64 = 100.0;
 
 #[derive(Clone)]
 pub struct Trader {
@@ -204,7 +203,7 @@ impl MarketDeal {
         Self { id, price }
     }
     fn is_affordable(&self, balance: f64) -> bool {
-        self.price <= (MAX_PRICE_BALANCE_THRESHOLD * balance)
+        self.price <= balance
     }
 
     fn is_profitable(&self, mean_price: f64) -> bool {

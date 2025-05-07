@@ -19,8 +19,7 @@ const DEFAULT_FEE: f64 = 0.05;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_MONTHLY_SALES: i32 = 60;
-const MAX_BALANCE_FRACTION: f64 = 1.0;
-const MIN_LIST_PRICE: f64 = 0.1;
+const MIN_LIST_PRICE: f64 = 0.2;
 const MAX_CHUNK_SIZE: usize = 100;
 const OWNER_ID: &str = "aa749fbf-e726-46db-9419-5a2f384a896e";
 
@@ -180,7 +179,7 @@ impl Trader {
     }
 
     pub async fn get_list_price(&self, game_title: &GameTitle, price: f64) -> Result<Option<f64>> {
-        if 100.0 * price > MAX_BALANCE_FRACTION * self.db.get_balance().await? as f64 {
+        if 100.0 * price > self.db.get_balance().await? as f64 {
             return Ok(None);
         }
         if let Some(stats) = self.db.get_price_statistics(game_title).await? {
