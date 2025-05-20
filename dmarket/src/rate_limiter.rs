@@ -46,6 +46,6 @@ impl RateLimiter {
         if self.times.is_full() {
             sleep(*self.times.front().unwrap() + ONE_SECOND - Instant::now()).await;
         }
-        self.times.push(Instant::now());
+        self.times.enqueue(Instant::now());
     }
 }

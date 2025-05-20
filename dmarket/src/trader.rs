@@ -19,7 +19,7 @@ const DEFAULT_FEE: f64 = 0.05;
 const MIN_PROFIT_MARGIN: f64 = 0.2;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_MONTHLY_SALES: i32 = 60;
-const MIN_LIST_PRICE: f64 = 0.2;
+const MIN_LIST_PRICE: f64 = 0.1;
 const MAX_CHUNK_SIZE: usize = 100;
 const OWNER_ID: &str = "aa749fbf-e726-46db-9419-5a2f384a896e";
 

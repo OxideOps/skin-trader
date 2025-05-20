@@ -7,10 +7,10 @@ use log::{debug, info, warn};
 use std::cmp::Ordering;
 
 const SALES_FEE: f64 = 0.1;
-const MIN_PROFIT_MARGIN: f64 = 0.2;
+const MIN_PROFIT_MARGIN: f64 = 0.25;
 const MIN_SALE_COUNT: i32 = 500;
 const MIN_SLOPE: f64 = 0.0;
-const MIN_LIST_PRICE: f64 = 100.0;
+const MIN_LIST_PRICE: f64 = 0.0;
 
 #[derive(Clone)]
 pub struct Trader {
