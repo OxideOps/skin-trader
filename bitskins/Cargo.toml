@@ -4,19 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-reqwest = { version = "0.12.12", features = ["json", "native-tls"], default-features = false }
-serde_json = "1.0.140"
-sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-native-tls", "time"] }
-log = "0.4.26"
-time = "0.3.39"
-serde = "1.0.218"
+reqwest = { version = "0.13.1", features = ["json", "native-tls"], default-features = false }
+serde_json = "1.0.149"
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio-native-tls", "time"] }
+log = "0.4.29"
+time = "0.3.44"
+serde = "1.0.228"
 futures = "0.3.31"
-tokio-tungstenite = { version = "0.26.2", features = ["native-tls"] }
-tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
-thiserror = "2.0.12"
-strum_macros = "0.27.1"
-strum = "0.27.1"
-derive_more = { version = "2.0.1", features = ["deref", "display", "into", "from"] }
-anyhow = "1.0.97"
+tokio-tungstenite = { version = "0.28.0", features = ["native-tls"] }
+tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+thiserror = "2.0.17"
+strum_macros = "0.27.2"
+strum = "0.27.2"
+derive_more = { version = "2.1.1", features = ["deref", "display", "into", "from"] }
+anyhow = "1.0.100"
 common = { path = "../common" }
-tokio-cron-scheduler = { version = "0.13.0", features = ["english"] }
+tokio-cron-scheduler = { version = "0.15.1", features = ["english"] }
